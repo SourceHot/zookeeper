@@ -543,12 +543,12 @@
           <artifactId>exec-maven-plugin</artifactId>
           <version>1.6.0</version>
         </plugin>
-        <plugin>
-          <groupId>pl.project13.maven</groupId>
-          <artifactId>git-commit-id-plugin</artifactId>
-          <version>2.2.5</version>
-          <inherited>false</inherited>
-        </plugin>
+<!--        <plugin>-->
+<!--          <groupId>pl.project13.maven</groupId>-->
+<!--          <artifactId>git-commit-id-plugin</artifactId>-->
+<!--          <version>2.2.5</version>-->
+<!--          <inherited>false</inherited>-->
+<!--        </plugin>-->
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>build-helper-maven-plugin</artifactId>
@@ -611,35 +611,35 @@
     </pluginManagement>
 
     <plugins>
-      <plugin>
-        <groupId>pl.project13.maven</groupId>
-        <artifactId>git-commit-id-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>find-current-git-revision</id>
-            <goals>
-              <goal>revision</goal>
-            </goals>
-            <phase>validate</phase>
-          </execution>
-        </executions>
-        <configuration>
-          <skipPoms>false</skipPoms>
-          <runOnlyOnce>true</runOnlyOnce>
-          <failOnNoGitDirectory>false</failOnNoGitDirectory>
-          <dotGitDirectory>${project.basedir}/.git</dotGitDirectory>
-          <prefix>git</prefix>
-          <verbose>false</verbose>
-          <generateGitPropertiesFile>true</generateGitPropertiesFile>
-          <generateGitPropertiesFilename>${project.basedir}/zookeeper-server/src/main/resources/git.properties</generateGitPropertiesFilename>
-          <format>properties</format>
-          <gitDescribe>
-            <skip>false</skip>
-            <always>false</always>
-            <dirty>-dirty</dirty>
-          </gitDescribe>
-        </configuration>
-      </plugin>
+<!--      <plugin>-->
+<!--        <groupId>pl.project13.maven</groupId>-->
+<!--        <artifactId>git-commit-id-plugin</artifactId>-->
+<!--        <executions>-->
+<!--          <execution>-->
+<!--            <id>find-current-git-revision</id>-->
+<!--            <goals>-->
+<!--              <goal>revision</goal>-->
+<!--            </goals>-->
+<!--            <phase>validate</phase>-->
+<!--          </execution>-->
+<!--        </executions>-->
+<!--        <configuration>-->
+<!--          <skipPoms>false</skipPoms>-->
+<!--          <runOnlyOnce>true</runOnlyOnce>-->
+<!--          <failOnNoGitDirectory>false</failOnNoGitDirectory>-->
+<!--          <dotGitDirectory>${project.basedir}/.git</dotGitDirectory>-->
+<!--          <prefix>git</prefix>-->
+<!--          <verbose>false</verbose>-->
+<!--          <generateGitPropertiesFile>true</generateGitPropertiesFile>-->
+<!--          <generateGitPropertiesFilename>${project.basedir}/zookeeper-server/src/main/resources/git.properties</generateGitPropertiesFilename>-->
+<!--          <format>properties</format>-->
+<!--          <gitDescribe>-->
+<!--            <skip>false</skip>-->
+<!--            <always>false</always>-->
+<!--            <dirty>-dirty</dirty>-->
+<!--          </gitDescribe>-->
+<!--        </configuration>-->
+<!--      </plugin>-->
       <plugin>
         <groupId>org.openclover</groupId>
         <artifactId>clover-maven-plugin</artifactId>
