@@ -52,6 +52,9 @@ public class ZooKeeperServerMain {
     private ServerCnxnFactory secureCnxnFactory;
     private ContainerManager containerManager;
 
+    /**
+     * 管理服务
+     */
     private AdminServer adminServer;
 
     /*
@@ -60,6 +63,7 @@ public class ZooKeeperServerMain {
      * @param args the configfile or the port datadir [ticktime]
      */
     public static void main(String[] args) {
+        // 构造ZooKeeperServerMain类
         ZooKeeperServerMain main = new ZooKeeperServerMain();
         try {
             main.initializeAndRun(args);
@@ -92,18 +96,22 @@ public class ZooKeeperServerMain {
         throws ConfigException, IOException, AdminServerException
     {
         try {
+            // 注册log4j与MBeanServer相关信息
             ManagedUtil.registerLog4jMBeans();
         } catch (JMException e) {
             LOG.warn("Unable to register log4j JMX control", e);
         }
 
+        // 创建Zookeeper服务端配置
         ServerConfig config = new ServerConfig();
+        // 解析配置
         if (args.length == 1) {
             config.parse(args[0]);
         } else {
             config.parse(args);
         }
 
+        // 核心运行方法
         runFromConfig(config);
     }
 
@@ -116,6 +124,7 @@ public class ZooKeeperServerMain {
     public void runFromConfig(ServerConfig config)
             throws IOException, AdminServerException {
         LOG.info("Starting server");
+        // 事务日志和快照日志
         FileTxnSnapLog txnLog = null;
         try {
             // Note that this thread isn't going to be doing anything else,
@@ -123,6 +132,7 @@ public class ZooKeeperServerMain {
             // run() in this thread.
             // create a file logger url from the command line args
             txnLog = new FileTxnSnapLog(config.dataLogDir, config.dataDir);
+            // 创建ZooKeeperServer类
             final ZooKeeperServer zkServer = new ZooKeeperServer(txnLog,
                     config.tickTime, config.minSessionTimeout, config.maxSessionTimeout, null, QuorumPeerConfig.isReconfigEnabled());
             txnLog.setServerStats(zkServer.serverStats());
@@ -136,33 +146,52 @@ public class ZooKeeperServerMain {
             // Start Admin server
             adminServer = AdminServerFactory.createAdminServer();
             adminServer.setZooKeeperServer(zkServer);
+            // 启动管理端
             adminServer.start();
 
+            // 是否需要启动Zookeeper服务标记位,默认值为真
             boolean needStartZKServer = true;
+            // 客户端地址不为空
             if (config.getClientPortAddress() != null) {
+                // 创建ServerCnxnFactory
                 cnxnFactory = ServerCnxnFactory.createFactory();
-                cnxnFactory.configure(config.getClientPortAddress(), config.getMaxClientCnxns(), false);
+                // 设置配置信息
+                cnxnFactory.configure(config.getClientPortAddress(), config.getMaxClientCnxns(),
+                        false);
+                // 启动
                 cnxnFactory.startup(zkServer);
                 // zkServer has been started. So we don't need to start it again in secureCnxnFactory.
+                // 是否需要启动Zookeeper服务标记位设置为false
                 needStartZKServer = false;
             }
+            // 安全客户端地址不为空
             if (config.getSecureClientPortAddress() != null) {
+                // 创建ServerCnxnFactory
                 secureCnxnFactory = ServerCnxnFactory.createFactory();
-                secureCnxnFactory.configure(config.getSecureClientPortAddress(), config.getMaxClientCnxns(), true);
+                // 设置配置信息
+                secureCnxnFactory.configure(config.getSecureClientPortAddress(),
+                        config.getMaxClientCnxns(), true);
+                // 启动
                 secureCnxnFactory.startup(zkServer, needStartZKServer);
             }
 
+            // 创建容器管理器
             containerManager = new ContainerManager(zkServer.getZKDatabase(), zkServer.firstProcessor,
                     Integer.getInteger("znode.container.checkIntervalMs", (int) TimeUnit.MINUTES.toMillis(1)),
                     Integer.getInteger("znode.container.maxPerMinute", 10000)
             );
+            // 容器管理器启动
             containerManager.start();
 
             // Watch status of ZooKeeper server. It will do a graceful shutdown
             // if the server is not running or hits an internal error.
+            // 阻塞等待确认是否需要关闭，
+            //
             shutdownLatch.await();
 
+            // 关闭
             shutdown();
+
 
             if (cnxnFactory != null) {
                 cnxnFactory.join();
@@ -178,6 +207,7 @@ public class ZooKeeperServerMain {
             LOG.warn("Server interrupted", e);
         } finally {
             if (txnLog != null) {
+                // 关闭事务日志
                 txnLog.close();
             }
         }

@@ -136,11 +136,13 @@ public class QuorumPeerConfig {
         LOG.info("Reading configuration from: " + path);
 
         try {
+            // 构建文件对象
             File configFile = (new VerifyingFileFactory.Builder(LOG)
                 .warnForRelativePath()
                 .failForNonExistingPath()
                 .build()).create(path);
 
+            // 创建Properties对象，将文件内容放入该对象
             Properties cfg = new Properties();
             FileInputStream in = new FileInputStream(configFile);
             try {
@@ -230,6 +232,7 @@ public class QuorumPeerConfig {
 
     /**
      * Parse config from a Properties.
+     * 解析配置
      * @param zkProp Properties to parse from.
      * @throws IOException
      * @throws ConfigException

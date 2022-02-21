@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,19 +25,38 @@ import org.apache.zookeeper.server.ZooKeeperServer;
  * Interface for an embedded admin server that runs Commands. There is only one
  * functional implementation, JettyAdminServer. DummyAdminServer, which does
  * nothing, is used when we do not wish to run a server.
+ * 管理服务
  */
 @InterfaceAudience.Public
 public interface AdminServer {
-    public void start() throws AdminServerException;
-    public void shutdown() throws AdminServerException;
-    public void setZooKeeperServer(ZooKeeperServer zkServer);
+    /**
+     * 启动
+     *
+     * @throws AdminServerException
+     */
+    void start() throws AdminServerException;
+
+    /**
+     * 关闭
+     *
+     * @throws AdminServerException
+     */
+    void shutdown() throws AdminServerException;
+
+    /**
+     * 设置Zookeeper服务
+     * @param zkServer
+     */
+    void setZooKeeperServer(ZooKeeperServer zkServer);
 
     @InterfaceAudience.Public
-    public class AdminServerException extends Exception {
+    class AdminServerException extends Exception {
         private static final long serialVersionUID = 1L;
+
         public AdminServerException(String message, Throwable cause) {
             super(message, cause);
         }
+
         public AdminServerException(Throwable cause) {
             super(cause);
         }

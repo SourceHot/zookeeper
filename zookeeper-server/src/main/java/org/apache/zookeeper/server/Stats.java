@@ -22,6 +22,7 @@ import java.util.Date;
 
 /**
  * Statistics on the ServerCnxn
+ * ServerCnxn的统计信息
  */
 interface Stats {
     /** Date/time the connection was established

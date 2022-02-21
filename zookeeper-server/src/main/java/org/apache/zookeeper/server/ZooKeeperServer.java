@@ -113,7 +113,22 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
     protected boolean reconfigEnabled;
 
     protected enum State {
-        INITIAL, RUNNING, SHUTDOWN, ERROR
+        /**
+         * 初始化
+         */
+        INITIAL,
+        /**
+         * 运行中
+         */
+        RUNNING,
+        /**
+         * 关闭
+         */
+        SHUTDOWN,
+        /**
+         * 异常
+         */
+        ERROR
     }
 
     /**

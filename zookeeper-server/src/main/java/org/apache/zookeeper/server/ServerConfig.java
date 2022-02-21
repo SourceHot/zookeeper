@@ -73,16 +73,20 @@ public class ServerConfig {
 
     /**
      * Parse a ZooKeeper configuration file
+     *
      * @param path the patch of the configuration file
      * @return ServerConfig configured wrt arguments
      * @throws ConfigException error processing configuration
      */
     public void parse(String path) throws ConfigException {
+        // 创建Zookeeper配置类
         QuorumPeerConfig config = new QuorumPeerConfig();
+        // 解析配置地址
         config.parse(path);
 
         // let qpconfig parse the file and then pull the stuff we are
         // interested in
+        // 读取配置并且将其设置到成员变量
         readFrom(config);
     }
 

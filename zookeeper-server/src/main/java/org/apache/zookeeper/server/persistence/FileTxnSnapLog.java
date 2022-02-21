@@ -45,6 +45,8 @@ import org.slf4j.LoggerFactory;
  * above the implementations
  * of txnlog and snapshot
  * classes
+ *
+ * txnlog
  */
 public class FileTxnSnapLog {
     //the direcotry containing the
@@ -53,7 +55,13 @@ public class FileTxnSnapLog {
     //the directory containing the
     //the snapshot directory
     private final File snapDir;
+    /**
+     * 事务日志
+     */
     private TxnLog txnLog;
+    /**
+     * 快照
+     */
     private SnapShot snapLog;
     private final boolean trustEmptySnapshot;
     public final static int VERSION = 2;
@@ -158,6 +166,7 @@ public class FileTxnSnapLog {
             checkLogDir();
             checkSnapDir();
         }
+
 
         txnLog = new FileTxnLog(this.dataDir);
         snapLog = new FileSnap(this.snapDir);

@@ -35,6 +35,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * checks container nodes that have a cversion > 0 and have no children. A
  * delete is attempted on the node. The result of the delete is unimportant.
  * If the proposal fails or the container node is not empty there's no harm.
+ * 容器管理器
  */
 public class ContainerManager {
     private static final Logger LOG = LoggerFactory.getLogger(ContainerManager.class);
