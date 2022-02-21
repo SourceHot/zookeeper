@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,14 +16,6 @@
  * limitations under the License.
  */
 package org.apache.zookeeper.test;
-
-import static org.apache.zookeeper.test.ClientBase.CONNECTION_TIMEOUT;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
-
-import java.io.IOException;
-import java.util.UUID;
 
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.PortAssignment;
@@ -37,6 +29,12 @@ import org.apache.zookeeper.server.quorum.QuorumPeerTestBase;
 import org.apache.zookeeper.test.ClientBase.CountdownWatcher;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.io.IOException;
+import java.util.UUID;
+
+import static org.apache.zookeeper.test.ClientBase.CONNECTION_TIMEOUT;
+import static org.junit.Assert.*;
 
 /**
  * This class tests the non-recoverable error behavior of quorum server.
@@ -153,7 +151,8 @@ public class NonRecoverableErrorTest extends QuorumPeerTestBase {
     }
 
     private void waitForNewLeaderElection(QuorumPeer peer,
-            long leaderCurrentEpoch) throws IOException, InterruptedException {
+                                          long leaderCurrentEpoch)
+            throws IOException, InterruptedException {
         LOG.info("Waiting for new LE cycle..");
         int count = 100; // giving a grace period of 10seconds
         while (count > 0) {

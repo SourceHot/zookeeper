@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,6 +17,13 @@
  */
 
 package org.apache.zookeeper.server.quorum;
+
+import org.apache.zookeeper.jmx.MBeanRegistry;
+import org.apache.zookeeper.server.quorum.QuorumPeer.LearnerType;
+import org.apache.zookeeper.server.quorum.QuorumPeer.QuorumServer;
+import org.apache.zookeeper.server.quorum.QuorumPeer.ServerState;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -27,45 +34,24 @@ import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Random;
 import java.util.Map.Entry;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.apache.zookeeper.jmx.MBeanRegistry;
-import org.apache.zookeeper.server.quorum.Vote;
-import org.apache.zookeeper.server.quorum.QuorumPeer.LearnerType;
-import org.apache.zookeeper.server.quorum.QuorumPeer.QuorumServer;
-import org.apache.zookeeper.server.quorum.QuorumPeer.ServerState;
+import java.util.Random;
 
 /**
  * @deprecated This class has been deprecated as of release 3.4.0. 
  */
 @Deprecated
-public class LeaderElection implements Election  {
-    private static final Logger LOG = LoggerFactory.getLogger(LeaderElection.class);
+public class LeaderElection implements Election {
     protected static final Random epochGen = new Random();
-
+    private static final Logger LOG = LoggerFactory.getLogger(LeaderElection.class);
     protected QuorumPeer self;
 
     public LeaderElection(QuorumPeer self) {
         this.self = self;
     }
 
-    protected static class ElectionResult {
-        public Vote vote;
-
-        public int count;
-
-        public Vote winner;
-
-        public int winningCount;
-
-        public int numValidVotes;
-    }
-
-    protected ElectionResult countVotes(HashMap<InetSocketAddress, Vote> votes, HashSet<Long> heardFrom) {
+    protected ElectionResult countVotes(HashMap<InetSocketAddress, Vote> votes,
+                                        HashSet<Long> heardFrom) {
         final ElectionResult result = new ElectionResult();
         // Initialize with null vote
         result.vote = new Vote(Long.MIN_VALUE, Long.MIN_VALUE);
@@ -75,7 +61,7 @@ public class LeaderElection implements Election  {
         // make the views consistent. Sometimes peers will have
         // different zxids for a server depending on timing.
         final HashMap<InetSocketAddress, Vote> validVotes = new HashMap<InetSocketAddress, Vote>();
-        final Map<Long, Long> maxZxids = new HashMap<Long,Long>();
+        final Map<Long, Long> maxZxids = new HashMap<Long, Long>();
         for (Map.Entry<InetSocketAddress, Vote> e : votes.entrySet()) {
             // Only include votes from machines that we heard from
             final Vote v = e.getValue();
@@ -84,9 +70,9 @@ public class LeaderElection implements Election  {
                 Long val = maxZxids.get(v.getId());
                 if (val == null || val < v.getZxid()) {
                     maxZxids.put(v.getId(), v.getZxid());
-            }
-                    }
                 }
+            }
+        }
 
         // Make all zxids for a given vote id equal to the largest zxid seen for
         // that id
@@ -96,7 +82,8 @@ public class LeaderElection implements Election  {
             if (v.getZxid() < zxid) {
                 // This is safe inside an iterator as per
                 // http://download.oracle.com/javase/1.5.0/docs/api/java/util/Map.Entry.html
-                e.setValue(new Vote(v.getId(), zxid, v.getElectionEpoch(), v.getPeerEpoch(), v.getState()));
+                e.setValue(new Vote(v.getId(), zxid, v.getElectionEpoch(), v.getPeerEpoch(),
+                        v.getState()));
             }
         }
 
@@ -134,11 +121,12 @@ public class LeaderElection implements Election  {
      * There is nothing to shutdown in this implementation of
      * leader election, so we simply have an empty method.
      */
-    public void shutdown(){}
-    
+    public void shutdown() {
+    }
+
     /**
      * Invoked in QuorumPeer to find or elect a new leader.
-     * 
+     *
      * @throws InterruptedException
      */
     public Vote lookForLeader() throws InterruptedException {
@@ -175,7 +163,7 @@ public class LeaderElection implements Election  {
             int xid = epochGen.nextInt();
             while (self.isRunning()) {
                 HashMap<InetSocketAddress, Vote> votes =
-                    new HashMap<InetSocketAddress, Vote>(self.getVotingView().size());
+                        new HashMap<InetSocketAddress, Vote>(self.getVotingView().size());
 
                 requestBuffer.clear();
                 requestBuffer.putInt(xid);
@@ -191,7 +179,7 @@ public class LeaderElection implements Election  {
                         // in order to capture this critical detail.
                         throw new IllegalArgumentException(
                                 "Unable to set socket address on packet, msg:"
-                                + e.getMessage() + " with addr:" + server.addr,
+                                        + e.getMessage() + " with addr:" + server.addr,
                                 e);
                     }
 
@@ -214,12 +202,12 @@ public class LeaderElection implements Election  {
                         long peerId = responseBuffer.getLong();
                         heardFrom.add(peerId);
                         //if(server.id != peerId){
-                            Vote vote = new Vote(responseBuffer.getLong(),
+                        Vote vote = new Vote(responseBuffer.getLong(),
                                 responseBuffer.getLong());
-                            InetSocketAddress addr =
+                        InetSocketAddress addr =
                                 (InetSocketAddress) responsePacket
-                                .getSocketAddress();
-                            votes.put(addr, vote);
+                                        .getSocketAddress();
+                        votes.put(addr, vote);
                         //}
                     } catch (IOException e) {
                         LOG.warn("Ignoring exception while looking for leader",
@@ -231,9 +219,9 @@ public class LeaderElection implements Election  {
 
                 ElectionResult result = countVotes(votes, heardFrom);
                 // ZOOKEEPER-569:
-                // If no votes are received for live peers, reset to voting 
-                // for ourselves as otherwise we may hang on to a vote 
-                // for a dead peer                 
+                // If no votes are received for live peers, reset to voting
+                // for ourselves as otherwise we may hang on to a vote
+                // for a dead peer
                 if (result.numValidVotes == 0) {
                     self.setCurrentVote(new Vote(self.getId(),
                             self.getLastLoggedZxid()));
@@ -249,7 +237,7 @@ public class LeaderElection implements Election  {
                             /*
                              * We want to make sure we implement the state machine
                              * correctly. If we are a PARTICIPANT, once a leader
-                             * is elected we can move either to LEADING or 
+                             * is elected we can move either to LEADING or
                              * FOLLOWING. However if we are an OBSERVER, it is an
                              * error to be elected as a Leader.
                              */
@@ -258,18 +246,17 @@ public class LeaderElection implements Election  {
                                     // This should never happen!
                                     LOG.error("OBSERVER elected as leader!");
                                     Thread.sleep(100);
-                                }
-                                else {
+                                } else {
                                     self.setPeerState(ServerState.OBSERVING);
                                     Thread.sleep(100);
                                     return current;
                                 }
                             } else {
                                 self.setPeerState((current.getId() == self.getId())
-                                        ? ServerState.LEADING: ServerState.FOLLOWING);
+                                        ? ServerState.LEADING : ServerState.FOLLOWING);
                                 if (self.getPeerState() == ServerState.FOLLOWING) {
                                     Thread.sleep(100);
-                                }                            
+                                }
                                 return current;
                             }
                         }
@@ -280,7 +267,7 @@ public class LeaderElection implements Election  {
             return null;
         } finally {
             try {
-                if(self.jmxLeaderElectionBean != null){
+                if (self.jmxLeaderElectionBean != null) {
                     MBeanRegistry.getInstance().unregister(
                             self.jmxLeaderElectionBean);
                 }
@@ -289,5 +276,18 @@ public class LeaderElection implements Election  {
             }
             self.jmxLeaderElectionBean = null;
         }
+    }
+
+
+    protected static class ElectionResult {
+        public Vote vote;
+
+        public int count;
+
+        public Vote winner;
+
+        public int winningCount;
+
+        public int numValidVotes;
     }
 }

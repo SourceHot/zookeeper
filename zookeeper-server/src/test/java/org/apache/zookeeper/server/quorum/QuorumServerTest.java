@@ -16,13 +16,13 @@
  */
 package org.apache.zookeeper.server.quorum;
 
-import static org.junit.Assert.assertEquals;
-
 import org.apache.zookeeper.ZKTestCase;
 import org.apache.zookeeper.server.quorum.QuorumPeer.QuorumServer;
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig.ConfigException;
 import org.junit.Assert;
 import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
 
 public class QuorumServerTest extends ZKTestCase {
     @Test
@@ -46,13 +46,13 @@ public class QuorumServerTest extends ZKTestCase {
         expected = "127.0.0.1:1234:1236:participant;0.0.0.0:1237";
         qs = new QuorumServer(0, config);
         Assert.assertEquals("Client address unspecified",
-                            expected, qs.toString());
+                expected, qs.toString());
 
         config = "127.0.0.1:1234:1236:participant;1.2.3.4:1237";
         expected = "127.0.0.1:1234:1236:participant;1.2.3.4:1237";
         qs = new QuorumServer(0, config);
         Assert.assertEquals("Client address specified",
-                            expected, qs.toString());
+                expected, qs.toString());
 
         config = "example.com:1234:1236:participant;1237";
         expected = "example.com:1234:1236:participant;0.0.0.0:1237";

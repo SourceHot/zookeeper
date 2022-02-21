@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,16 +16,6 @@
  * limitations under the License.
  */
 package org.apache.zookeeper.server.quorum;
-
-import static org.apache.zookeeper.test.ClientBase.CONNECTION_TIMEOUT;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-
-import java.io.IOException;
-import java.net.SocketTimeoutException;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.CreateMode;
@@ -42,6 +32,13 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import javax.security.sasl.SaslException;
+import java.io.IOException;
+import java.net.SocketTimeoutException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
+import static org.apache.zookeeper.test.ClientBase.CONNECTION_TIMEOUT;
+import static org.junit.Assert.*;
 
 public class EphemeralNodeDeletionTest extends QuorumPeerTestBase {
     private static int SERVER_COUNT = 3;
@@ -150,11 +147,11 @@ public class EphemeralNodeDeletionTest extends QuorumPeerTestBase {
 
         // close the session and newly created ephemeral node should be deleted
         zk.close();
-        
+
         SyncCallback cb = new SyncCallback();
         followerZK.sync(nodePath, cb, null);
         cb.sync.await(CONNECTION_TIMEOUT, TimeUnit.MILLISECONDS);
-        
+
         nodeAtFollower = followerZK.exists(nodePath, false);
 
         // Problem 2: Before fix, after session close the ephemeral node
@@ -226,19 +223,21 @@ public class EphemeralNodeDeletionTest extends QuorumPeerTestBase {
 
     }
 
+
     static class MockTestQPMain extends TestQPMain {
         @Override
         protected QuorumPeer getQuorumPeer() throws SaslException {
             return new CustomQuorumPeer();
         }
     }
-    
+
+
     private static class SyncCallback implements AsyncCallback.VoidCallback {
         private final CountDownLatch sync = new CountDownLatch(1);
-        
+
         @Override
         public void processResult(int rc, String path, Object ctx) {
-        	sync.countDown();
+            sync.countDown();
         }
     }
 }

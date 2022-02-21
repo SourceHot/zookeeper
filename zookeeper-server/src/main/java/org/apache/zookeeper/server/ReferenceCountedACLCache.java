@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -27,27 +27,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class ReferenceCountedACLCache {
     private static final Logger LOG = LoggerFactory.getLogger(ReferenceCountedACLCache.class);
-
+    private static final long OPEN_UNSAFE_ACL_ID = -1L;
     final Map<Long, List<ACL>> longKeyMap =
             new HashMap<Long, List<ACL>>();
-
     final Map<List<ACL>, Long> aclKeyMap =
             new HashMap<List<ACL>, Long>();
-
     final Map<Long, AtomicLongWithEquals> referenceCounter =
             new HashMap<Long, AtomicLongWithEquals>();
-    private static final long OPEN_UNSAFE_ACL_ID = -1L;
-
     /**
      * these are the number of acls that we have in the datatree
      */
@@ -110,7 +101,8 @@ public class ReferenceCountedACLCache {
             List<ACL> aclList = new ArrayList<ACL>();
             Index j = ia.startVector("acls");
             if (j == null) {
-                throw new RuntimeException("Incorrent format of InputArchive when deserialize DataTree - missing acls");
+                throw new RuntimeException(
+                        "Incorrent format of InputArchive when deserialize DataTree - missing acls");
             }
             while (!j.done()) {
                 ACL acl = new ACL();
@@ -186,7 +178,8 @@ public class ReferenceCountedACLCache {
     }
 
     public synchronized void purgeUnused() {
-        Iterator<Map.Entry<Long, AtomicLongWithEquals>> refCountIter = referenceCounter.entrySet().iterator();
+        Iterator<Map.Entry<Long, AtomicLongWithEquals>> refCountIter =
+                referenceCounter.entrySet().iterator();
         while (refCountIter.hasNext()) {
             Map.Entry<Long, AtomicLongWithEquals> entry = refCountIter.next();
             if (entry.getValue().get() <= 0) {
@@ -208,8 +201,10 @@ public class ReferenceCountedACLCache {
 
         @Override
         public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+            if (this == o)
+                return true;
+            if (o == null || getClass() != o.getClass())
+                return false;
 
             return equals((AtomicLongWithEquals) o);
         }

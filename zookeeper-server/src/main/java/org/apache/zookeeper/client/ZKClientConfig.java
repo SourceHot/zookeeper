@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,12 +18,12 @@
 
 package org.apache.zookeeper.client;
 
-import java.io.File;
-
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.common.ZKConfig;
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig.ConfigException;
+
+import java.io.File;
 
 /**
  * Handles client specific properties
@@ -34,15 +34,17 @@ public class ZKClientConfig extends ZKConfig {
     public static final String ZK_SASL_CLIENT_USERNAME = "zookeeper.sasl.client.username";
     public static final String ZK_SASL_CLIENT_USERNAME_DEFAULT = "zookeeper";
     public static final String ZK_SASL_CLIENT_CANONICALIZE_HOSTNAME =
-        "zookeeper.sasl.client.canonicalize.hostname";
+            "zookeeper.sasl.client.canonicalize.hostname";
     public static final String ZK_SASL_CLIENT_CANONICALIZE_HOSTNAME_DEFAULT = "true";
     @SuppressWarnings("deprecation")
-    public static final String LOGIN_CONTEXT_NAME_KEY = ZooKeeperSaslClient.LOGIN_CONTEXT_NAME_KEY;;
+    public static final String LOGIN_CONTEXT_NAME_KEY = ZooKeeperSaslClient.LOGIN_CONTEXT_NAME_KEY;
+    ;
     public static final String LOGIN_CONTEXT_NAME_KEY_DEFAULT = "Client";
     @SuppressWarnings("deprecation")
     public static final String ENABLE_CLIENT_SASL_KEY = ZooKeeperSaslClient.ENABLE_CLIENT_SASL_KEY;
     @SuppressWarnings("deprecation")
-    public static final String ENABLE_CLIENT_SASL_DEFAULT = ZooKeeperSaslClient.ENABLE_CLIENT_SASL_DEFAULT;
+    public static final String ENABLE_CLIENT_SASL_DEFAULT =
+            ZooKeeperSaslClient.ENABLE_CLIENT_SASL_DEFAULT;
     public static final String ZOOKEEPER_SERVER_REALM = "zookeeper.server.realm";
     /**
      * This controls whether automatic watch resetting is enabled. Clients
@@ -52,7 +54,8 @@ public class ZKClientConfig extends ZKConfig {
      */
     public static final String DISABLE_AUTO_WATCH_RESET = "zookeeper.disableAutoWatchReset";
     @SuppressWarnings("deprecation")
-    public static final String ZOOKEEPER_CLIENT_CNXN_SOCKET = ZooKeeper.ZOOKEEPER_CLIENT_CNXN_SOCKET;
+    public static final String ZOOKEEPER_CLIENT_CNXN_SOCKET =
+            ZooKeeper.ZOOKEEPER_CLIENT_CNXN_SOCKET;
     /**
      * Setting this to "true" will enable encrypted client-server communication.
      */
@@ -102,7 +105,8 @@ public class ZKClientConfig extends ZKConfig {
          * backward compatibility for client specific properties
          */
         setProperty(ZK_SASL_CLIENT_USERNAME, System.getProperty(ZK_SASL_CLIENT_USERNAME));
-        setProperty(ZK_SASL_CLIENT_CANONICALIZE_HOSTNAME, System.getProperty(ZK_SASL_CLIENT_CANONICALIZE_HOSTNAME));
+        setProperty(ZK_SASL_CLIENT_CANONICALIZE_HOSTNAME,
+                System.getProperty(ZK_SASL_CLIENT_CANONICALIZE_HOSTNAME));
         setProperty(LOGIN_CONTEXT_NAME_KEY, System.getProperty(LOGIN_CONTEXT_NAME_KEY));
         setProperty(ENABLE_CLIENT_SASL_KEY, System.getProperty(ENABLE_CLIENT_SASL_KEY));
         setProperty(ZOOKEEPER_SERVER_REALM, System.getProperty(ZOOKEEPER_SERVER_REALM));

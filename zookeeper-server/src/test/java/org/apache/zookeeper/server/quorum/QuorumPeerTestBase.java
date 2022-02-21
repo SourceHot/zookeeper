@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,41 +17,35 @@
  */
 
 /**
- * 
+ *
  */
 package org.apache.zookeeper.server.quorum;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.FilenameFilter;
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.Properties;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZKTestCase;
 import org.apache.zookeeper.common.PathUtils;
-import org.apache.zookeeper.server.admin.AdminServer.AdminServerException;
 import org.apache.zookeeper.server.admin.JettyAdminServer;
 import org.apache.zookeeper.test.ClientBase;
 import org.apache.zookeeper.test.QuorumBase;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Properties;
+import java.util.Set;
 
 /**
  * Has some common functionality for tests that work with QuorumPeers. Override
  * process(WatchedEvent) to implement the Watcher interface
  */
 public class QuorumPeerTestBase extends ZKTestCase implements Watcher {
+    public static final int TIMEOUT = 5000;
     protected static final Logger LOG = LoggerFactory
             .getLogger(QuorumPeerTestBase.class);
-
-    public static final int TIMEOUT = 5000;
 
     public void process(WatchedEvent event) {
         // ignore for this test
@@ -65,18 +59,18 @@ public class QuorumPeerTestBase extends ZKTestCase implements Watcher {
             }
         }
     }
-    
-    public static class MainThread implements Runnable {
-        final File confFile;
-        final File tmpDir;
 
+
+    public static class MainThread implements Runnable {
         public static final int UNSET_STATIC_CLIENTPORT = -1;
         // standalone mode doens't need myid
         public static final int UNSET_MYID = -1;
-
+        final File confFile;
+        final File tmpDir;
         volatile TestQPMain main;
 
         File baseDir;
+        Thread currentThread;
         private int myid;
         private int clientPort;
         private String quorumCfgSection;
@@ -144,8 +138,11 @@ public class QuorumPeerTestBase extends ZKTestCase implements Watcher {
             this(myid, quorumCfgSection, true);
         }
 
-        public MainThread(int myid, String quorumCfgSection, Integer secureClientPort, boolean writeDynamicConfigFile)
-                throws  IOException {
+        public MainThread(int myid,
+                          String quorumCfgSection,
+                          Integer secureClientPort,
+                          boolean writeDynamicConfigFile)
+                throws IOException {
             this(myid, UNSET_STATIC_CLIENTPORT, JettyAdminServer.DEFAULT_PORT, secureClientPort,
                     quorumCfgSection, null, writeDynamicConfigFile, null);
         }
@@ -155,12 +152,19 @@ public class QuorumPeerTestBase extends ZKTestCase implements Watcher {
             this(myid, UNSET_STATIC_CLIENTPORT, quorumCfgSection, writeDynamicConfigFile);
         }
 
-        public MainThread(int myid, int clientPort, String quorumCfgSection, boolean writeDynamicConfigFile)
+        public MainThread(int myid,
+                          int clientPort,
+                          String quorumCfgSection,
+                          boolean writeDynamicConfigFile)
                 throws IOException {
-            this(myid, clientPort, JettyAdminServer.DEFAULT_PORT, quorumCfgSection, null, writeDynamicConfigFile);
+            this(myid, clientPort, JettyAdminServer.DEFAULT_PORT, quorumCfgSection, null,
+                    writeDynamicConfigFile);
         }
 
-        public MainThread(int myid, int clientPort, String quorumCfgSection, boolean writeDynamicConfigFile,
+        public MainThread(int myid,
+                          int clientPort,
+                          String quorumCfgSection,
+                          boolean writeDynamicConfigFile,
                           String version) throws IOException {
             this(myid, clientPort, JettyAdminServer.DEFAULT_PORT, quorumCfgSection, null,
                     writeDynamicConfigFile, version);
@@ -172,23 +176,32 @@ public class QuorumPeerTestBase extends ZKTestCase implements Watcher {
         }
 
         public MainThread(int myid, int clientPort, int adminServerPort, String quorumCfgSection,
-                String configs)  throws IOException {
+                          String configs) throws IOException {
             this(myid, clientPort, adminServerPort, quorumCfgSection, configs, true);
         }
 
         public MainThread(int myid, int clientPort, int adminServerPort, String quorumCfgSection,
-                String configs, boolean writeDynamicConfigFile)
+                          String configs, boolean writeDynamicConfigFile)
                 throws IOException {
-            this(myid, clientPort, adminServerPort, quorumCfgSection, configs, writeDynamicConfigFile, null);
+            this(myid, clientPort, adminServerPort, quorumCfgSection, configs,
+                    writeDynamicConfigFile, null);
         }
 
         public MainThread(int myid, int clientPort, int adminServerPort, String quorumCfgSection,
-                          String configs, boolean writeDynamicConfigFile, String version) throws IOException {
-            this(myid, clientPort, adminServerPort, null, quorumCfgSection, configs, writeDynamicConfigFile, version);
+                          String configs, boolean writeDynamicConfigFile, String version)
+                throws IOException {
+            this(myid, clientPort, adminServerPort, null, quorumCfgSection, configs,
+                    writeDynamicConfigFile, version);
         }
 
-        public MainThread(int myid, int clientPort, int adminServerPort, Integer secureClientPort,
-                          String quorumCfgSection, String configs, boolean writeDynamicConfigFile, String version)
+        public MainThread(int myid,
+                          int clientPort,
+                          int adminServerPort,
+                          Integer secureClientPort,
+                          String quorumCfgSection,
+                          String configs,
+                          boolean writeDynamicConfigFile,
+                          String version)
                 throws IOException {
             tmpDir = ClientBase.createTmpDir();
             LOG.info("id = " + myid + " tmpDir = " + tmpDir + " clientPort = "
@@ -205,7 +218,7 @@ public class QuorumPeerTestBase extends ZKTestCase implements Watcher {
             fwriter.write("tickTime=4000\n");
             fwriter.write("initLimit=10\n");
             fwriter.write("syncLimit=5\n");
-            if(configs != null){
+            if (configs != null) {
                 fwriter.write(configs);
             }
 
@@ -242,15 +255,27 @@ public class QuorumPeerTestBase extends ZKTestCase implements Watcher {
             fwriter.close();
         }
 
+        public MainThread(int myid, int clientPort, String quorumCfgSection)
+                throws IOException {
+            this(myid, clientPort, quorumCfgSection,
+                    new HashMap<String, String>());
+        }
+
+        public MainThread(int myid, int clientPort, String quorumCfgSection,
+                          Map<String, String> otherConfigs) throws IOException {
+            this(myid, clientPort, quorumCfgSection, otherConfigs, 4000);
+        }
+
         private String createDynamicFile(String quorumCfgSection, String version)
                 throws IOException {
             String filename = "zoo.cfg.dynamic";
-            if( version != null ){
+            if (version != null) {
                 filename = filename + "." + version;
             }
 
             File dynamicConfigFile = new File(tmpDir, filename);
-            String dynamicConfigFilename = PathUtils.normalizeFileSystemPath(dynamicConfigFile.toString());
+            String dynamicConfigFilename =
+                    PathUtils.normalizeFileSystemPath(dynamicConfigFile.toString());
 
             FileWriter fDynamicConfigWriter = new FileWriter(dynamicConfigFile);
             fDynamicConfigWriter.write(quorumCfgSection);
@@ -265,11 +290,12 @@ public class QuorumPeerTestBase extends ZKTestCase implements Watcher {
         }
 
         public File[] getFilesWithPrefix(final String prefix) {
-            return tmpDir.listFiles(new FilenameFilter() {      
+            return tmpDir.listFiles(new FilenameFilter() {
                 @Override
                 public boolean accept(File dir, String name) {
                     return name.startsWith(prefix);
-                }});
+                }
+            });
         }
 
         public File getFileByName(String filename) {
@@ -288,19 +314,6 @@ public class QuorumPeerTestBase extends ZKTestCase implements Watcher {
             fwriter.flush();
             fwriter.close();
         }
-
-        public MainThread(int myid, int clientPort, String quorumCfgSection)
-                throws IOException {
-            this(myid, clientPort, quorumCfgSection,
-                    new HashMap<String, String>());
-        }
-
-        public MainThread(int myid, int clientPort, String quorumCfgSection,
-                          Map<String, String> otherConfigs) throws IOException {
-            this(myid, clientPort, quorumCfgSection, otherConfigs, 4000);
-        }
-
-        Thread currentThread;
 
         synchronized public void start() {
             main = getTestQPMain();

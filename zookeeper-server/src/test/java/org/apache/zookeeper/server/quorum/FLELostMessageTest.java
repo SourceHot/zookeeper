@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,18 +18,8 @@
 
 package org.apache.zookeeper.server.quorum;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.util.HashMap;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.zookeeper.PortAssignment;
 import org.apache.zookeeper.ZKTestCase;
-import org.apache.zookeeper.server.quorum.FastLeaderElection;
-import org.apache.zookeeper.server.quorum.QuorumCnxManager;
-import org.apache.zookeeper.server.quorum.QuorumPeer;
 import org.apache.zookeeper.server.quorum.QuorumPeer.QuorumServer;
 import org.apache.zookeeper.server.quorum.QuorumPeer.ServerState;
 import org.apache.zookeeper.test.ClientBase;
@@ -37,12 +27,19 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.util.HashMap;
 
 public class FLELostMessageTest extends ZKTestCase {
     protected static final Logger LOG = LoggerFactory.getLogger(FLELostMessageTest.class);
 
     int count;
-    HashMap<Long,QuorumServer> peers;
+    HashMap<Long, QuorumServer> peers;
     File tmpdir[];
     int port[];
 
@@ -52,7 +49,7 @@ public class FLELostMessageTest extends ZKTestCase {
     public void setUp() throws Exception {
         count = 3;
 
-        peers = new HashMap<Long,QuorumServer>(count);
+        peers = new HashMap<Long, QuorumServer>(count);
         tmpdir = new File[count];
         port = new int[count];
     }
@@ -65,7 +62,7 @@ public class FLELostMessageTest extends ZKTestCase {
     @Test
     public void testLostMessage() throws Exception {
         LOG.info("TestLE: {}, {}", getTestName(), count);
-        for(int i = 0; i < count; i++) {
+        for (int i = 0; i < count; i++) {
             int clientport = PortAssignment.unique();
             peers.put(Long.valueOf(i),
                     new QuorumServer(i,

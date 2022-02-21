@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,12 +17,6 @@
  */
 
 package org.apache.zookeeper.test;
-
-import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.Socket;
-
 
 import org.apache.jute.BinaryOutputArchive;
 import org.apache.zookeeper.ZooDefs;
@@ -35,11 +29,16 @@ import org.apache.zookeeper.proto.RequestHeader;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.Socket;
+
 public class SessionInvalidationTest extends ClientBase {
     /**
      * Test solution for ZOOKEEPER-1208. Verify that operations are not
      * accepted after a close session.
-     * 
+     *
      * We're using our own marshalling here in order to force an operation
      * after the session is closed (ZooKeeper.class will not allow this). Also
      * by filling the pipe with operations it increases the likelyhood that
@@ -70,9 +69,9 @@ public class SessionInvalidationTest extends ClientBase {
                     Ids.OPEN_ACL_UNSAFE, 1);
             createReq.serialize(boa, "request");
             baos.close();
-            
+
             System.out.println("Length:" + baos.toByteArray().length);
-            
+
             String hp[] = hostPort.split(":");
             Socket sock = new Socket(hp[0], Integer.parseInt(hp[1]));
             InputStream resultStream = null;
@@ -81,7 +80,7 @@ public class SessionInvalidationTest extends ClientBase {
                 byte[] data = baos.toByteArray();
                 outstream.write(data);
                 outstream.flush();
-                
+
                 resultStream = sock.getInputStream();
                 byte[] b = new byte[10000];
                 int len;
@@ -96,7 +95,7 @@ public class SessionInvalidationTest extends ClientBase {
                 sock.close();
             }
         }
-        
+
         ZooKeeper zk = createClient();
         Assert.assertEquals(1, zk.getChildren("/", false).size());
 

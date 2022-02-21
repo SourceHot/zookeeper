@@ -17,13 +17,14 @@
  */
 package org.apache.zookeeper.server;
 
+import org.apache.jute.Record;
+import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.proto.ReplyHeader;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.security.cert.Certificate;
-import org.apache.jute.Record;
-import org.apache.zookeeper.WatchedEvent;
-import org.apache.zookeeper.proto.ReplyHeader;
 
 public class MockServerCnxn extends ServerCnxn {
     public Certificate[] clientChain;
@@ -32,6 +33,10 @@ public class MockServerCnxn extends ServerCnxn {
     @Override
     int getSessionTimeout() {
         return 0;
+    }
+
+    @Override
+    void setSessionTimeout(int sessionTimeout) {
     }
 
     @Override
@@ -85,10 +90,6 @@ public class MockServerCnxn extends ServerCnxn {
 
     @Override
     void disableRecv() {
-    }
-
-    @Override
-    void setSessionTimeout(int sessionTimeout) {
     }
 
     @Override

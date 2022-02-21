@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,22 +18,21 @@
 
 package org.apache.zookeeper.test;
 
-import java.io.IOException;
-
 import org.apache.zookeeper.TestableZooKeeper;
 import org.apache.zookeeper.common.X509Exception.SSLContextException;
-
-import static org.apache.zookeeper.client.FourLetterWordMain.send4LetterWord;
-
 import org.apache.zookeeper.server.command.FourLetterCommands;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+
+import static org.apache.zookeeper.client.FourLetterWordMain.send4LetterWord;
+
 public class FourLetterWordsWhiteListTest extends ClientBase {
     protected static final Logger LOG =
-        LoggerFactory.getLogger(FourLetterWordsWhiteListTest.class);
+            LoggerFactory.getLogger(FourLetterWordsWhiteListTest.class);
 
     /*
      * ZOOKEEPER-2693: test white list of four letter words.
@@ -41,7 +40,7 @@ public class FourLetterWordsWhiteListTest extends ClientBase {
      * the case (except 'stat' command which is enabled in ClientBase
      * which other tests depend on.).
      */
-    @Test(timeout=30000)
+    @Test(timeout = 30000)
     public void testFourLetterWordsAllDisabledByDefault() throws Exception {
         stopServer();
         FourLetterCommands.resetWhiteList();
@@ -65,7 +64,7 @@ public class FourLetterWordsWhiteListTest extends ClientBase {
         verifyAllCommandsFail();
     }
 
-    @Test(timeout=30000)
+    @Test(timeout = 30000)
     public void testFourLetterWordsEnableSomeCommands() throws Exception {
         stopServer();
         FourLetterCommands.resetWhiteList();
@@ -92,7 +91,7 @@ public class FourLetterWordsWhiteListTest extends ClientBase {
         verifyExactMatch("mntr", generateExpectedMessage("mntr"));
     }
 
-    @Test(timeout=30000)
+    @Test(timeout = 30000)
     public void testISROEnabledWhenReadOnlyModeEnabled() throws Exception {
         stopServer();
         FourLetterCommands.resetWhiteList();
@@ -103,7 +102,7 @@ public class FourLetterWordsWhiteListTest extends ClientBase {
         System.clearProperty("readonlymode.enabled");
     }
 
-    @Test(timeout=30000)
+    @Test(timeout = 30000)
     public void testFourLetterWordsInvalidConfiguration() throws Exception {
         stopServer();
         FourLetterCommands.resetWhiteList();
@@ -118,7 +117,7 @@ public class FourLetterWordsWhiteListTest extends ClientBase {
         verifyFuzzyMatch("stat", "Outstanding");
     }
 
-    @Test(timeout=30000)
+    @Test(timeout = 30000)
     public void testFourLetterWordsEnableAllCommandsThroughAsterisk() throws Exception {
         stopServer();
         FourLetterCommands.resetWhiteList();
@@ -127,7 +126,7 @@ public class FourLetterWordsWhiteListTest extends ClientBase {
         verifyAllCommandsSuccess();
     }
 
-    @Test(timeout=30000)
+    @Test(timeout = 30000)
     public void testFourLetterWordsEnableAllCommandsThroughExplicitList() throws Exception {
         stopServer();
         FourLetterCommands.resetWhiteList();
@@ -229,11 +228,12 @@ public class FourLetterWordsWhiteListTest extends ClientBase {
     }
 
     private String sendRequest(String cmd) throws IOException, SSLContextException {
-      HostPort hpobj = ClientBase.parseHostPortList(hostPort).get(0);
-      return send4LetterWord(hpobj.host, hpobj.port, cmd);
+        HostPort hpobj = ClientBase.parseHostPortList(hostPort).get(0);
+        return send4LetterWord(hpobj.host, hpobj.port, cmd);
     }
 
-    private void verifyFuzzyMatch(String cmd, String expected) throws IOException, SSLContextException {
+    private void verifyFuzzyMatch(String cmd, String expected)
+            throws IOException, SSLContextException {
         String resp = sendRequest(cmd);
         LOG.info("cmd " + cmd + " expected " + expected + " got " + resp);
         Assert.assertTrue(resp.contains(expected));
@@ -243,7 +243,8 @@ public class FourLetterWordsWhiteListTest extends ClientBase {
         return command + " is not executed because it is not in the whitelist.";
     }
 
-    private void verifyExactMatch(String cmd, String expected) throws IOException, SSLContextException {
+    private void verifyExactMatch(String cmd, String expected)
+            throws IOException, SSLContextException {
         String resp = sendRequest(cmd);
         LOG.info("cmd " + cmd + " expected an exact match of " + expected + "; got " + resp);
         Assert.assertTrue(resp.trim().equals(expected));

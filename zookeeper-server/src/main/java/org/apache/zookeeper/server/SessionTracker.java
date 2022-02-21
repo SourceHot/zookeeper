@@ -18,20 +18,19 @@
 
 package org.apache.zookeeper.server;
 
+import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.KeeperException.SessionExpiredException;
+
 import java.io.PrintWriter;
 import java.util.Map;
 import java.util.Set;
-
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.KeeperException.SessionExpiredException;
-import org.apache.zookeeper.KeeperException.SessionMovedException;
 
 /**
  * This is the basic interface that ZooKeeperServer uses to track sessions. The
  * standalone and leader ZooKeeperServer use the same SessionTracker. The
  * FollowerZooKeeperServer uses a SessionTracker which is basically a simple
  * shell to track information to be forwarded to the leader.
- *
+ * <p>
  * 会话跟踪器
  */
 public interface SessionTracker {
@@ -39,6 +38,7 @@ public interface SessionTracker {
 
     /**
      * Add a global session to those being tracked.
+     *
      * @param id sessionId
      * @param to sessionTimeout
      * @return whether the session was newly added (if false, already existed)
@@ -48,6 +48,7 @@ public interface SessionTracker {
     /**
      * Add a session to those being tracked. The session is added as a local
      * session if they are enabled, otherwise as global.
+     *
      * @param id sessionId
      * @param to sessionTimeout
      * @return whether the session was newly added (if false, already existed)
@@ -63,6 +64,7 @@ public interface SessionTracker {
 
     /**
      * Mark that the session is in the process of closing.
+     *
      * @param sessionId
      */
     void setSessionClosing(long sessionId);
@@ -87,7 +89,7 @@ public interface SessionTracker {
      * Checks whether the SessionTracker is aware of this session, the session
      * is still active, and the owner matches. If the owner wasn't previously
      * set, this sets the owner of the session.
-     *
+     * <p>
      * UnknownSessionException should never been thrown to the client. It is
      * only used internally to deal with possible local session from other
      * machine
@@ -102,6 +104,7 @@ public interface SessionTracker {
 
     /**
      * Strictly check that a given session is a global session or not
+     *
      * @param sessionId
      * @param owner
      * @throws KeeperException.SessionExpiredException
@@ -115,6 +118,7 @@ public interface SessionTracker {
 
     /**
      * Text dump of session information, suitable for debugging.
+     *
      * @param pwriter the output writer
      */
     void dumpSessions(PrintWriter pwriter);
@@ -131,6 +135,7 @@ public interface SessionTracker {
 
         boolean isClosing();
     }
+
 
     interface SessionExpirer {
         void expire(Session session);

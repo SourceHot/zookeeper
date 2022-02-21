@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,30 +18,31 @@
 
 package org.apache.zookeeper.test;
 
-import java.io.File;
-import java.util.List;
-
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.PortAssignment;
 import org.apache.zookeeper.ZKTestCase;
-import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooDefs.Ids;
-import org.apache.zookeeper.server.quorum.Leader.Proposal;
+import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.server.ServerCnxnFactory;
 import org.apache.zookeeper.server.SyncRequestProcessor;
 import org.apache.zookeeper.server.ZooKeeperServer;
+import org.apache.zookeeper.server.quorum.Leader.Proposal;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.util.List;
+
 /** After a replica starts, it should load commits in its committedLog list.
  *  This test checks if committedLog != 0 after replica restarted.
  */
-public class RestoreCommittedLogTest extends ZKTestCase{
+public class RestoreCommittedLogTest extends ZKTestCase {
     private static final Logger LOG = LoggerFactory.getLogger(RestoreCommittedLogTest.class);
     private static final String HOSTPORT = "127.0.0.1:" + PortAssignment.unique();
     private static final int CONNECTION_TIMEOUT = 3000;
+
     /**
      * test the purge
      * @throws Exception an exception might be thrown here
@@ -56,10 +57,10 @@ public class RestoreCommittedLogTest extends ZKTestCase{
         ServerCnxnFactory f = ServerCnxnFactory.createFactory(PORT, -1);
         f.startup(zks);
         Assert.assertTrue("waiting for server being up ",
-                ClientBase.waitForServerUp(HOSTPORT,CONNECTION_TIMEOUT));
+                ClientBase.waitForServerUp(HOSTPORT, CONNECTION_TIMEOUT));
         ZooKeeper zk = ClientBase.createZKClient(HOSTPORT);
         try {
-            for (int i = 0; i< 2000; i++) {
+            for (int i = 0; i < 2000; i++) {
                 zk.create("/invalidsnap-" + i, new byte[0], Ids.OPEN_ACL_UNSAFE,
                         CreateMode.PERSISTENT);
             }

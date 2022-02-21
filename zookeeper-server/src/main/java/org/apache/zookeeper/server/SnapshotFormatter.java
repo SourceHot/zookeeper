@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,6 +17,12 @@
  */
 
 package org.apache.zookeeper.server;
+
+import org.apache.jute.BinaryInputArchive;
+import org.apache.jute.InputArchive;
+import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.zookeeper.data.StatPersisted;
+import org.apache.zookeeper.server.persistence.FileSnap;
 
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
@@ -28,12 +34,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.zip.Adler32;
 import java.util.zip.CheckedInputStream;
-
-import org.apache.jute.BinaryInputArchive;
-import org.apache.jute.InputArchive;
-import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.zookeeper.data.StatPersisted;
-import org.apache.zookeeper.server.persistence.FileSnap;
 
 /**
  * Dump a snapshot file to stdout.
@@ -52,18 +52,18 @@ public class SnapshotFormatter {
 
         new SnapshotFormatter().run(args[0]);
     }
-    
+
     public void run(String snapshotFileName) throws IOException {
         InputStream is = new CheckedInputStream(
                 new BufferedInputStream(new FileInputStream(snapshotFileName)),
                 new Adler32());
         InputArchive ia = BinaryInputArchive.getArchive(is);
-        
+
         FileSnap fileSnap = new FileSnap(null);
 
         DataTree dataTree = new DataTree();
         Map<Long, Integer> sessions = new HashMap<Long, Integer>();
-        
+
         fileSnap.deserialize(dataTree, sessions, ia);
 
         printDetails(dataTree, sessions);
@@ -77,7 +77,7 @@ public class SnapshotFormatter {
     private void printZnodeDetails(DataTree dataTree) {
         System.out.println(String.format("ZNode Details (count=%d):",
                 dataTree.getNodeCount()));
-        
+
         printZnode(dataTree, "/");
         System.out.println("----");
     }
@@ -86,7 +86,7 @@ public class SnapshotFormatter {
         System.out.println("----");
         DataNode n = dataTree.getNode(name);
         Set<String> children;
-        synchronized(n) { // keep findbugs happy
+        synchronized (n) { // keep findbugs happy
             System.out.println(name);
             printStat(n.stat);
             if (n.data != null) {

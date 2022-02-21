@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,19 +18,14 @@
 
 package org.apache.zookeeper.client;
 
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Random;
-
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
+import java.util.*;
 
 /**
  * Most simple HostProvider, resolves on every next() call.
@@ -42,42 +37,29 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Public
 public final class StaticHostProvider implements HostProvider {
-    public interface Resolver {
-        InetAddress[] getAllByName(String name) throws UnknownHostException;
-    }
-
     private static final Logger LOG = LoggerFactory
             .getLogger(StaticHostProvider.class);
-
+    private final List<InetSocketAddress> oldServers = new ArrayList<InetSocketAddress>(
+            5);
+    private final List<InetSocketAddress> newServers = new ArrayList<InetSocketAddress>(
+            5);
     private List<InetSocketAddress> serverAddresses = new ArrayList<InetSocketAddress>(
             5);
-
     private Random sourceOfRandomness;
     private int lastIndex = -1;
-
     private int currentIndex = -1;
-
     /**
      * The following fields are used to migrate clients during reconfiguration
      */
     private boolean reconfigMode = false;
-
-    private final List<InetSocketAddress> oldServers = new ArrayList<InetSocketAddress>(
-            5);
-
-    private final List<InetSocketAddress> newServers = new ArrayList<InetSocketAddress>(
-            5);
-
     private int currentIndexOld = -1;
     private int currentIndexNew = -1;
-
     private float pOld, pNew;
-
     private Resolver resolver;
 
     /**
      * Constructs a SimpleHostSet.
-     * 
+     *
      * @param serverAddresses
      *            possibly unresolved ZooKeeper server addresses
      * @throws IllegalArgumentException
@@ -87,11 +69,11 @@ public final class StaticHostProvider implements HostProvider {
         init(serverAddresses,
                 System.currentTimeMillis() ^ this.hashCode(),
                 new Resolver() {
-            @Override
-            public InetAddress[] getAllByName(String name) throws UnknownHostException {
-                return InetAddress.getAllByName(name);
-            }
-        });
+                    @Override
+                    public InetAddress[] getAllByName(String name) throws UnknownHostException {
+                        return InetAddress.getAllByName(name);
+                    }
+                });
     }
 
     /**
@@ -112,7 +94,7 @@ public final class StaticHostProvider implements HostProvider {
     /**
      * Constructs a SimpleHostSet. This constructor is used from StaticHostProviderTest to produce deterministic test results
      * by initializing sourceOfRandomness with the same seed
-     * 
+     *
      * @param serverAddresses
      *            possibly unresolved ZooKeeper server addresses
      * @param randomnessSeed a seed used to initialize sourceOfRandomnes
@@ -120,7 +102,7 @@ public final class StaticHostProvider implements HostProvider {
      *             if serverAddresses is empty or resolves to an empty list
      */
     public StaticHostProvider(Collection<InetSocketAddress> serverAddresses,
-        long randomnessSeed) {
+                              long randomnessSeed) {
         init(serverAddresses, randomnessSeed, new Resolver() {
             @Override
             public InetAddress[] getAllByName(String name) throws UnknownHostException {
@@ -129,7 +111,9 @@ public final class StaticHostProvider implements HostProvider {
         });
     }
 
-    private void init(Collection<InetSocketAddress> serverAddresses, long randomnessSeed, Resolver resolver) {
+    private void init(Collection<InetSocketAddress> serverAddresses,
+                      long randomnessSeed,
+                      Resolver resolver) {
         this.sourceOfRandomness = new Random(randomnessSeed);
         this.resolver = resolver;
         if (serverAddresses.isEmpty()) {
@@ -144,7 +128,8 @@ public final class StaticHostProvider implements HostProvider {
     private InetSocketAddress resolve(InetSocketAddress address) {
         try {
             String curHostString = address.getHostString();
-            List<InetAddress> resolvedAddresses = new ArrayList<>(Arrays.asList(this.resolver.getAllByName(curHostString)));
+            List<InetAddress> resolvedAddresses =
+                    new ArrayList<>(Arrays.asList(this.resolver.getAllByName(curHostString)));
             if (resolvedAddresses.isEmpty()) {
                 return address;
             }
@@ -165,14 +150,14 @@ public final class StaticHostProvider implements HostProvider {
 
     /**
      * Update the list of servers. This returns true if changing connections is necessary for load-balancing, false
-	 * otherwise. Changing connections is necessary if one of the following holds: 
+     * otherwise. Changing connections is necessary if one of the following holds:
      * a) the host to which this client is currently connected is not in serverAddresses.
-     *    Otherwise (if currentHost is in the new list serverAddresses):   
+     *    Otherwise (if currentHost is in the new list serverAddresses):
      * b) the number of servers in the cluster is increasing - in this case the load on currentHost should decrease,
      *    which means that SOME of the clients connected to it will migrate to the new servers. The decision whether
-     *    this client migrates or not (i.e., whether true or false is returned) is probabilistic so that the expected 
+     *    this client migrates or not (i.e., whether true or false is returned) is probabilistic so that the expected
      *    number of clients connected to each server is the same.
-     *    
+     *
      * If true is returned, the function sets pOld and pNew that correspond to the probability to migrate to ones of the
      * new servers in serverAddresses or one of the old servers (migrating to one of the old servers is done only
      * if our client's currentHost is not in serverAddresses). See nextHostInReconfigMode for the selection logic.
@@ -183,7 +168,7 @@ public final class StaticHostProvider implements HostProvider {
      *
      * @param serverAddresses new host list
      * @param currentHost the host to which this client is currently connected
-     * @return true if changing connections is necessary for load-balancing, false otherwise  
+     * @return true if changing connections is necessary for load-balancing, false otherwise
      */
     @Override
     public synchronized boolean updateServerList(
@@ -219,9 +204,9 @@ public final class StaticHostProvider implements HostProvider {
         for (InetSocketAddress addr : shuffledList) {
             if (addr.getPort() == myServer.getPort()
                     && ((addr.getAddress() != null
-                            && myServer.getAddress() != null && addr
-                            .getAddress().equals(myServer.getAddress())) || addr
-                            .getHostString().equals(myServer.getHostString()))) {
+                    && myServer.getAddress() != null && addr
+                    .getAddress().equals(myServer.getAddress())) || addr
+                    .getHostString().equals(myServer.getHostString()))) {
                 myServerInNewConfig = true;
                 break;
             }
@@ -290,12 +275,13 @@ public final class StaticHostProvider implements HostProvider {
     }
 
     public synchronized InetSocketAddress getServerAtIndex(int i) {
-    	if (i < 0 || i >= serverAddresses.size()) return null;
-    	return serverAddresses.get(i);
+        if (i < 0 || i >= serverAddresses.size())
+            return null;
+        return serverAddresses.get(i);
     }
-    
+
     public synchronized InetSocketAddress getServerAtCurrentIndex() {
-    	return getServerAtIndex(currentIndex);
+        return getServerAtIndex(currentIndex);
     }
 
     public synchronized int size() {
@@ -303,11 +289,11 @@ public final class StaticHostProvider implements HostProvider {
     }
 
     /**
-     * Get the next server to connect to, when in "reconfigMode", which means that 
-     * you've just updated the server list, and now trying to find some server to connect to. 
+     * Get the next server to connect to, when in "reconfigMode", which means that
+     * you've just updated the server list, and now trying to find some server to connect to.
      * Once onConnected() is called, reconfigMode is set to false. Similarly, if we tried to connect
      * to all servers in new config and failed, reconfigMode is set to false.
-     * 
+     *
      * While in reconfigMode, we should connect to a server in newServers with probability pNew and to servers in
      * oldServers with probability pOld (which is just 1-pNew). If we tried out all servers in either oldServers
      * or newServers we continue to try servers from the other set, regardless of pNew or pOld. If we tried all servers
@@ -342,24 +328,24 @@ public final class StaticHostProvider implements HostProvider {
         boolean needToSleep = false;
         InetSocketAddress addr;
 
-        synchronized(this) {
+        synchronized (this) {
             if (reconfigMode) {
                 addr = nextHostInReconfigMode();
                 if (addr != null) {
-                	currentIndex = serverAddresses.indexOf(addr);
-                	return resolve(addr);
+                    currentIndex = serverAddresses.indexOf(addr);
+                    return resolve(addr);
                 }
                 //tried all servers and couldn't connect
                 reconfigMode = false;
                 needToSleep = (spinDelay > 0);
-            }        
+            }
             ++currentIndex;
             if (currentIndex == serverAddresses.size()) {
                 currentIndex = 0;
-            }            
+            }
             addr = serverAddresses.get(currentIndex);
             needToSleep = needToSleep || (currentIndex == lastIndex && spinDelay > 0);
-            if (lastIndex == -1) { 
+            if (lastIndex == -1) {
                 // We don't want to sleep on the first ever connect attempt.
                 lastIndex = 0;
             }
@@ -378,6 +364,10 @@ public final class StaticHostProvider implements HostProvider {
     public synchronized void onConnected() {
         lastIndex = currentIndex;
         reconfigMode = false;
+    }
+
+    public interface Resolver {
+        InetAddress[] getAllByName(String name) throws UnknownHostException;
     }
 
 }

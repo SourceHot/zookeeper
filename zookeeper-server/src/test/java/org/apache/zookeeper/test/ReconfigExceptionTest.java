@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,16 +18,10 @@
 
 package org.apache.zookeeper.test;
 
-import static org.junit.Assert.fail;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.TimeoutException;
-import org.apache.zookeeper.ZKTestCase;
 import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.PortAssignment;
+import org.apache.zookeeper.ZKTestCase;
+import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.admin.ZooKeeperAdmin;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Id;
@@ -39,6 +33,14 @@ import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.TimeoutException;
+
+import static org.junit.Assert.fail;
 
 public class ReconfigExceptionTest extends ZKTestCase {
     private static final Logger LOG = LoggerFactory
@@ -153,7 +155,8 @@ public class ReconfigExceptionTest extends ZKTestCase {
             ArrayList<ACL> acls = new ArrayList<ACL>(
                     Collections.singletonList(
                             new ACL(ZooDefs.Perms.READ,
-                                    new Id("digest", "user:tl+z3z0vO6PfPfEENfLF96E6pM0="/* password is test */))));
+                                    new Id("digest",
+                                            "user:tl+z3z0vO6PfPfEENfLF96E6pM0="/* password is test */))));
             zkAdmin.setACL(ZooDefs.CONFIG_NODE, acls, -1);
             resetZKAdmin();
             zkAdmin.addAuthInfo("digest", "user:test".getBytes());
@@ -173,7 +176,8 @@ public class ReconfigExceptionTest extends ZKTestCase {
             ArrayList<ACL> acls = new ArrayList<ACL>(
                     Collections.singletonList(
                             new ACL(ZooDefs.Perms.WRITE,
-                            new Id("digest", "user:tl+z3z0vO6PfPfEENfLF96E6pM0="/* password is test */))));
+                                    new Id("digest",
+                                            "user:tl+z3z0vO6PfPfEENfLF96E6pM0="/* password is test */))));
             zkAdmin.setACL(ZooDefs.CONFIG_NODE, acls, -1);
             resetZKAdmin();
             zkAdmin.addAuthInfo("digest", "user:test".getBytes());

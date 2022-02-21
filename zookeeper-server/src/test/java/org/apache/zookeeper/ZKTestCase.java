@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,14 +18,16 @@
 
 package org.apache.zookeeper;
 
-import static org.junit.Assert.fail;
-import java.time.LocalDateTime;
 import org.junit.Rule;
 import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.time.LocalDateTime;
+
+import static org.junit.Assert.fail;
 
 
 /**
@@ -40,14 +42,9 @@ public class ZKTestCase {
     private static final Logger LOG = LoggerFactory.getLogger(ZKTestCase.class);
 
     private String testName;
-
-    protected String getTestName() {
-        return testName;
-    }
-
     @Rule
-    public TestWatcher watchman= new TestWatcher() {
-        
+    public TestWatcher watchman = new TestWatcher() {
+
         @Override
         public void starting(Description method) {
             // By default, disable starting a JettyAdminServer in tests to avoid
@@ -77,11 +74,9 @@ public class ZKTestCase {
         }
 
     };
-    public interface WaitForCondition {
-        /**
-         * @return true when success
-         */
-        boolean evaluate();
+
+    protected String getTestName() {
+        return testName;
     }
 
     /**
@@ -92,7 +87,8 @@ public class ZKTestCase {
      * @param timeout   timeout in seconds
      * @throws InterruptedException
      */
-    public void waitFor(String msg, WaitForCondition condition, int timeout) throws InterruptedException {
+    public void waitFor(String msg, WaitForCondition condition, int timeout)
+            throws InterruptedException {
         final LocalDateTime deadline = LocalDateTime.now().plusSeconds(timeout);
         while (LocalDateTime.now().isBefore(deadline)) {
             if (condition.evaluate()) {
@@ -101,6 +97,13 @@ public class ZKTestCase {
             Thread.sleep(100);
         }
         fail(msg);
+    }
+
+    public interface WaitForCondition {
+        /**
+         * @return true when success
+         */
+        boolean evaluate();
     }
 
 }

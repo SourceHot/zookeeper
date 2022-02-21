@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,21 +18,8 @@
 
 package org.apache.zookeeper.test;
 
-import static org.apache.zookeeper.test.ClientBase.CONNECTION_TIMEOUT;
-
-import java.io.File;
-import java.util.ArrayList;
-import java.util.concurrent.CountDownLatch;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.PortAssignment;
-import org.apache.zookeeper.WatchedEvent;
-import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.*;
 import org.apache.zookeeper.Watcher.Event.KeeperState;
-import org.apache.zookeeper.ZKTestCase;
-import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Id;
@@ -42,11 +29,19 @@ import org.apache.zookeeper.server.ZooKeeperServer;
 import org.apache.zookeeper.server.auth.IPAuthenticationProvider;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.concurrent.CountDownLatch;
+
+import static org.apache.zookeeper.test.ClientBase.CONNECTION_TIMEOUT;
 
 public class ACLTest extends ZKTestCase implements Watcher {
     private static final Logger LOG = LoggerFactory.getLogger(ACLTest.class);
     private static final String HOSTPORT =
-        "127.0.0.1:" + PortAssignment.unique();
+            "127.0.0.1:" + PortAssignment.unique();
     private volatile CountDownLatch startSignal;
 
     @Test
@@ -122,7 +117,7 @@ public class ACLTest extends ZKTestCase implements Watcher {
                 ACL acl = new ACL();
                 acl.setPerms(0);
                 Id id = new Id();
-                id.setId("1.1.1."+j);
+                id.setId("1.1.1." + j);
                 id.setScheme("ip");
                 acl.setId(id);
                 ArrayList<ACL> list = new ArrayList<ACL>();
@@ -144,7 +139,7 @@ public class ACLTest extends ZKTestCase implements Watcher {
         f.startup(zks);
         try {
             Assert.assertTrue("waiting for server up",
-                       ClientBase.waitForServerUp(HOSTPORT, CONNECTION_TIMEOUT));
+                    ClientBase.waitForServerUp(HOSTPORT, CONNECTION_TIMEOUT));
             zk = ClientBase.createZKClient(HOSTPORT);
             Assert.assertTrue("acl map ", (102 == zks.getZKDatabase().getAclSize()));
             for (int j = 200; j < 205; j++) {
@@ -152,7 +147,7 @@ public class ACLTest extends ZKTestCase implements Watcher {
                 ACL acl = new ACL();
                 acl.setPerms(0);
                 Id id = new Id();
-                id.setId("1.1.1."+j);
+                id.setId("1.1.1." + j);
                 id.setScheme("ip");
                 acl.setId(id);
                 ArrayList<ACL> list = new ArrayList<ACL>();
@@ -160,14 +155,14 @@ public class ACLTest extends ZKTestCase implements Watcher {
                 zk.create(path, path.getBytes(), list, CreateMode.PERSISTENT);
             }
             Assert.assertTrue("acl map ", (107 == zks.getZKDatabase().getAclSize()));
-    
+
             zk.close();
         } finally {
             f.shutdown();
             zks.shutdown();
             Assert.assertTrue("waiting for server down",
-                       ClientBase.waitForServerDown(HOSTPORT,
-                               ClientBase.CONNECTION_TIMEOUT));
+                    ClientBase.waitForServerDown(HOSTPORT,
+                            ClientBase.CONNECTION_TIMEOUT));
         }
 
     }
@@ -179,7 +174,7 @@ public class ACLTest extends ZKTestCase implements Watcher {
      */
     public void process(WatchedEvent event) {
         LOG.info("Event:" + event.getState() + " " + event.getType() + " "
-                 + event.getPath());
+                + event.getPath());
         if (event.getState() == KeeperState.SyncConnected) {
             if (startSignal != null && startSignal.getCount() > 0) {
                 LOG.info("startsignal.countDown()");

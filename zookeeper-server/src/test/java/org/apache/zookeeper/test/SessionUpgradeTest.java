@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -39,9 +39,8 @@ import org.slf4j.LoggerFactory;
  * persistence, i.e. creating an ephemeral node.
  */
 public class SessionUpgradeTest extends ZKTestCase {
-    protected static final Logger LOG = LoggerFactory.getLogger(SessionUpgradeTest.class);
     public static final int CONNECTION_TIMEOUT = ClientBase.CONNECTION_TIMEOUT;
-
+    protected static final Logger LOG = LoggerFactory.getLogger(SessionUpgradeTest.class);
     private final QuorumBase qb = new QuorumBase();
 
     @Before
@@ -72,7 +71,7 @@ public class SessionUpgradeTest extends ZKTestCase {
     private void testLocalSessionsWithoutEphemeral(boolean testLeader)
             throws Exception {
         String nodePrefix = "/testLocalSessions-"
-            + (testLeader ? "leaderTest-" : "followerTest-");
+                + (testLeader ? "leaderTest-" : "followerTest-");
         int leaderIdx = qb.getLeaderIndex();
         Assert.assertFalse("No leader in quorum?", leaderIdx == -1);
         int followerIdx = (leaderIdx + 1) % 5;
@@ -87,7 +86,7 @@ public class SessionUpgradeTest extends ZKTestCase {
         // Try creating some data.
         for (int i = 0; i < 5; i++) {
             zk.create(nodePrefix + i, new byte[0],
-                      ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+                    ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
         }
 
         long localSessionId = zk.getSessionId();
@@ -102,7 +101,7 @@ public class SessionUpgradeTest extends ZKTestCase {
                     localSessionId, localSessionPwd);
 
             zknew.create(nodePrefix + "5", new byte[0],
-                         ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+                    ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
             Assert.fail("Connection on the same session ID should fail.");
         } catch (KeeperException.SessionExpiredException e) {
         } catch (KeeperException.ConnectionLossException e) {
@@ -118,8 +117,8 @@ public class SessionUpgradeTest extends ZKTestCase {
                         watcher, localSessionId, localSessionPwd);
 
                 zknew.create(nodePrefix + "5", new byte[0],
-                             ZooDefs.Ids.OPEN_ACL_UNSAFE,
-                             CreateMode.PERSISTENT);
+                        ZooDefs.Ids.OPEN_ACL_UNSAFE,
+                        CreateMode.PERSISTENT);
                 Assert.fail("Connection on the same session ID should fail.");
             } catch (KeeperException.SessionExpiredException e) {
             } catch (KeeperException.ConnectionLossException e) {
@@ -138,7 +137,7 @@ public class SessionUpgradeTest extends ZKTestCase {
         watcher.waitForConnected(CONNECTION_TIMEOUT);
 
         zk.create(nodePrefix + "6", new byte[0],
-                  ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+                ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
 
         // If we explicitly close the session, then the session id should no
         // longer be valid.
@@ -150,7 +149,7 @@ public class SessionUpgradeTest extends ZKTestCase {
                     localSessionId, localSessionPwd);
 
             zk.create(nodePrefix + "7", new byte[0],
-                      ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+                    ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
             Assert.fail("Reconnecting to a closed session ID should fail.");
         } catch (KeeperException.SessionExpiredException e) {
         }
@@ -169,7 +168,7 @@ public class SessionUpgradeTest extends ZKTestCase {
     private void testUpgradeWithEphemeral(boolean testLeader)
             throws Exception {
         String nodePrefix = "/testUpgrade-"
-            + (testLeader ? "leaderTest-" : "followerTest-");
+                + (testLeader ? "leaderTest-" : "followerTest-");
         int leaderIdx = qb.getLeaderIndex();
         Assert.assertFalse("No leader in quorum?", leaderIdx == -1);
         int followerIdx = (leaderIdx + 1) % 5;
@@ -186,7 +185,7 @@ public class SessionUpgradeTest extends ZKTestCase {
         // be propagated to the other servers in the ensemble.
         for (int i = 0; i < 5; i++) {
             zk.create(nodePrefix + i, new byte[0],
-                      ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
+                    ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
         }
 
         // We should be able to reconnect with the same session id on a

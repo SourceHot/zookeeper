@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,38 +18,31 @@
 
 package org.apache.zookeeper.server.quorum;
 
+import org.apache.jute.BinaryOutputArchive;
+import org.apache.zookeeper.ZKTestCase;
+import org.apache.zookeeper.ZooDefs.Ids;
+import org.apache.zookeeper.ZooDefs.OpCode;
+import org.apache.zookeeper.data.Id;
+import org.apache.zookeeper.proto.CreateRequest;
+import org.apache.zookeeper.proto.GetDataRequest;
+import org.apache.zookeeper.server.*;
+import org.apache.zookeeper.test.ClientBase;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Random;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
-
-import org.apache.jute.BinaryOutputArchive;
-import org.apache.zookeeper.ZKTestCase;
-import org.apache.zookeeper.data.Id;
-import org.apache.zookeeper.ZooDefs.Ids;
-import org.apache.zookeeper.ZooDefs.OpCode;
-import org.apache.zookeeper.proto.CreateRequest;
-import org.apache.zookeeper.proto.GetDataRequest;
-import org.apache.zookeeper.server.FinalRequestProcessor;
-import org.apache.zookeeper.server.PrepRequestProcessor;
-import org.apache.zookeeper.server.Request;
-import org.apache.zookeeper.server.RequestProcessor;
-import org.apache.zookeeper.server.SessionTracker;
-import org.apache.zookeeper.server.ZooKeeperServer;
-import org.apache.zookeeper.server.quorum.CommitProcessor;
-import org.apache.zookeeper.test.ClientBase;
-
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * The following are invariant regardless of the particular implementation
@@ -72,28 +65,26 @@ import org.slf4j.LoggerFactory;
  */
 public class CommitProcessorTest extends ZKTestCase {
     protected static final Logger LOG =
-        LoggerFactory.getLogger(CommitProcessorTest.class);
-
-
-    private AtomicInteger processedReadRequests = new AtomicInteger(0);
-    private AtomicInteger processedWriteRequests = new AtomicInteger(0);
-
+            LoggerFactory.getLogger(CommitProcessorTest.class);
     TestZooKeeperServer zks;
     File tmpDir;
     ArrayList<TestClientThread> testClients =
-        new ArrayList<TestClientThread>();
+            new ArrayList<TestClientThread>();
+    volatile boolean fail = false;
+    private AtomicInteger processedReadRequests = new AtomicInteger(0);
+    private AtomicInteger processedWriteRequests = new AtomicInteger(0);
 
     public void setUp(int numCommitThreads, int numClientThreads)
             throws Exception {
         System.setProperty(
-            CommitProcessor.ZOOKEEPER_COMMIT_PROC_NUM_WORKER_THREADS,
-            Integer.toString(numCommitThreads));
+                CommitProcessor.ZOOKEEPER_COMMIT_PROC_NUM_WORKER_THREADS,
+                Integer.toString(numCommitThreads));
         System.setProperty("zookeeper.admin.enableServer", "false");
         tmpDir = ClientBase.createTmpDir();
         ClientBase.setupTestEnv();
         zks = new TestZooKeeperServer(tmpDir, tmpDir, 4000);
         zks.startup();
-        for(int i=0; i<numClientThreads; ++i) {
+        for (int i = 0; i < numClientThreads; ++i) {
             TestClientThread client = new TestClientThread();
             testClients.add(client);
             client.start();
@@ -103,7 +94,7 @@ public class CommitProcessorTest extends ZKTestCase {
     @After
     public void tearDown() throws Exception {
         LOG.info("tearDown starting");
-        for(TestClientThread client : testClients) {
+        for (TestClientThread client : testClients) {
             client.interrupt();
             client.join();
         }
@@ -111,66 +102,14 @@ public class CommitProcessorTest extends ZKTestCase {
 
         if (tmpDir != null) {
             Assert.assertTrue("delete " + tmpDir.toString(),
-                              ClientBase.recursiveDelete(tmpDir));
-        }
-    }
-
-    private class TestClientThread extends Thread {
-        long sessionId;
-        int cxid;
-        int nodeId;
-
-        public TestClientThread() {
-            sessionId = zks.getSessionTracker().createSession(5000);
-        }
-
-        public void sendWriteRequest() throws Exception {
-            ByteArrayOutputStream boas = new ByteArrayOutputStream();
-            BinaryOutputArchive boa = BinaryOutputArchive.getArchive(boas);
-            CreateRequest createReq = new CreateRequest(
-                "/session" + Long.toHexString(sessionId) + "-" + (++nodeId),
-                new byte[0], Ids.OPEN_ACL_UNSAFE, 1);
-            createReq.serialize(boa, "request");
-            ByteBuffer bb = ByteBuffer.wrap(boas.toByteArray());
-            Request req = new Request(null, sessionId, ++cxid, OpCode.create,
-                                      bb, new ArrayList<Id>());
-            zks.firstProcessor.processRequest(req);
-        }
-
-        public void sendReadRequest() throws Exception {
-            ByteArrayOutputStream boas = new ByteArrayOutputStream();
-            BinaryOutputArchive boa = BinaryOutputArchive.getArchive(boas);
-            GetDataRequest getDataRequest = new GetDataRequest(
-                "/session" + Long.toHexString(sessionId) + "-" + nodeId, false);
-            getDataRequest.serialize(boa, "request");
-            ByteBuffer bb = ByteBuffer.wrap(boas.toByteArray());
-            Request req = new Request(null, sessionId, ++cxid, OpCode.getData,
-                                      bb, new ArrayList<Id>());
-            zks.firstProcessor.processRequest(req);
-        }
-
-        public void run() {
-            Random rand = new Random(Thread.currentThread().getId());
-            try {
-                sendWriteRequest();
-                for(int i=0; i<1000; ++i) {
-                    // Do 25% write / 75% read request mix
-                    if (rand.nextInt(100) < 25) {
-                        sendWriteRequest();
-                    } else {
-                        sendReadRequest();
-                    }
-                }
-            } catch (Exception e) {
-                LOG.error("Uncaught exception in test: ", e);
-            }
+                    ClientBase.recursiveDelete(tmpDir));
         }
     }
 
     @Test
     public void testNoCommitWorkers() throws Exception {
         setUp(0, 10);
-        synchronized(this) {
+        synchronized (this) {
             wait(5000);
         }
         checkProcessedRequest();
@@ -180,7 +119,7 @@ public class CommitProcessorTest extends ZKTestCase {
     @Test
     public void testOneCommitWorker() throws Exception {
         setUp(1, 10);
-        synchronized(this) {
+        synchronized (this) {
             wait(5000);
         }
         checkProcessedRequest();
@@ -190,7 +129,7 @@ public class CommitProcessorTest extends ZKTestCase {
     @Test
     public void testManyCommitWorkers() throws Exception {
         setUp(10, 10);
-        synchronized(this) {
+        synchronized (this) {
             wait(5000);
         }
         checkProcessedRequest();
@@ -205,12 +144,65 @@ public class CommitProcessorTest extends ZKTestCase {
                 processedWriteRequests.get() > 0);
     }
 
-    volatile boolean fail = false;
     synchronized private void failTest(String reason) {
         fail = true;
         notifyAll();
         Assert.fail(reason);
     }
+
+
+    private class TestClientThread extends Thread {
+        long sessionId;
+        int cxid;
+        int nodeId;
+
+        public TestClientThread() {
+            sessionId = zks.getSessionTracker().createSession(5000);
+        }
+
+        public void sendWriteRequest() throws Exception {
+            ByteArrayOutputStream boas = new ByteArrayOutputStream();
+            BinaryOutputArchive boa = BinaryOutputArchive.getArchive(boas);
+            CreateRequest createReq = new CreateRequest(
+                    "/session" + Long.toHexString(sessionId) + "-" + (++nodeId),
+                    new byte[0], Ids.OPEN_ACL_UNSAFE, 1);
+            createReq.serialize(boa, "request");
+            ByteBuffer bb = ByteBuffer.wrap(boas.toByteArray());
+            Request req = new Request(null, sessionId, ++cxid, OpCode.create,
+                    bb, new ArrayList<Id>());
+            zks.firstProcessor.processRequest(req);
+        }
+
+        public void sendReadRequest() throws Exception {
+            ByteArrayOutputStream boas = new ByteArrayOutputStream();
+            BinaryOutputArchive boa = BinaryOutputArchive.getArchive(boas);
+            GetDataRequest getDataRequest = new GetDataRequest(
+                    "/session" + Long.toHexString(sessionId) + "-" + nodeId, false);
+            getDataRequest.serialize(boa, "request");
+            ByteBuffer bb = ByteBuffer.wrap(boas.toByteArray());
+            Request req = new Request(null, sessionId, ++cxid, OpCode.getData,
+                    bb, new ArrayList<Id>());
+            zks.firstProcessor.processRequest(req);
+        }
+
+        public void run() {
+            Random rand = new Random(Thread.currentThread().getId());
+            try {
+                sendWriteRequest();
+                for (int i = 0; i < 1000; ++i) {
+                    // Do 25% write / 75% read request mix
+                    if (rand.nextInt(100) < 25) {
+                        sendWriteRequest();
+                    } else {
+                        sendReadRequest();
+                    }
+                }
+            } catch (Exception e) {
+                LOG.error("Uncaught exception in test: ", e);
+            }
+        }
+    }
+
 
     private class TestZooKeeperServer extends ZooKeeperServer {
         PrepRequestProcessor firstProcessor;
@@ -233,24 +225,25 @@ public class CommitProcessorTest extends ZKTestCase {
             // ValidateProcessor is set up in a similar fashion to ToBeApplied
             // processor, so it can do pre/post validating of requests
             ValidateProcessor validateProcessor =
-                new ValidateProcessor(finalProcessor);
+                    new ValidateProcessor(finalProcessor);
             commitProcessor = new CommitProcessor(validateProcessor, "1", true,
                     getZooKeeperServerListener());
             validateProcessor.setCommitProcessor(commitProcessor);
             commitProcessor.start();
             MockProposalRequestProcessor proposalProcessor =
-                new MockProposalRequestProcessor(commitProcessor);
+                    new MockProposalRequestProcessor(commitProcessor);
             proposalProcessor.start();
             firstProcessor = new PrepRequestProcessor(zks, proposalProcessor);
             firstProcessor.start();
         }
     }
 
+
     private class MockProposalRequestProcessor extends Thread
             implements RequestProcessor {
         private final CommitProcessor commitProcessor;
         private final LinkedBlockingQueue<Request> proposals =
-            new LinkedBlockingQueue<Request>();
+                new LinkedBlockingQueue<Request>();
 
         public MockProposalRequestProcessor(CommitProcessor commitProcessor) {
             this.commitProcessor = commitProcessor;
@@ -260,7 +253,7 @@ public class CommitProcessorTest extends ZKTestCase {
         public void run() {
             Random rand = new Random(Thread.currentThread().getId());
             try {
-                while(true) {
+                while (true) {
                     Request request = proposals.take();
                     Thread.sleep(10 + rand.nextInt(190));
                     commitProcessor.commit(request);
@@ -287,13 +280,14 @@ public class CommitProcessorTest extends ZKTestCase {
         }
     }
 
+
     private class ValidateProcessor implements RequestProcessor {
         Random rand = new Random(Thread.currentThread().getId());
         RequestProcessor nextProcessor;
         CommitProcessor commitProcessor;
         AtomicLong expectedZxid = new AtomicLong(1);
         ConcurrentHashMap<Long, AtomicInteger> cxidMap =
-            new ConcurrentHashMap<Long, AtomicInteger>();
+                new ConcurrentHashMap<Long, AtomicInteger>();
 
         AtomicInteger outstandingReadRequests = new AtomicInteger(0);
         AtomicInteger outstandingWriteRequests = new AtomicInteger(0);
@@ -326,7 +320,7 @@ public class CommitProcessorTest extends ZKTestCase {
             // Insert random delay to test thread race conditions
             try {
                 Thread.sleep(10 + rand.nextInt(290));
-            } catch(InterruptedException e) {
+            } catch (InterruptedException e) {
                 // ignore
             }
             nextProcessor.processRequest(request);
@@ -391,7 +385,7 @@ public class CommitProcessorTest extends ZKTestCase {
                 long zxid = request.getHdr().getZxid();
                 if (!expectedZxid.compareAndSet(zxid, zxid + 1)) {
                     failTest("Write request, expected_zxid="
-                             + expectedZxid.get() + "; req_zxid=" + zxid);
+                            + expectedZxid.get() + "; req_zxid=" + zxid);
                 }
             }
 
@@ -400,18 +394,18 @@ public class CommitProcessorTest extends ZKTestCase {
             if (sessionCxid == null) {
                 sessionCxid = new AtomicInteger(request.cxid + 1);
                 AtomicInteger existingSessionCxid =
-                    cxidMap.putIfAbsent(request.sessionId, sessionCxid);
+                        cxidMap.putIfAbsent(request.sessionId, sessionCxid);
                 if (existingSessionCxid != null) {
                     failTest("Race condition adding cxid=" + request.cxid
-                             + " for session 0x"
-                             + Long.toHexString(request.sessionId)
-                             + " with other_cxid=" + existingSessionCxid.get());
+                            + " for session 0x"
+                            + Long.toHexString(request.sessionId)
+                            + " with other_cxid=" + existingSessionCxid.get());
                 }
             } else {
                 if (!sessionCxid.compareAndSet(
-                      request.cxid, request.cxid + 1)) {
+                        request.cxid, request.cxid + 1)) {
                     failTest("Expected_cxid=" + sessionCxid.get()
-                             + "; req_cxid=" + request.cxid);
+                            + "; req_cxid=" + request.cxid);
                 }
             }
         }

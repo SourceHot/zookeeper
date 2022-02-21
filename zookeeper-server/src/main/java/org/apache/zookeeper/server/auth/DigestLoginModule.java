@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -34,14 +34,17 @@ public class DigestLoginModule implements LoginModule {
         return true;
     }
 
-    public void initialize(Subject subject, CallbackHandler callbackHandler, Map<String,?> sharedState, Map<String,?> options) {
+    public void initialize(Subject subject,
+                           CallbackHandler callbackHandler,
+                           Map<String, ?> sharedState,
+                           Map<String, ?> options) {
         if (options.containsKey("username")) {
             // Zookeeper client: get username and password from JAAS conf (only used if using DIGEST-MD5).
             this.subject = subject;
-            String username = (String)options.get("username");
-            this.subject.getPublicCredentials().add((Object)username);
-            String password = (String)options.get("password");
-            this.subject.getPrivateCredentials().add((Object)password);
+            String username = (String) options.get("username");
+            this.subject.getPublicCredentials().add((Object) username);
+            String password = (String) options.get("password");
+            this.subject.getPrivateCredentials().add((Object) password);
         }
         return;
     }

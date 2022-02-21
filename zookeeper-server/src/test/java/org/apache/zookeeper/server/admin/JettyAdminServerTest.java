@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,13 +17,6 @@
  */
 
 package org.apache.zookeeper.server.admin;
-
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
 
 import org.apache.zookeeper.PortAssignment;
 import org.apache.zookeeper.ZKTestCase;
@@ -37,7 +30,14 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class JettyAdminServerTest extends ZKTestCase{
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
+
+public class JettyAdminServerTest extends ZKTestCase {
     protected static final Logger LOG = LoggerFactory.getLogger(JettyAdminServerTest.class);
 
     private static final String URL_FORMAT = "http://localhost:%d/commands";
@@ -55,7 +55,8 @@ public class JettyAdminServerTest extends ZKTestCase{
      */
     @Test
     public void testJettyAdminServer() throws AdminServerException, IOException {
-        JettyAdminServer server = new JettyAdminServer();;
+        JettyAdminServer server = new JettyAdminServer();
+        ;
         try {
             server.start();
             queryAdminServer(jettyAdminPort);
@@ -74,12 +75,13 @@ public class JettyAdminServerTest extends ZKTestCase{
 
         final int CLIENT_PORT = PortAssignment.unique();
 
-        ZooKeeperServerMainTest.MainThread main = new ZooKeeperServerMainTest.MainThread(CLIENT_PORT, false, null);
+        ZooKeeperServerMainTest.MainThread main =
+                new ZooKeeperServerMainTest.MainThread(CLIENT_PORT, false, null);
         main.start();
 
         Assert.assertTrue("waiting for server being up",
                 ClientBase.waitForServerUp("127.0.0.1:" + CLIENT_PORT,
-                ClientBase.CONNECTION_TIMEOUT));
+                        ClientBase.CONNECTION_TIMEOUT));
 
         queryAdminServer(jettyAdminPort);
 
@@ -104,10 +106,10 @@ public class JettyAdminServerTest extends ZKTestCase{
         final int ADMIN_SERVER_PORT2 = PortAssignment.unique();
 
         String quorumCfgSection = String.format
-            ("server.1=127.0.0.1:%d:%d;%d\nserver.2=127.0.0.1:%d:%d;%d",
-             PortAssignment.unique(), PortAssignment.unique(), CLIENT_PORT_QP1,
-             PortAssignment.unique(), PortAssignment.unique(), CLIENT_PORT_QP2
-            );
+                ("server.1=127.0.0.1:%d:%d;%d\nserver.2=127.0.0.1:%d:%d;%d",
+                        PortAssignment.unique(), PortAssignment.unique(), CLIENT_PORT_QP1,
+                        PortAssignment.unique(), PortAssignment.unique(), CLIENT_PORT_QP2
+                );
         QuorumPeerTestBase.MainThread q1 = new QuorumPeerTestBase.MainThread(
                 1, CLIENT_PORT_QP1, ADMIN_SERVER_PORT1, quorumCfgSection, null);
         q1.start();
@@ -125,9 +127,9 @@ public class JettyAdminServerTest extends ZKTestCase{
 
         Assert.assertTrue("waiting for server 1 being up",
                 ClientBase.waitForServerUp("127.0.0.1:" + CLIENT_PORT_QP1,
-                ClientBase.CONNECTION_TIMEOUT));
+                        ClientBase.CONNECTION_TIMEOUT));
         Assert.assertTrue("waiting for server 2 being up",
-                        ClientBase.waitForServerUp("127.0.0.1:" + CLIENT_PORT_QP2,
+                ClientBase.waitForServerUp("127.0.0.1:" + CLIENT_PORT_QP2,
                         ClientBase.CONNECTION_TIMEOUT));
 
         queryAdminServer(ADMIN_SERVER_PORT1);

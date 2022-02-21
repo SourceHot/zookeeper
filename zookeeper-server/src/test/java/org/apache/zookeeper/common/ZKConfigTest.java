@@ -19,21 +19,22 @@
 package org.apache.zookeeper.common;
 
 
-import static org.junit.Assert.assertEquals;
-import java.util.concurrent.TimeUnit;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
 
+import java.util.concurrent.TimeUnit;
+
+import static org.junit.Assert.assertEquals;
+
 
 
 public class ZKConfigTest {
 
-    X509Util x509Util = new ClientX509Util();
-
     @Rule
     public Timeout timeout = new Timeout(10, TimeUnit.SECONDS);
+    X509Util x509Util = new ClientX509Util();
 
     @After
     public void tearDown() throws Exception {

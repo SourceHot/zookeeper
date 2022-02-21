@@ -73,14 +73,14 @@ public class ZooKeeperServerConf {
     /**
      * Creates a new configuration.
      *
-     * @param clientPort client port
-     * @param dataDir absolute path to data directory
-     * @param dataLogDir absolute path to data log directory
-     * @param tickTime tick time
+     * @param clientPort            client port
+     * @param dataDir               absolute path to data directory
+     * @param dataLogDir            absolute path to data log directory
+     * @param tickTime              tick time
      * @param maxClientCnxnsPerHost maximum number of client connections
-     * @param minSessionTimeout minimum session timeout
-     * @param maxSessionTimeout maximum session timeout
-     * @param serverId server ID
+     * @param minSessionTimeout     minimum session timeout
+     * @param maxSessionTimeout     maximum session timeout
+     * @param serverId              server ID
      */
     ZooKeeperServerConf(int clientPort, String dataDir, String dataLogDir,
                         int tickTime, int maxClientCnxnsPerHost,

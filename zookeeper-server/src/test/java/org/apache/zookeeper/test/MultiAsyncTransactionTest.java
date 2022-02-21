@@ -17,40 +17,31 @@
 
 package org.apache.zookeeper.test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import org.apache.zookeeper.AsyncCallback.MultiCallback;
+import org.apache.zookeeper.*;
+import org.apache.zookeeper.OpResult.CreateResult;
+import org.apache.zookeeper.OpResult.ErrorResult;
+import org.apache.zookeeper.ZooDefs.Ids;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.zookeeper.AsyncCallback.MultiCallback;
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.Op;
-import org.apache.zookeeper.OpResult;
-import org.apache.zookeeper.OpResult.CreateResult;
-import org.apache.zookeeper.OpResult.ErrorResult;
-import org.apache.zookeeper.ZooDefs.Ids;
-import org.apache.zookeeper.ZooKeeper;
-import org.junit.Before;
-import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class MultiAsyncTransactionTest extends ClientBase {
-    private ZooKeeper zk;
     private final AtomicInteger pendingOps = new AtomicInteger(0);
+    private ZooKeeper zk;
 
     @Before
     public void setUp() throws Exception {
         super.setUp();
         zk = createClient();
         pendingOps.set(0);
-    }
-
-    private static class MultiResult {
-        int rc;
-        List<OpResult> results;
     }
 
     private void finishPendingOps() {
@@ -62,8 +53,8 @@ public class MultiAsyncTransactionTest extends ClientBase {
     }
 
     private void waitForPendingOps(int timeout) throws Exception {
-        synchronized(pendingOps) {
-            while(pendingOps.get() > 0) {
+        synchronized (pendingOps) {
+            while (pendingOps.get() > 0) {
                 pendingOps.wait(timeout);
             }
         }
@@ -74,7 +65,7 @@ public class MultiAsyncTransactionTest extends ClientBase {
      * get rollbacked correctly when multi-op failed. This cause
      * create sequential node request in subsequent multi-op to failed because
      * sequential node name generation is incorrect.
-     *
+     * <p>
      * The check is to make sure that each request in multi-op failed with
      * the correct reason.
      */
@@ -87,16 +78,16 @@ public class MultiAsyncTransactionTest extends ClientBase {
 
         List<Op> ops = Arrays.asList(
                 Op.create("/node-", new byte[0], Ids.OPEN_ACL_UNSAFE,
-                          CreateMode.PERSISTENT_SEQUENTIAL),
+                        CreateMode.PERSISTENT_SEQUENTIAL),
                 Op.create("/dup", new byte[0], Ids.OPEN_ACL_UNSAFE,
-                          CreateMode.PERSISTENT));
+                        CreateMode.PERSISTENT));
 
 
         for (int i = 0; i < iteration; ++i) {
             zk.multi(ops, new MultiCallback() {
                 @Override
                 public void processResult(int rc, String path, Object ctx,
-                        List<OpResult> opResults) {
+                                          List<OpResult> opResults) {
                     MultiResult result = new MultiResult();
                     result.results = opResults;
                     result.rc = rc;
@@ -131,5 +122,11 @@ public class MultiAsyncTransactionTest extends ClientBase {
         assertEquals(KeeperException.Code.NODEEXISTS.intValue(),
                 ((ErrorResult) results.get(3).results.get(1)).getErr());
 
+    }
+
+
+    private static class MultiResult {
+        int rc;
+        List<OpResult> results;
     }
 }

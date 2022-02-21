@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,9 +18,6 @@
 
 package org.apache.zookeeper.server.quorum.auth;
 
-import java.io.File;
-import java.util.HashMap;
-import java.util.Map;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.zookeeper.CreateMode;
@@ -34,8 +31,13 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.File;
+import java.util.HashMap;
+import java.util.Map;
+
 public class QuorumKerberosAuthTest extends KerberosSecurityTestcase {
     private static File keytabFile;
+
     static {
         String keytabFilePath = FilenameUtils.normalize(KerberosTestUtils.getKeytabFile(), true);
 
@@ -60,8 +62,17 @@ public class QuorumKerberosAuthTest extends KerberosSecurityTestcase {
                 + "       useTicketCache=false\n"
                 + "       debug=false\n"
                 + "       refreshKrb5Config=true\n"
-                + "       principal=\"" + KerberosTestUtils.getLearnerPrincipal() + "\";\n" + "};\n";
+                + "       principal=\"" + KerberosTestUtils.getLearnerPrincipal() + "\";\n"
+                + "};\n";
         setupJaasConfig(jaasEntries);
+    }
+
+    @AfterClass
+    public static void cleanup() {
+        if (keytabFile != null) {
+            FileUtils.deleteQuietly(keytabFile);
+        }
+        cleanupJaasConfig();
     }
 
     @Before
@@ -81,14 +92,6 @@ public class QuorumKerberosAuthTest extends KerberosSecurityTestcase {
             mainThread.shutdown();
             mainThread.deleteBaseDir();
         }
-    }
-
-    @AfterClass
-    public static void cleanup() {
-        if(keytabFile != null){
-            FileUtils.deleteQuietly(keytabFile);
-        }
-        cleanupJaasConfig();
     }
 
     /**

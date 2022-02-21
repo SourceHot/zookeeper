@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,31 +18,15 @@
 
 package org.apache.zookeeper.server.persistence;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
-import org.apache.commons.cli.PosixParser;
+import org.apache.commons.cli.*;
 import org.apache.jute.BinaryInputArchive;
 import org.apache.jute.BinaryOutputArchive;
 import org.apache.jute.Record;
 import org.apache.zookeeper.server.TraceFormatter;
 import org.apache.zookeeper.server.util.SerializeUtils;
-import org.apache.zookeeper.txn.CreateContainerTxn;
-import org.apache.zookeeper.txn.CreateTTLTxn;
-import org.apache.zookeeper.txn.CreateTxn;
-import org.apache.zookeeper.txn.SetDataTxn;
-import org.apache.zookeeper.txn.TxnHeader;
+import org.apache.zookeeper.txn.*;
 
-import java.io.Closeable;
-import java.io.EOFException;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.text.DateFormat;
 import java.util.Date;
 import java.util.Scanner;
@@ -53,40 +37,11 @@ import static org.apache.zookeeper.server.persistence.FileTxnLog.TXNLOG_MAGIC;
 
 public class TxnLogToolkit implements Closeable {
 
-    static class TxnLogToolkitException extends Exception {
-        private static final long serialVersionUID = 1L;
-        private int exitCode;
-
-        TxnLogToolkitException(int exitCode, String message, Object... params) {
-            super(String.format(message, params));
-            this.exitCode = exitCode;
-        }
-
-        int getExitCode() {
-            return exitCode;
-        }
-    }
-
-    static class TxnLogToolkitParseException extends TxnLogToolkitException {
-        private static final long serialVersionUID = 1L;
-        private Options options;
-
-        TxnLogToolkitParseException(Options options, int exitCode, String message, Object... params) {
-            super(exitCode, message, params);
-            this.options = options;
-        }
-
-        Options getOptions() {
-            return options;
-        }
-    }
-
     private File txnLogFile;
     private boolean recoveryMode = false;
     private boolean verbose = false;
     private FileInputStream txnFis;
     private BinaryInputArchive logStream;
-
     // Recovery mode
     private int crcFixed = 0;
     private FileOutputStream recoveryFos;
@@ -94,6 +49,32 @@ public class TxnLogToolkit implements Closeable {
     private File recoveryLogFile;
     private FilePadding filePadding = new FilePadding();
     private boolean force = false;
+    public TxnLogToolkit(boolean recoveryMode,
+                         boolean verbose,
+                         String txnLogFileName,
+                         boolean force)
+            throws FileNotFoundException, TxnLogToolkitException {
+        this.recoveryMode = recoveryMode;
+        this.verbose = verbose;
+        this.force = force;
+        txnLogFile = new File(txnLogFileName);
+        if (!txnLogFile.exists() || !txnLogFile.canRead()) {
+            throw new TxnLogToolkitException(1, "File doesn't exist or not readable: %s",
+                    txnLogFile);
+        }
+        if (recoveryMode) {
+            recoveryLogFile = new File(txnLogFile.toString() + ".fixed");
+            if (recoveryLogFile.exists()) {
+                throw new TxnLogToolkitException(1,
+                        "Recovery file %s already exists or not writable", recoveryLogFile);
+            }
+        }
+
+        openTxnLogFile();
+        if (recoveryMode) {
+            openRecoveryFile();
+        }
+    }
 
     /**
      * @param args Command line arguments
@@ -111,26 +92,86 @@ public class TxnLogToolkit implements Closeable {
         }
     }
 
-    public TxnLogToolkit(boolean recoveryMode, boolean verbose, String txnLogFileName, boolean force)
-            throws FileNotFoundException, TxnLogToolkitException {
-        this.recoveryMode = recoveryMode;
-        this.verbose = verbose;
-        this.force = force;
-        txnLogFile = new File(txnLogFileName);
-        if (!txnLogFile.exists() || !txnLogFile.canRead()) {
-            throw new TxnLogToolkitException(1, "File doesn't exist or not readable: %s", txnLogFile);
+    /**
+     * get transaction log data string with node's data as a string
+     * @param txn
+     * @return
+     */
+    private static String getDataStrFromTxn(Record txn) {
+        StringBuilder txnData = new StringBuilder();
+        if (txn == null) {
+            return txnData.toString();
         }
-        if (recoveryMode) {
-            recoveryLogFile = new File(txnLogFile.toString() + ".fixed");
-            if (recoveryLogFile.exists()) {
-                throw new TxnLogToolkitException(1, "Recovery file %s already exists or not writable", recoveryLogFile);
-            }
+        if (txn instanceof CreateTxn) {
+            CreateTxn createTxn = ((CreateTxn) txn);
+            txnData.append(createTxn.getPath() + "," + new String(createTxn.getData()))
+                    .append("," + createTxn.getAcl() + "," + createTxn.getEphemeral())
+                    .append("," + createTxn.getParentCVersion());
+        } else if (txn instanceof SetDataTxn) {
+            SetDataTxn setDataTxn = ((SetDataTxn) txn);
+            txnData.append(setDataTxn.getPath() + "," + new String(setDataTxn.getData()))
+                    .append("," + setDataTxn.getVersion());
+        } else if (txn instanceof CreateContainerTxn) {
+            CreateContainerTxn createContainerTxn = ((CreateContainerTxn) txn);
+            txnData.append(
+                            createContainerTxn.getPath() + "," + new String(createContainerTxn.getData()))
+                    .append("," + createContainerTxn.getAcl() + ","
+                            + createContainerTxn.getParentCVersion());
+        } else if (txn instanceof CreateTTLTxn) {
+            CreateTTLTxn createTTLTxn = ((CreateTTLTxn) txn);
+            txnData.append(createTTLTxn.getPath() + "," + new String(createTTLTxn.getData()))
+                    .append("," + createTTLTxn.getAcl() + "," + createTTLTxn.getParentCVersion())
+                    .append("," + createTTLTxn.getTtl());
+        } else {
+            txnData.append(txn.toString());
         }
 
-        openTxnLogFile();
-        if (recoveryMode) {
-            openRecoveryFile();
+        return txnData.toString();
+    }
+
+    private static TxnLogToolkit parseCommandLine(String[] args)
+            throws TxnLogToolkitException, FileNotFoundException {
+        CommandLineParser parser = new PosixParser();
+        Options options = new Options();
+
+        Option helpOpt = new Option("h", "help", false, "Print help message");
+        options.addOption(helpOpt);
+
+        Option recoverOpt = new Option("r", "recover", false,
+                "Recovery mode. Re-calculate CRC for broken entries.");
+        options.addOption(recoverOpt);
+
+        Option quietOpt = new Option("v", "verbose", false,
+                "Be verbose in recovery mode: print all entries, not just fixed ones.");
+        options.addOption(quietOpt);
+
+        Option dumpOpt = new Option("d", "dump", false,
+                "Dump mode. Dump all entries of the log file with printing the content of a nodepath (default)");
+        options.addOption(dumpOpt);
+
+        Option forceOpt = new Option("y", "yes", false,
+                "Non-interactive mode: repair all CRC errors without asking");
+        options.addOption(forceOpt);
+
+        try {
+            CommandLine cli = parser.parse(options, args);
+            if (cli.hasOption("help")) {
+                printHelpAndExit(0, options);
+            }
+            if (cli.getArgs().length < 1) {
+                printHelpAndExit(1, options);
+            }
+            return new TxnLogToolkit(cli.hasOption("recover"), cli.hasOption("verbose"),
+                    cli.getArgs()[0], cli.hasOption("yes"));
+        } catch (ParseException e) {
+            throw new TxnLogToolkitParseException(options, 1, e.getMessage());
         }
+    }
+
+    private static void printHelpAndExit(int exitCode, Options options) {
+        HelpFormatter help = new HelpFormatter();
+        help.printHelp(120, "TxnLogToolkit [-dhrv] <txn_log_file_name>", "", options, "");
+        System.exit(exitCode);
     }
 
     public void dump(Scanner scanner) throws Exception {
@@ -139,7 +180,8 @@ public class TxnLogToolkit implements Closeable {
         FileHeader fhdr = new FileHeader();
         fhdr.deserialize(logStream, "fileheader");
         if (fhdr.getMagic() != TXNLOG_MAGIC) {
-            throw new TxnLogToolkitException(2, "Invalid magic number for %s", txnLogFile.getName());
+            throw new TxnLogToolkitException(2, "Invalid magic number for %s",
+                    txnLogFile.getName());
         }
         System.out.println("ZooKeeper Transactional Log File with dbid "
                 + fhdr.getDbid() + " txnlog format version "
@@ -197,7 +239,7 @@ public class TxnLogToolkit implements Closeable {
                 filePadding.padFile(recoveryFos.getChannel());
                 recoveryOa.writeLong(crcValue, "crcvalue");
                 recoveryOa.writeBuffer(bytes, "txnEntry");
-                recoveryOa.writeByte((byte)'B', "EOR");
+                recoveryOa.writeByte((byte) 'B', "EOR");
             }
             count++;
         }
@@ -227,7 +269,8 @@ public class TxnLogToolkit implements Closeable {
         Record txn = SerializeUtils.deserializeTxn(bytes, hdr);
         String txnStr = getDataStrFromTxn(txn);
         String txns = String.format("%s session 0x%s cxid 0x%s zxid 0x%s %s %s",
-                DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.LONG).format(new Date(hdr.getTime())),
+                DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.LONG)
+                        .format(new Date(hdr.getTime())),
                 Long.toHexString(hdr.getClientId()),
                 Long.toHexString(hdr.getCxid()),
                 Long.toHexString(hdr.getZxid()),
@@ -243,41 +286,6 @@ public class TxnLogToolkit implements Closeable {
         }
     }
 
-    /**
-     * get transaction log data string with node's data as a string
-     * @param txn
-     * @return
-     */
-    private static String getDataStrFromTxn(Record txn) {
-        StringBuilder txnData = new StringBuilder();
-        if (txn == null) {
-            return txnData.toString();
-        }
-        if (txn instanceof CreateTxn) {
-            CreateTxn createTxn = ((CreateTxn) txn);
-            txnData.append(createTxn.getPath() + "," + new String(createTxn.getData()))
-                   .append("," + createTxn.getAcl() + "," + createTxn.getEphemeral())
-                   .append("," + createTxn.getParentCVersion());
-        } else if (txn instanceof SetDataTxn) {
-            SetDataTxn setDataTxn = ((SetDataTxn) txn);
-            txnData.append(setDataTxn.getPath() + "," + new String(setDataTxn.getData()))
-                   .append("," + setDataTxn.getVersion());
-        } else if (txn instanceof CreateContainerTxn) {
-            CreateContainerTxn createContainerTxn = ((CreateContainerTxn) txn);
-            txnData.append(createContainerTxn.getPath() + "," + new String(createContainerTxn.getData()))
-                   .append("," + createContainerTxn.getAcl() + "," + createContainerTxn.getParentCVersion());
-        } else if (txn instanceof CreateTTLTxn) {
-            CreateTTLTxn createTTLTxn = ((CreateTTLTxn) txn);
-            txnData.append(createTTLTxn.getPath() + "," + new String(createTTLTxn.getData()))
-                   .append("," + createTTLTxn.getAcl() + "," + createTTLTxn.getParentCVersion())
-                   .append("," + createTTLTxn.getTtl());
-        } else {
-            txnData.append(txn.toString());
-        }
-
-        return txnData.toString();
-    }
-    
     private void openTxnLogFile() throws FileNotFoundException {
         txnFis = new FileInputStream(txnLogFile);
         logStream = BinaryInputArchive.getArchive(txnFis);
@@ -300,48 +308,10 @@ public class TxnLogToolkit implements Closeable {
         }
     }
 
-    private static TxnLogToolkit parseCommandLine(String[] args) throws TxnLogToolkitException, FileNotFoundException {
-        CommandLineParser parser = new PosixParser();
-        Options options = new Options();
-
-        Option helpOpt = new Option("h", "help", false, "Print help message");
-        options.addOption(helpOpt);
-
-        Option recoverOpt = new Option("r", "recover", false, "Recovery mode. Re-calculate CRC for broken entries.");
-        options.addOption(recoverOpt);
-
-        Option quietOpt = new Option("v", "verbose", false, "Be verbose in recovery mode: print all entries, not just fixed ones.");
-        options.addOption(quietOpt);
-
-        Option dumpOpt = new Option("d", "dump", false, "Dump mode. Dump all entries of the log file with printing the content of a nodepath (default)");
-        options.addOption(dumpOpt);
-
-        Option forceOpt = new Option("y", "yes", false, "Non-interactive mode: repair all CRC errors without asking");
-        options.addOption(forceOpt);
-
-        try {
-            CommandLine cli = parser.parse(options, args);
-            if (cli.hasOption("help")) {
-                printHelpAndExit(0, options);
-            }
-            if (cli.getArgs().length < 1) {
-                printHelpAndExit(1, options);
-            }
-            return new TxnLogToolkit(cli.hasOption("recover"), cli.hasOption("verbose"), cli.getArgs()[0], cli.hasOption("yes"));
-        } catch (ParseException e) {
-            throw new TxnLogToolkitParseException(options, 1, e.getMessage());
-        }
-    }
-
-    private static void printHelpAndExit(int exitCode, Options options) {
-        HelpFormatter help = new HelpFormatter();
-        help.printHelp(120,"TxnLogToolkit [-dhrv] <txn_log_file_name>", "", options, "");
-        System.exit(exitCode);
-    }
-
     private void printStat() {
         if (recoveryMode) {
-            System.out.printf("Recovery file %s has been written with %d fixed CRC error(s)%n", recoveryLogFile, crcFixed);
+            System.out.printf("Recovery file %s has been written with %d fixed CRC error(s)%n",
+                    recoveryLogFile, crcFixed);
         }
     }
 
@@ -351,5 +321,38 @@ public class TxnLogToolkit implements Closeable {
             closeRecoveryFile();
         }
         closeTxnLogFile();
+    }
+
+
+    static class TxnLogToolkitException extends Exception {
+        private static final long serialVersionUID = 1L;
+        private int exitCode;
+
+        TxnLogToolkitException(int exitCode, String message, Object... params) {
+            super(String.format(message, params));
+            this.exitCode = exitCode;
+        }
+
+        int getExitCode() {
+            return exitCode;
+        }
+    }
+
+
+    static class TxnLogToolkitParseException extends TxnLogToolkitException {
+        private static final long serialVersionUID = 1L;
+        private Options options;
+
+        TxnLogToolkitParseException(Options options,
+                                    int exitCode,
+                                    String message,
+                                    Object... params) {
+            super(exitCode, message, params);
+            this.options = options;
+        }
+
+        Options getOptions() {
+            return options;
+        }
     }
 }

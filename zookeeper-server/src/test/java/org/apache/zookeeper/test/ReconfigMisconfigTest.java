@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,14 +18,9 @@
 
 package org.apache.zookeeper.test;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.TimeoutException;
-
-import org.apache.zookeeper.ZKTestCase;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.PortAssignment;
+import org.apache.zookeeper.ZKTestCase;
 import org.apache.zookeeper.admin.ZooKeeperAdmin;
 import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig;
@@ -36,12 +31,17 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeoutException;
+
 public class ReconfigMisconfigTest extends ZKTestCase {
     private static final Logger LOG = LoggerFactory.getLogger(ReconfigMisconfigTest.class);
-    private QuorumUtil qu;
-    private ZooKeeperAdmin zkAdmin;
     private static String errorMsg = "Reconfig should fail without configuring the super " +
             "user's password on server side first.";
+    private QuorumUtil qu;
+    private ZooKeeperAdmin zkAdmin;
 
     @Before
     public void setup() throws InterruptedException {
@@ -73,7 +73,8 @@ public class ReconfigMisconfigTest extends ZKTestCase {
     }
 
     @Test(timeout = 10000)
-    public void testReconfigFailWithoutSuperuserPasswordConfiguredOnServer() throws InterruptedException {
+    public void testReconfigFailWithoutSuperuserPasswordConfiguredOnServer()
+            throws InterruptedException {
         // This tests the case where ZK ensemble does not have the super user's password configured.
         // Reconfig should fail as the super user has to be explicitly configured via
         // zookeeper.DigestAuthenticationProvider.superDigest.

@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -54,7 +54,8 @@ public class ZKTrustManager extends X509ExtendedTrustManager {
      * @param clientHostnameVerificationEnabled  If true, the hostname of a client connecting to this machine will be
      *                                           verified.
      */
-    ZKTrustManager(X509ExtendedTrustManager x509ExtendedTrustManager, boolean serverHostnameVerificationEnabled,
+    ZKTrustManager(X509ExtendedTrustManager x509ExtendedTrustManager,
+                   boolean serverHostnameVerificationEnabled,
                    boolean clientHostnameVerificationEnabled) {
         this.x509ExtendedTrustManager = x509ExtendedTrustManager;
         this.serverHostnameVerificationEnabled = serverHostnameVerificationEnabled;
@@ -68,7 +69,8 @@ public class ZKTrustManager extends X509ExtendedTrustManager {
     }
 
     @Override
-    public void checkClientTrusted(X509Certificate[] chain, String authType, Socket socket) throws CertificateException {
+    public void checkClientTrusted(X509Certificate[] chain, String authType, Socket socket)
+            throws CertificateException {
         x509ExtendedTrustManager.checkClientTrusted(chain, authType, socket);
         if (clientHostnameVerificationEnabled) {
             performHostVerification(socket.getInetAddress(), chain[0]);
@@ -76,7 +78,8 @@ public class ZKTrustManager extends X509ExtendedTrustManager {
     }
 
     @Override
-    public void checkServerTrusted(X509Certificate[] chain, String authType, Socket socket) throws CertificateException {
+    public void checkServerTrusted(X509Certificate[] chain, String authType, Socket socket)
+            throws CertificateException {
         x509ExtendedTrustManager.checkServerTrusted(chain, authType, socket);
         if (serverHostnameVerificationEnabled) {
             performHostVerification(socket.getInetAddress(), chain[0]);
@@ -84,7 +87,8 @@ public class ZKTrustManager extends X509ExtendedTrustManager {
     }
 
     @Override
-    public void checkClientTrusted(X509Certificate[] chain, String authType, SSLEngine engine) throws CertificateException {
+    public void checkClientTrusted(X509Certificate[] chain, String authType, SSLEngine engine)
+            throws CertificateException {
         x509ExtendedTrustManager.checkClientTrusted(chain, authType, engine);
         if (clientHostnameVerificationEnabled) {
             try {
@@ -109,12 +113,14 @@ public class ZKTrustManager extends X509ExtendedTrustManager {
     }
 
     @Override
-    public void checkClientTrusted(X509Certificate[] chain, String authType) throws CertificateException {
+    public void checkClientTrusted(X509Certificate[] chain, String authType)
+            throws CertificateException {
         x509ExtendedTrustManager.checkClientTrusted(chain, authType);
     }
 
     @Override
-    public void checkServerTrusted(X509Certificate[] chain, String authType) throws CertificateException {
+    public void checkServerTrusted(X509Certificate[] chain, String authType)
+            throws CertificateException {
         x509ExtendedTrustManager.checkServerTrusted(chain, authType);
     }
 
@@ -135,12 +141,14 @@ public class ZKTrustManager extends X509ExtendedTrustManager {
             hostnameVerifier.verify(hostAddress, certificate);
         } catch (SSLException addressVerificationException) {
             try {
-                LOG.debug("Failed to verify host address: {} attempting to verify host name with reverse dns lookup",
+                LOG.debug(
+                        "Failed to verify host address: {} attempting to verify host name with reverse dns lookup",
                         hostAddress, addressVerificationException);
                 hostName = inetAddress.getHostName();
                 hostnameVerifier.verify(hostName, certificate);
             } catch (SSLException hostnameVerificationException) {
-                LOG.error("Failed to verify host address: {}", hostAddress, addressVerificationException);
+                LOG.error("Failed to verify host address: {}", hostAddress,
+                        addressVerificationException);
                 LOG.error("Failed to verify hostname: {}", hostName, hostnameVerificationException);
                 throw new CertificateException("Failed to verify both host address and host name",
                         hostnameVerificationException);

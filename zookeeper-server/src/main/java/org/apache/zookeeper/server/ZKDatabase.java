@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,20 +17,6 @@
  */
 
 package org.apache.zookeeper.server;
-
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import org.apache.jute.InputArchive;
 import org.apache.jute.OutputArchive;
@@ -56,6 +42,15 @@ import org.apache.zookeeper.txn.TxnHeader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
+
 /**
  * This class maintains the in memory database of zookeeper
  * server states that includes the sessions, datatree and the
@@ -64,8 +59,14 @@ import org.slf4j.LoggerFactory;
  */
 public class ZKDatabase {
 
+    /**
+     * Default value is to use snapshot if txnlog size exceeds 1/3 the size of snapshot
+     */
+    public static final String SNAPSHOT_SIZE_FACTOR = "zookeeper.snapshotSizeFactor";
+    public static final double DEFAULT_SNAPSHOT_SIZE_FACTOR = 0.33;
+    public static final int commitLogCount = 500;
     private static final Logger LOG = LoggerFactory.getLogger(ZKDatabase.class);
-
+    protected static int commitLogBuffer = 700;
     /**
      * make sure on a clear you take care of
      * all these members.
@@ -74,18 +75,14 @@ public class ZKDatabase {
     protected ConcurrentHashMap<Long, Integer> sessionsWithTimeouts;
     protected FileTxnSnapLog snapLog;
     protected long minCommittedLog, maxCommittedLog;
-
-    /**
-     * Default value is to use snapshot if txnlog size exceeds 1/3 the size of snapshot
-     */
-    public static final String SNAPSHOT_SIZE_FACTOR = "zookeeper.snapshotSizeFactor";
-    public static final double DEFAULT_SNAPSHOT_SIZE_FACTOR = 0.33;
-    private double snapshotSizeFactor;
-
-    public static final int commitLogCount = 500;
-    protected static int commitLogBuffer = 700;
     protected LinkedList<Proposal> committedLog = new LinkedList<Proposal>();
     protected ReentrantReadWriteLock logLock = new ReentrantReadWriteLock();
+    private final PlayBackListener commitProposalPlaybackListener = new PlayBackListener() {
+        public void onTxnLoaded(TxnHeader hdr, Record txn) {
+            addCommittedProposal(hdr, txn);
+        }
+    };
+    private double snapshotSizeFactor;
     volatile private boolean initialized = false;
 
     /**
@@ -101,12 +98,12 @@ public class ZKDatabase {
 
         try {
             snapshotSizeFactor = Double.parseDouble(
-                System.getProperty(SNAPSHOT_SIZE_FACTOR,
-                        Double.toString(DEFAULT_SNAPSHOT_SIZE_FACTOR)));
+                    System.getProperty(SNAPSHOT_SIZE_FACTOR,
+                            Double.toString(DEFAULT_SNAPSHOT_SIZE_FACTOR)));
             if (snapshotSizeFactor > 1) {
                 snapshotSizeFactor = DEFAULT_SNAPSHOT_SIZE_FACTOR;
                 LOG.warn("The configured {} is invalid, going to use " +
-                        "the default {}", SNAPSHOT_SIZE_FACTOR,
+                                "the default {}", SNAPSHOT_SIZE_FACTOR,
                         DEFAULT_SNAPSHOT_SIZE_FACTOR);
             }
         } catch (NumberFormatException e) {
@@ -166,7 +163,6 @@ public class ZKDatabase {
         return maxCommittedLog;
     }
 
-
     /**
      * the minimum committed transaction log
      * available in memory
@@ -176,6 +172,7 @@ public class ZKDatabase {
     public long getminCommittedLog() {
         return minCommittedLog;
     }
+
     /**
      * Get the lock that controls the committedLog. If you want to get the pointer to the committedLog, you need
      * to use this lock to acquire a read lock before calling getCommittedLog()
@@ -185,11 +182,10 @@ public class ZKDatabase {
         return logLock;
     }
 
-
     public synchronized List<Proposal> getCommittedLog() {
         ReadLock rl = logLock.readLock();
         // only make a copy if this thread isn't already holding a lock
-        if(logLock.getReadHoldCount() <=0) {
+        if (logLock.getReadHoldCount() <= 0) {
             try {
                 rl.lock();
                 return new LinkedList<Proposal>(this.committedLog);
@@ -224,12 +220,6 @@ public class ZKDatabase {
         return sessionsWithTimeouts;
     }
 
-    private final PlayBackListener commitProposalPlaybackListener = new PlayBackListener() {
-        public void onTxnLoaded(TxnHeader hdr, Record txn){
-            addCommittedProposal(hdr, txn);
-        }
-    };
-
     /**
      * load the database from the disk onto memory and also add
      * the transactions to the committedlog in memory.
@@ -248,7 +238,8 @@ public class ZKDatabase {
      * @throws IOException
      */
     public long fastForwardDataBase() throws IOException {
-        long zxid = snapLog.fastForwardFromEdits(dataTree, sessionsWithTimeouts, commitProposalPlaybackListener);
+        long zxid = snapLog.fastForwardFromEdits(dataTree, sessionsWithTimeouts,
+                commitProposalPlaybackListener);
         initialized = true;
         return zxid;
     }
@@ -293,7 +284,7 @@ public class ZKDatabase {
         boolean enabled = snapshotSizeFactor >= 0;
         if (enabled) {
             LOG.info("On disk txn sync enabled with snapshotSizeFactor "
-                + snapshotSizeFactor);
+                    + snapshotSizeFactor);
         } else {
             LOG.info("On disk txn sync disabled");
         }
@@ -369,6 +360,7 @@ public class ZKDatabase {
     public List<ACL> aclForNode(DataNode n) {
         return dataTree.getACL(n);
     }
+
     /**
      * remove a cnxn from the datatree
      * @param cnxn the cnxn to remove from the datatree
@@ -441,7 +433,8 @@ public class ZKDatabase {
      * @return the stat of this node
      * @throws KeeperException.NoNodeException
      */
-    public Stat statNode(String path, ServerCnxn serverCnxn) throws KeeperException.NoNodeException {
+    public Stat statNode(String path, ServerCnxn serverCnxn)
+            throws KeeperException.NoNodeException {
         return dataTree.statNode(path, serverCnxn);
     }
 
@@ -451,7 +444,7 @@ public class ZKDatabase {
      * @return the datanode for getting the path
      */
     public DataNode getNode(String path) {
-      return dataTree.getNode(path);
+        return dataTree.getNode(path);
     }
 
     /**
@@ -463,7 +456,7 @@ public class ZKDatabase {
      * @throws KeeperException.NoNodeException
      */
     public byte[] getData(String path, Stat stat, Watcher watcher)
-    throws KeeperException.NoNodeException {
+            throws KeeperException.NoNodeException {
         return dataTree.getData(path, stat, watcher);
     }
 
@@ -476,7 +469,7 @@ public class ZKDatabase {
      * @param watcher the watcher function
      */
     public void setWatches(long relativeZxid, List<String> dataWatches,
-            List<String> existWatches, List<String> childWatches, Watcher watcher) {
+                           List<String> existWatches, List<String> childWatches, Watcher watcher) {
         dataTree.setWatches(relativeZxid, dataWatches, existWatches, childWatches, watcher);
     }
 
@@ -500,7 +493,7 @@ public class ZKDatabase {
      * @throws KeeperException.NoNodeException
      */
     public List<String> getChildren(String path, Stat stat, Watcher watcher)
-    throws KeeperException.NoNodeException {
+            throws KeeperException.NoNodeException {
         return dataTree.getChildren(path, stat, watcher);
     }
 
@@ -548,7 +541,7 @@ public class ZKDatabase {
      */
     public void deserializeSnapshot(InputArchive ia) throws IOException {
         clear();
-        SerializeUtils.deserializeSnapshot(getDataTree(),ia,getSessionWithTimeOuts());
+        SerializeUtils.deserializeSnapshot(getDataTree(), ia, getSessionWithTimeOuts());
         initialized = true;
     }
 
@@ -559,7 +552,7 @@ public class ZKDatabase {
      * @throws InterruptedException
      */
     public void serializeSnapshot(OutputArchive oa) throws IOException,
-    InterruptedException {
+            InterruptedException {
         SerializeUtils.serializeSnapshot(getDataTree(), oa, getSessionWithTimeOuts());
     }
 
@@ -596,14 +589,17 @@ public class ZKDatabase {
     }
 
     public synchronized void initConfigInZKDatabase(QuorumVerifier qv) {
-        if (qv == null) return; // only happens during tests
+        if (qv == null)
+            return; // only happens during tests
         try {
             if (this.dataTree.getNode(ZooDefs.CONFIG_NODE) == null) {
                 // should only happen during upgrade
-                LOG.warn("configuration znode missing (should only happen during upgrade), creating the node");
+                LOG.warn(
+                        "configuration znode missing (should only happen during upgrade), creating the node");
                 this.dataTree.addConfigNode();
             }
-            this.dataTree.setData(ZooDefs.CONFIG_NODE, qv.toString().getBytes(), -1, qv.getVersion(), Time.currentWallTime());
+            this.dataTree.setData(ZooDefs.CONFIG_NODE, qv.toString().getBytes(), -1,
+                    qv.getVersion(), Time.currentWallTime());
         } catch (NoNodeException e) {
             System.out.println("configuration node missing - should not happen");
         }

@@ -48,7 +48,7 @@ public class MultiTransactionRecord implements Record, Iterable<Op> {
 
     @Override
     public Iterator<Op> iterator() {
-        return ops.iterator() ;
+        return ops.iterator();
     }
 
     public void add(Op op) {
@@ -101,7 +101,8 @@ public class MultiTransactionRecord implements Record, Iterable<Op> {
                 case ZooDefs.OpCode.createTTL:
                     CreateTTLRequest crTtl = new CreateTTLRequest();
                     crTtl.deserialize(archive, tag);
-                    add(Op.create(crTtl.getPath(), crTtl.getData(), crTtl.getAcl(), crTtl.getFlags(), crTtl.getTtl()));
+                    add(Op.create(crTtl.getPath(), crTtl.getData(), crTtl.getAcl(),
+                            crTtl.getFlags(), crTtl.getTtl()));
                     break;
                 case ZooDefs.OpCode.delete:
                     DeleteRequest dr = new DeleteRequest();
@@ -128,8 +129,10 @@ public class MultiTransactionRecord implements Record, Iterable<Op> {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof MultiTransactionRecord)) return false;
+        if (this == o)
+            return true;
+        if (!(o instanceof MultiTransactionRecord))
+            return false;
 
         MultiTransactionRecord that = (MultiTransactionRecord) o;
 

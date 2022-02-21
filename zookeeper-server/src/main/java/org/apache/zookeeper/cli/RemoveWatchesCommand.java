@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,11 +17,7 @@
  */
 package org.apache.zookeeper.cli;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
-import org.apache.commons.cli.Parser;
-import org.apache.commons.cli.PosixParser;
+import org.apache.commons.cli.*;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.Watcher.WatcherType;
 
@@ -31,8 +27,6 @@ import org.apache.zookeeper.Watcher.WatcherType;
 public class RemoveWatchesCommand extends CliCommand {
 
     private static Options options = new Options();
-    private String[] args;
-    private CommandLine cl;
 
     static {
         options.addOption("c", false, "child watcher type");
@@ -41,6 +35,9 @@ public class RemoveWatchesCommand extends CliCommand {
         options.addOption("l", false,
                 "remove locally when there is no server connection");
     }
+
+    private String[] args;
+    private CommandLine cl;
 
     public RemoveWatchesCommand() {
         super("removewatches", "path [-c|-d|-a] [-l]");
@@ -81,7 +78,7 @@ public class RemoveWatchesCommand extends CliCommand {
             zk.removeAllWatches(path, wtype, local);
         } catch (IllegalArgumentException ex) {
             throw new MalformedPathException(ex.getMessage());
-        } catch (KeeperException|InterruptedException ex) {
+        } catch (KeeperException | InterruptedException ex) {
             throw new CliWrapperException(ex);
         }
         return true;

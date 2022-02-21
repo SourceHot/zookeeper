@@ -46,11 +46,12 @@ public class CommandResponse {
     public CommandResponse(String command) {
         this(command, null);
     }
+
     /**
      * Creates a new response.
      *
      * @param command command name
-     * @param error error string (may be null)
+     * @param error   error string (may be null)
      */
     public CommandResponse(String command, String error) {
         this.command = command;
@@ -79,7 +80,7 @@ public class CommandResponse {
     /**
      * Adds a key/value pair to this response.
      *
-     * @param key key
+     * @param key   key
      * @param value value
      * @return prior value for key, or null if none
      */
@@ -92,7 +93,7 @@ public class CommandResponse {
      *
      * @param m map of key/value pairs
      */
-    public void putAll(Map<? extends String,?> m) {
+    public void putAll(Map<? extends String, ?> m) {
         data.putAll(m);
     }
 

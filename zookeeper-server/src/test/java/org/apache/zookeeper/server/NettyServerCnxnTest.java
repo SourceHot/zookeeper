@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -23,9 +23,9 @@ import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.ZooKeeper;
-import org.apache.zookeeper.test.TestByteBufAllocator;
 import org.apache.zookeeper.server.quorum.BufferStats;
 import org.apache.zookeeper.test.ClientBase;
+import org.apache.zookeeper.test.TestByteBufAllocator;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -111,16 +111,19 @@ public class NettyServerCnxnTest extends ClientBase {
     }
 
     @Test
-    public void testClientResponseStatsUpdate() throws IOException, InterruptedException, KeeperException {
+    public void testClientResponseStatsUpdate()
+            throws IOException, InterruptedException, KeeperException {
         try (ZooKeeper zk = createClient()) {
-            BufferStats clientResponseStats = serverFactory.getZooKeeperServer().serverStats().getClientResponseStats();
+            BufferStats clientResponseStats =
+                    serverFactory.getZooKeeperServer().serverStats().getClientResponseStats();
             assertThat("Last client response size should be initialized with INIT_VALUE",
                     clientResponseStats.getLastBufferSize(), equalTo(BufferStats.INIT_VALUE));
 
             zk.create("/a", "test".getBytes(StandardCharsets.UTF_8), Ids.OPEN_ACL_UNSAFE,
                     CreateMode.PERSISTENT);
 
-            assertThat("Last client response size should be greater than 0 after client request was performed",
+            assertThat(
+                    "Last client response size should be greater than 0 after client request was performed",
                     clientResponseStats.getLastBufferSize(), greaterThan(0));
 
             byte[] contents = zk.getData("/a", null, null);
@@ -129,16 +132,19 @@ public class NettyServerCnxnTest extends ClientBase {
     }
 
     @Test
-    public void testServerSideThrottling() throws IOException, InterruptedException, KeeperException {
+    public void testServerSideThrottling()
+            throws IOException, InterruptedException, KeeperException {
         try (ZooKeeper zk = createClient()) {
-            BufferStats clientResponseStats = serverFactory.getZooKeeperServer().serverStats().getClientResponseStats();
+            BufferStats clientResponseStats =
+                    serverFactory.getZooKeeperServer().serverStats().getClientResponseStats();
             assertThat("Last client response size should be initialized with INIT_VALUE",
                     clientResponseStats.getLastBufferSize(), equalTo(BufferStats.INIT_VALUE));
 
             zk.create("/a", "test".getBytes(StandardCharsets.UTF_8), Ids.OPEN_ACL_UNSAFE,
                     CreateMode.PERSISTENT);
 
-            assertThat("Last client response size should be greater than 0 after client request was performed",
+            assertThat(
+                    "Last client response size should be greater than 0 after client request was performed",
                     clientResponseStats.getLastBufferSize(), greaterThan(0));
 
             for (final ServerCnxn cnxn : serverFactory.cnxns) {

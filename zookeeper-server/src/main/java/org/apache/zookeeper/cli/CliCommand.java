@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,9 +17,10 @@
  */
 package org.apache.zookeeper.cli;
 
+import org.apache.zookeeper.ZooKeeper;
+
 import java.io.PrintStream;
 import java.util.Map;
-import org.apache.zookeeper.ZooKeeper;
 
 /**
  * base class for all CLI commands
@@ -46,7 +47,7 @@ abstract public class CliCommand {
 
     /**
      * Set out printStream (usable for testing)
-     * @param out 
+     * @param out
      */
     public void setOut(PrintStream out) {
         this.out = out;
@@ -54,7 +55,7 @@ abstract public class CliCommand {
 
     /**
      * Set err printStream (usable for testing)
-     * @param err 
+     * @param err
      */
     public void setErr(PrintStream err) {
         this.err = err;
@@ -70,7 +71,7 @@ abstract public class CliCommand {
 
     /**
      * get the string used to call this command
-     * @return 
+     * @return
      */
     public String getCmdStr() {
         return cmdStr;
@@ -78,7 +79,7 @@ abstract public class CliCommand {
 
     /**
      * get the option string
-     * @return 
+     * @return
      */
     public String getOptionStr() {
         return optionStr;
@@ -86,7 +87,7 @@ abstract public class CliCommand {
 
     /**
      * get a usage string, contains the command and the options
-     * @return 
+     * @return
      */
     public String getUsageStr() {
         return cmdStr + " " + optionStr;
@@ -94,12 +95,12 @@ abstract public class CliCommand {
 
     /**
      * add this command to a map. Use the command string as key.
-     * @param cmdMap 
+     * @param cmdMap
      */
     public void addToMap(Map<String, CliCommand> cmdMap) {
         cmdMap.put(cmdStr, this);
     }
-    
+
     /**
      * parse the command arguments
      * @param cmdArgs
@@ -107,9 +108,9 @@ abstract public class CliCommand {
      * @throws CliParseException
      */
     abstract public CliCommand parse(String cmdArgs[]) throws CliParseException;
-    
+
     /**
-     * 
+     *
      * @return
      * @throws CliException
      */

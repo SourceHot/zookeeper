@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,17 +18,17 @@
 
 package org.apache.zookeeper.test;
 
+import org.apache.jute.BinaryOutputArchive;
+import org.apache.zookeeper.proto.ConnectRequest;
+import org.junit.Assert;
+import org.junit.Test;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import org.apache.jute.BinaryOutputArchive;
-import org.apache.zookeeper.proto.ConnectRequest;
-import org.junit.Assert;
-import org.junit.Test;
 
 public class MaxCnxnsTest extends ClientBase {
     final private static int numCnxns = 30;
@@ -42,10 +42,38 @@ public class MaxCnxnsTest extends ClientBase {
         super.setUp();
     }
 
+    /**
+     * Verify the ability to limit the number of concurrent connections.
+     * @throws IOException
+     * @throws InterruptedException
+     */
+    @Test
+    public void testMaxCnxns() throws IOException, InterruptedException {
+        String split[] = hostPort.split(":");
+        host = split[0];
+        port = Integer.parseInt(split[1]);
+        int numThreads = numCnxns + 5;
+        CnxnThread[] threads = new CnxnThread[numThreads];
+
+        for (int i = 0; i < numCnxns; ++i) {
+            threads[i] = new CnxnThread(i);
+        }
+
+        for (int i = 0; i < numCnxns; ++i) {
+            threads[i].start();
+        }
+
+        for (int i = 0; i < numCnxns; ++i) {
+            threads[i].join();
+        }
+        Assert.assertSame(numCnxns, numConnected.get());
+    }
+
+
     class CnxnThread extends Thread {
 
         public CnxnThread(int i) {
-            super("CnxnThread-"+i);
+            super("CnxnThread-" + i);
         }
 
         public void run() {
@@ -58,7 +86,7 @@ public class MaxCnxnsTest extends ClientBase {
                  * this for loop.
                  */
                 sChannel = SocketChannel.open();
-                sChannel.connect(new InetSocketAddress(host,port));
+                sChannel.connect(new InetSocketAddress(host, port));
                 // Construct a connection request
                 ConnectRequest conReq = new ConnectRequest(0, 0,
                         10000, 0, "password".getBytes());
@@ -86,14 +114,13 @@ public class MaxCnxnsTest extends ClientBase {
                 // If the socket times out, we count that as Assert.failed -
                 // the server should respond within 10s
                 sChannel.socket().setSoTimeout(10000);
-                if (!sChannel.socket().isClosed()){
+                if (!sChannel.socket().isClosed()) {
                     eof = sChannel.socket().getInputStream().read();
                     if (eof != -1) {
                         numConnected.incrementAndGet();
                     }
                 }
-            }
-            catch (IOException io) {
+            } catch (IOException io) {
                 // "Connection reset by peer"
             } finally {
                 if (sChannel != null) {
@@ -105,32 +132,5 @@ public class MaxCnxnsTest extends ClientBase {
                 }
             }
         }
-    }
-
-    /**
-     * Verify the ability to limit the number of concurrent connections.
-     * @throws IOException
-     * @throws InterruptedException
-     */
-    @Test
-    public void testMaxCnxns() throws IOException, InterruptedException{
-        String split[] = hostPort.split(":");
-        host = split[0];
-        port = Integer.parseInt(split[1]);
-        int numThreads = numCnxns + 5;
-        CnxnThread[] threads = new CnxnThread[numThreads];
-
-        for (int i=0;i<numCnxns;++i) {
-          threads[i] = new CnxnThread(i);
-        }
-
-        for (int i=0;i<numCnxns;++i) {
-            threads[i].start();
-        }
-
-        for (int i=0;i<numCnxns;++i) {
-            threads[i].join();
-        }
-        Assert.assertSame(numCnxns,numConnected.get());
     }
 }

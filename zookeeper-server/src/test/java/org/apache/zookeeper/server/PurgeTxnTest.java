@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,7 +18,20 @@
 
 package org.apache.zookeeper.server;
 
-import static org.junit.Assert.assertEquals;
+import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.PortAssignment;
+import org.apache.zookeeper.ZKTestCase;
+import org.apache.zookeeper.ZooDefs.Ids;
+import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.data.Stat;
+import org.apache.zookeeper.server.persistence.FileTxnSnapLog;
+import org.apache.zookeeper.server.persistence.Util;
+import org.apache.zookeeper.test.ClientBase;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -29,31 +42,14 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.zookeeper.data.Stat;
 
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.PortAssignment;
-import org.apache.zookeeper.ZKTestCase;
-import org.apache.zookeeper.ZooDefs.Ids;
-import org.apache.zookeeper.ZooKeeper;
-import org.apache.zookeeper.server.PurgeTxnLog;
-import org.apache.zookeeper.server.ServerCnxnFactory;
-import org.apache.zookeeper.server.SyncRequestProcessor;
-import org.apache.zookeeper.server.ZooKeeperServer;
-import org.apache.zookeeper.server.persistence.FileTxnSnapLog;
-import org.apache.zookeeper.server.persistence.Util;
-import org.apache.zookeeper.test.ClientBase;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static org.junit.Assert.assertEquals;
 
 public class PurgeTxnTest extends ZKTestCase {
     private static final Logger LOG = LoggerFactory.getLogger(PurgeTxnTest.class);
-    private static String HOSTPORT = "127.0.0.1:" + PortAssignment.unique();
     private static final int CONNECTION_TIMEOUT = 3000;
     private static final long OP_TIMEOUT_IN_MILLIS = 90000;
+    private static String HOSTPORT = "127.0.0.1:" + PortAssignment.unique();
     private File tmpDir;
 
     @After
@@ -77,10 +73,10 @@ public class PurgeTxnTest extends ZKTestCase {
         ServerCnxnFactory f = ServerCnxnFactory.createFactory(PORT, -1);
         f.startup(zks);
         Assert.assertTrue("waiting for server being up ",
-                ClientBase.waitForServerUp(HOSTPORT,CONNECTION_TIMEOUT));
+                ClientBase.waitForServerUp(HOSTPORT, CONNECTION_TIMEOUT));
         ZooKeeper zk = ClientBase.createZKClient(HOSTPORT);
         try {
-            for (int i = 0; i< 2000; i++) {
+            for (int i = 0; i < 2000; i++) {
                 zk.create("/invalidsnap-" + i, new byte[0], Ids.OPEN_ACL_UNSAFE,
                         CreateMode.PERSISTENT);
             }
@@ -96,7 +92,7 @@ public class PurgeTxnTest extends ZKTestCase {
         FileTxnSnapLog snaplog = new FileTxnSnapLog(tmpDir, tmpDir);
         List<File> listLogs = snaplog.findNRecentSnapshots(4);
         int numSnaps = 0;
-        for (File ff: listLogs) {
+        for (File ff : listLogs) {
             if (ff.getName().startsWith("snapshot")) {
                 numSnaps++;
             }
@@ -144,7 +140,9 @@ public class PurgeTxnTest extends ZKTestCase {
                 } finally {
                     purgeFinished.countDown();
                 }
-            };
+            }
+
+            ;
         }.start();
         final int thCount = 3;
         List<String> znodes = manyClientOps(zk, doPurge, thCount,
@@ -198,7 +196,7 @@ public class PurgeTxnTest extends ZKTestCase {
             Assert.assertTrue("Failed to create snap File:" + snapFile.toString(),
                     snapFile.createNewFile());
             // add the n recent snap files for assertion
-            if(i < nRecentSnap){
+            if (i < nRecentSnap) {
                 expectedNRecentSnapFiles.add(snapFile);
             }
         }
@@ -216,9 +214,9 @@ public class PurgeTxnTest extends ZKTestCase {
         // not logs or anything else (per ZOOKEEPER-2420)
         nRecentSnapFiles = txnLog.findNRecentSnapshots(nRecentCount + 5);
         assertEquals(nRecentCount, nRecentSnapFiles.size());
-        for (File f: nRecentSnapFiles) {
+        for (File f : nRecentSnapFiles) {
             Assert.assertTrue("findNRecentSnapshots() returned a non-snapshot: " + f.getPath(),
-                   (Util.getZxidFromName(f.getName(), "snapshot") != -1));
+                    (Util.getZxidFromName(f.getName(), "snapshot") != -1));
         }
 
         txnLog.close();
@@ -248,7 +246,8 @@ public class PurgeTxnTest extends ZKTestCase {
         createDataDirFiles(offset, fileToPurgeCount, false, version2, snapsToPurge,
                 logsToPurge);
         createDataDirFiles(offset, nRecentCount, false, version2, snaps, logs);
-        logs.add(logsToPurge.remove(0)); // log that precedes first retained snapshot is also retained
+        logs.add(logsToPurge.remove(
+                0)); // log that precedes first retained snapshot is also retained
         createDataDirFiles(offset, fileAboveRecentCount, false, version2,
                 snapsAboveRecentFiles, logsAboveRecentFiles);
 
@@ -287,7 +286,8 @@ public class PurgeTxnTest extends ZKTestCase {
         internalTestSnapFilesEqualsToRetain(true);
     }
 
-    public void internalTestSnapFilesEqualsToRetain(boolean testWithPrecedingLogFile) throws Exception {
+    public void internalTestSnapFilesEqualsToRetain(boolean testWithPrecedingLogFile)
+            throws Exception {
         int nRecentCount = 3;
         AtomicInteger offset = new AtomicInteger(0);
         tmpDir = ClientBase.createTmpDir();
@@ -325,7 +325,8 @@ public class PurgeTxnTest extends ZKTestCase {
         createDataDirFiles(offset, fileToPurgeCount, false, version2, snapsToPurge,
                 logsToPurge);
         createDataDirFiles(offset, nRecentCount, false, version2, snaps, logs);
-        logs.add(logsToPurge.remove(0)); // log that precedes first retained snapshot is also retained
+        logs.add(logsToPurge.remove(
+                0)); // log that precedes first retained snapshot is also retained
 
         /**
          * The newest log file preceding the oldest retained snapshot is not removed as it may
@@ -376,9 +377,9 @@ public class PurgeTxnTest extends ZKTestCase {
 
         int numberOfSnapFilesToKeep = 10;
         // scenario where four parameter are passed
-        String[] args = new String[] { dataLogDir.getAbsolutePath(),
+        String[] args = new String[] {dataLogDir.getAbsolutePath(),
                 dataDir.getAbsolutePath(), "-n",
-                Integer.toString(numberOfSnapFilesToKeep) };
+                Integer.toString(numberOfSnapFilesToKeep)};
         PurgeTxnLog.main(args);
 
         assertEquals(numberOfSnapFilesToKeep, dataDirVersion2.listFiles().length);
@@ -421,10 +422,11 @@ public class PurgeTxnTest extends ZKTestCase {
 
         int numberOfSnapFilesToKeep = 10;
         // scenario where only three parameter are passed
-        String[] args = new String[] { dataLogDir.getAbsolutePath(), "-n",
-                Integer.toString(numberOfSnapFilesToKeep) };
+        String[] args = new String[] {dataLogDir.getAbsolutePath(), "-n",
+                Integer.toString(numberOfSnapFilesToKeep)};
         PurgeTxnLog.main(args);
-        assertEquals(numberOfSnapFilesToKeep * 2, // Since for each snapshot we have a log file with same zxid, expect same # logs as snaps to be kept
+        assertEquals(numberOfSnapFilesToKeep * 2,
+                // Since for each snapshot we have a log file with same zxid, expect same # logs as snaps to be kept
                 dataLogDirVersion2.listFiles().length);
         ClientBase.recursiveDelete(tmpDir);
 
@@ -458,7 +460,7 @@ public class PurgeTxnTest extends ZKTestCase {
         ServerCnxnFactory f = ServerCnxnFactory.createFactory(PORT, -1);
         f.startup(zks);
         Assert.assertTrue("waiting for server being up ",
-                ClientBase.waitForServerUp(HOSTPORT,CONNECTION_TIMEOUT));
+                ClientBase.waitForServerUp(HOSTPORT, CONNECTION_TIMEOUT));
         ZooKeeper zk = ClientBase.createZKClient(HOSTPORT);
 
         // Unique identifier for each znode that we create.
@@ -469,14 +471,14 @@ public class PurgeTxnTest extends ZKTestCase {
              * snapshots.  Do not rollover the log.
              */
             for (int snapshotCount = 0; snapshotCount < SNAP_RETAIN_COUNT; snapshotCount++) {
-                for (int i = 0; i< 100; i++, unique++) {
+                for (int i = 0; i < 100; i++, unique++) {
                     zk.create("/snap-" + unique, new byte[0], Ids.OPEN_ACL_UNSAFE,
                             CreateMode.PERSISTENT);
                 }
                 zks.takeSnapshot();
             }
             // Create some additional znodes without taking a snapshot afterwards.
-            for (int i = 0; i< 100; i++, unique++) {
+            for (int i = 0; i < 100; i++, unique++) {
                 zk.create("/snap-" + unique, new byte[0], Ids.OPEN_ACL_UNSAFE,
                         CreateMode.PERSISTENT);
             }
@@ -524,7 +526,7 @@ public class PurgeTxnTest extends ZKTestCase {
     }
 
     private void createDataDirFiles(AtomicInteger offset, int limit, boolean createPrecedingLogFile,
-            File version_2, List<File> snaps, List<File> logs)
+                                    File version_2, List<File> snaps, List<File> logs)
             throws IOException {
         int counter = offset.get() + (2 * limit);
         if (createPrecedingLogFile) {
@@ -554,7 +556,9 @@ public class PurgeTxnTest extends ZKTestCase {
     }
 
     private List<String> manyClientOps(final ZooKeeper zk,
-            final CountDownLatch doPurge, int thCount, final String prefix) {
+                                       final CountDownLatch doPurge,
+                                       int thCount,
+                                       final String prefix) {
         Thread[] ths = new Thread[thCount];
         final List<String> znodes = Collections
                 .synchronizedList(new ArrayList<String>());
@@ -577,7 +581,9 @@ public class PurgeTxnTest extends ZKTestCase {
                         }
                     }
                     finished.countDown();
-                };
+                }
+
+                ;
             };
             ths[indx] = th;
         }

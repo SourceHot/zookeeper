@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -37,11 +37,13 @@ import java.util.Map;
 
 public class ZabUtils {
 
-    private ZabUtils() {}
-
     public static final int SYNC_LIMIT = 2;
 
-    public static QuorumPeer createQuorumPeer(File tmpDir) throws IOException, FileNotFoundException {
+    private ZabUtils() {
+    }
+
+    public static QuorumPeer createQuorumPeer(File tmpDir)
+            throws IOException, FileNotFoundException {
         HashMap<Long, QuorumPeer.QuorumServer> peers = new HashMap<Long, QuorumPeer.QuorumServer>();
         QuorumPeer peer = QuorumPeer.testingQuorumPeer();
         peer.syncLimit = SYNC_LIMIT;
@@ -99,26 +101,35 @@ public class ZabUtils {
         public void startup(ZooKeeperServer zkServer, boolean startServer)
                 throws IOException, InterruptedException {
         }
+
         public void start() {
         }
+
         public void shutdown() {
         }
-        public void setMaxClientCnxnsPerHost(int max) {
-        }
+
         public void join() throws InterruptedException {
         }
+
         public int getMaxClientCnxnsPerHost() {
             return 0;
         }
+
+        public void setMaxClientCnxnsPerHost(int max) {
+        }
+
         public int getLocalPort() {
             return 0;
         }
+
         public InetSocketAddress getLocalAddress() {
             return null;
         }
+
         public Iterable<ServerCnxn> getConnections() {
             return null;
         }
+
         public void configure(InetSocketAddress addr, int maxcc, boolean secure)
                 throws IOException {
         }
@@ -126,23 +137,29 @@ public class ZabUtils {
         public boolean closeSession(long sessionId) {
             return false;
         }
+
         public void closeAll() {
         }
+
         @Override
         public int getNumAliveConnections() {
             return 0;
         }
+
         @Override
         public void reconfigure(InetSocketAddress addr) {
         }
+
         @Override
         public void resetAllConnectionStats() {
         }
+
         @Override
         public Iterable<Map<String, Object>> getAllConnectionInfo(boolean brief) {
             return null;
         }
     }
+
 
     public static final class MockLeader extends Leader {
 

@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,21 +18,11 @@
 
 package org.apache.zookeeper.server.quorum;
 
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import javax.security.sasl.SaslException;
-
 import org.apache.jute.OutputArchive;
-
 import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.KeeperException.ConnectionLossException;
 import org.apache.zookeeper.KeeperException.NoNodeException;
 import org.apache.zookeeper.KeeperException.NodeExistsException;
 import org.apache.zookeeper.Op;
-
 import org.apache.zookeeper.PortAssignment;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.ZooKeeper;
@@ -44,14 +34,19 @@ import org.apache.zookeeper.server.DataTree;
 import org.apache.zookeeper.server.ZKDatabase;
 import org.apache.zookeeper.server.ZooKeeperServer;
 import org.apache.zookeeper.test.ClientBase;
-
-import org.junit.Assert;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.security.sasl.SaslException;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Test cases used to catch corner cases due to fuzzy snapshot.
@@ -114,13 +109,13 @@ public class FuzzySnapshotRelatedTest extends QuorumPeerTestBase {
     @After
     public void tearDown() throws Exception {
         if (mt != null) {
-            for (MainThread t: mt) {
+            for (MainThread t : mt) {
                 t.shutdown();
             }
         }
 
         if (zk != null) {
-            for (ZooKeeper z: zk) {
+            for (ZooKeeper z : zk) {
                 z.close();
             }
         }
@@ -151,10 +146,10 @@ public class FuzzySnapshotRelatedTest extends QuorumPeerTestBase {
 
         LOG.info("Issue a multi op to create 2 nodes");
         zk[followerA].multi(Arrays.asList(
-            Op.create(node1, node1.getBytes(),
-                    Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT),
-            Op.create(node2, node2.getBytes(),
-                    Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT))
+                Op.create(node1, node1.getBytes(),
+                        Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT),
+                Op.create(node2, node2.getBytes(),
+                        Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT))
         );
 
         LOG.info("Restart the server");
@@ -272,6 +267,12 @@ public class FuzzySnapshotRelatedTest extends QuorumPeerTestBase {
 
     }
 
+
+    static interface NodeSerializeListener {
+        public void nodeSerialized(String path);
+    }
+
+
     static class CustomDataTree extends DataTree {
         Map<String, NodeCreateListener> nodeCreateListeners =
                 new HashMap<String, NodeCreateListener>();
@@ -280,7 +281,7 @@ public class FuzzySnapshotRelatedTest extends QuorumPeerTestBase {
 
         @Override
         public void serializeNodeData(OutputArchive oa, String path,
-                DataNode node) throws IOException {
+                                      DataNode node) throws IOException {
             super.serializeNodeData(oa, path, node);
             NodeSerializeListener listener = listeners.get(path);
             if (listener != null) {
@@ -294,8 +295,8 @@ public class FuzzySnapshotRelatedTest extends QuorumPeerTestBase {
 
         @Override
         public void createNode(final String path, byte data[], List<ACL> acl,
-                           long ephemeralOwner, int parentCVersion, long zxid,
-                           long time, Stat outputStat)
+                               long ephemeralOwner, int parentCVersion, long zxid,
+                               long time, Stat outputStat)
                 throws NoNodeException, NodeExistsException {
             NodeCreateListener listener = nodeCreateListeners.get(path);
             if (listener != null) {
@@ -310,9 +311,6 @@ public class FuzzySnapshotRelatedTest extends QuorumPeerTestBase {
         }
     }
 
-    static interface NodeSerializeListener {
-        public void nodeSerialized(String path);
-    }
 
     static class CustomizedQPMain extends TestQPMain {
         @Override

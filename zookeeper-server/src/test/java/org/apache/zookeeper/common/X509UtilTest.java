@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,31 +16,6 @@
  * limitations under the License.
  */
 package org.apache.zookeeper.common;
-
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.security.Security;
-import java.util.Collection;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import javax.net.ssl.HandshakeCompletedEvent;
-import javax.net.ssl.HandshakeCompletedListener;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLHandshakeException;
-import javax.net.ssl.SSLServerSocket;
-import javax.net.ssl.SSLSocket;
-import javax.net.ssl.X509KeyManager;
-import javax.net.ssl.X509TrustManager;
 
 import org.apache.zookeeper.PortAssignment;
 import org.apache.zookeeper.client.ZKClientConfig;
@@ -52,17 +27,23 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import javax.net.ssl.*;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.security.Security;
+import java.util.Collection;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
+
 @RunWith(Parameterized.class)
 public class X509UtilTest extends BaseX509ParameterizedTestCase {
-    private X509Util x509Util;
-    private static final String[] customCipherSuites = new String[]{
+    private static final String[] customCipherSuites = new String[] {
             "SSL_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA",
             "SSL_DH_anon_EXPORT_WITH_DES40_CBC_SHA"};
-
-    @Parameterized.Parameters
-    public static Collection<Object[]> params() {
-        return BaseX509ParameterizedTestCase.defaultParams();
-    }
+    private X509Util x509Util;
 
     public X509UtilTest(
             X509KeyType caKeyType,
@@ -84,13 +65,41 @@ public class X509UtilTest extends BaseX509ParameterizedTestCase {
         });
     }
 
+    @Parameterized.Parameters
+    public static Collection<Object[]> params() {
+        return BaseX509ParameterizedTestCase.defaultParams();
+    }
+
+    private static void forceClose(Socket s) {
+        if (s == null || s.isClosed()) {
+            return;
+        }
+        try {
+            s.close();
+        } catch (IOException e) {
+        }
+    }
+
+    private static void forceClose(ServerSocket s) {
+        if (s == null || s.isClosed()) {
+            return;
+        }
+        try {
+            s.close();
+        } catch (IOException e) {
+        }
+    }
+
     @Before
     public void setUp() throws Exception {
         try (X509Util x509util = new ClientX509Util()) {
-            x509TestContext.setSystemProperties(x509util, KeyStoreFileType.JKS, KeyStoreFileType.JKS);
+            x509TestContext.setSystemProperties(x509util, KeyStoreFileType.JKS,
+                    KeyStoreFileType.JKS);
         }
-        System.setProperty(ServerCnxnFactory.ZOOKEEPER_SERVER_CNXN_FACTORY, "org.apache.zookeeper.server.NettyServerCnxnFactory");
-        System.setProperty(ZKClientConfig.ZOOKEEPER_CLIENT_CNXN_SOCKET, "org.apache.zookeeper.ClientCnxnSocketNetty");
+        System.setProperty(ServerCnxnFactory.ZOOKEEPER_SERVER_CNXN_FACTORY,
+                "org.apache.zookeeper.server.NettyServerCnxnFactory");
+        System.setProperty(ZKClientConfig.ZOOKEEPER_CLIENT_CNXN_SOCKET,
+                "org.apache.zookeeper.ClientCnxnSocketNetty");
         x509Util = new ClientX509Util();
     }
 
@@ -380,9 +389,9 @@ public class X509UtilTest extends BaseX509ParameterizedTestCase {
     public void testLoadPKCS12KeyStore() throws Exception {
         // Make sure we can instantiate a key manager from the PKCS12 file on disk
         X509KeyManager km = X509Util.createKeyManager(
-            x509TestContext.getKeyStoreFile(KeyStoreFileType.PKCS12).getAbsolutePath(),
-            x509TestContext.getKeyStorePassword(),
-            KeyStoreFileType.PKCS12.getPropertyValue());
+                x509TestContext.getKeyStoreFile(KeyStoreFileType.PKCS12).getAbsolutePath(),
+                x509TestContext.getKeyStorePassword(),
+                KeyStoreFileType.PKCS12.getPropertyValue());
     }
 
     @Test
@@ -392,40 +401,40 @@ public class X509UtilTest extends BaseX509ParameterizedTestCase {
         }
         // Make sure that empty password and null password are treated the same
         X509KeyManager km = X509Util.createKeyManager(
-            x509TestContext.getKeyStoreFile(KeyStoreFileType.PKCS12).getAbsolutePath(),
-            null,
-            KeyStoreFileType.PKCS12.getPropertyValue());
+                x509TestContext.getKeyStoreFile(KeyStoreFileType.PKCS12).getAbsolutePath(),
+                null,
+                KeyStoreFileType.PKCS12.getPropertyValue());
     }
 
     @Test
     public void testLoadPKCS12KeyStoreAutodetectStoreFileType() throws Exception {
         // Make sure we can instantiate a key manager from the PKCS12 file on disk
         X509KeyManager km = X509Util.createKeyManager(
-            x509TestContext.getKeyStoreFile(KeyStoreFileType.PKCS12).getAbsolutePath(),
-            x509TestContext.getKeyStorePassword(),
-            null /* null StoreFileType means 'autodetect from file extension' */);
+                x509TestContext.getKeyStoreFile(KeyStoreFileType.PKCS12).getAbsolutePath(),
+                x509TestContext.getKeyStorePassword(),
+                null /* null StoreFileType means 'autodetect from file extension' */);
     }
 
     @Test(expected = X509Exception.KeyManagerException.class)
     public void testLoadPKCS12KeyStoreWithWrongPassword() throws Exception {
         // Attempting to load with the wrong key password should fail
         X509KeyManager km = X509Util.createKeyManager(
-            x509TestContext.getKeyStoreFile(KeyStoreFileType.PKCS12).getAbsolutePath(),
-            "wrong password",
-            KeyStoreFileType.PKCS12.getPropertyValue());
+                x509TestContext.getKeyStoreFile(KeyStoreFileType.PKCS12).getAbsolutePath(),
+                "wrong password",
+                KeyStoreFileType.PKCS12.getPropertyValue());
     }
 
     @Test
     public void testLoadPKCS12TrustStore() throws Exception {
         // Make sure we can instantiate a trust manager from the PKCS12 file on disk
         X509TrustManager tm = X509Util.createTrustManager(
-            x509TestContext.getTrustStoreFile(KeyStoreFileType.PKCS12).getAbsolutePath(),
-            x509TestContext.getTrustStorePassword(),
-            KeyStoreFileType.PKCS12.getPropertyValue(),
-            true,
-            true,
-            true,
-            true);
+                x509TestContext.getTrustStoreFile(KeyStoreFileType.PKCS12).getAbsolutePath(),
+                x509TestContext.getTrustStorePassword(),
+                KeyStoreFileType.PKCS12.getPropertyValue(),
+                true,
+                true,
+                true,
+                true);
     }
 
     @Test
@@ -435,39 +444,39 @@ public class X509UtilTest extends BaseX509ParameterizedTestCase {
         }
         // Make sure that empty password and null password are treated the same
         X509TrustManager tm = X509Util.createTrustManager(
-            x509TestContext.getTrustStoreFile(KeyStoreFileType.PKCS12).getAbsolutePath(),
-            null,
-            KeyStoreFileType.PKCS12.getPropertyValue(),
-            false,
-            false,
-            true,
-            true);
+                x509TestContext.getTrustStoreFile(KeyStoreFileType.PKCS12).getAbsolutePath(),
+                null,
+                KeyStoreFileType.PKCS12.getPropertyValue(),
+                false,
+                false,
+                true,
+                true);
     }
 
     @Test
     public void testLoadPKCS12TrustStoreAutodetectStoreFileType() throws Exception {
         // Make sure we can instantiate a trust manager from the PKCS12 file on disk
         X509TrustManager tm = X509Util.createTrustManager(
-            x509TestContext.getTrustStoreFile(KeyStoreFileType.PKCS12).getAbsolutePath(),
-            x509TestContext.getTrustStorePassword(),
-            null,  // null StoreFileType means 'autodetect from file extension'
-            true,
-            true,
-            true,
-            true);
+                x509TestContext.getTrustStoreFile(KeyStoreFileType.PKCS12).getAbsolutePath(),
+                x509TestContext.getTrustStorePassword(),
+                null,  // null StoreFileType means 'autodetect from file extension'
+                true,
+                true,
+                true,
+                true);
     }
 
     @Test(expected = X509Exception.TrustManagerException.class)
     public void testLoadPKCS12TrustStoreWithWrongPassword() throws Exception {
         // Attempting to load with the wrong key password should fail
         X509TrustManager tm = X509Util.createTrustManager(
-            x509TestContext.getTrustStoreFile(KeyStoreFileType.PKCS12).getAbsolutePath(),
-            "wrong password",
-            KeyStoreFileType.PKCS12.getPropertyValue(),
-            true,
-            true,
-            true,
-            true);
+                x509TestContext.getTrustStoreFile(KeyStoreFileType.PKCS12).getAbsolutePath(),
+                "wrong password",
+                KeyStoreFileType.PKCS12.getPropertyValue(),
+                true,
+                true,
+                true,
+                true);
     }
 
     @Test
@@ -476,8 +485,10 @@ public class X509UtilTest extends BaseX509ParameterizedTestCase {
                 X509Util.DEFAULT_HANDSHAKE_DETECTION_TIMEOUT_MILLIS,
                 x509Util.getSslHandshakeTimeoutMillis());
         // Note: need to create a new ClientX509Util each time to pick up modified property value
-        String newPropertyString = Integer.toString(X509Util.DEFAULT_HANDSHAKE_DETECTION_TIMEOUT_MILLIS + 1);
-        System.setProperty(x509Util.getSslHandshakeDetectionTimeoutMillisProperty(), newPropertyString);
+        String newPropertyString =
+                Integer.toString(X509Util.DEFAULT_HANDSHAKE_DETECTION_TIMEOUT_MILLIS + 1);
+        System.setProperty(x509Util.getSslHandshakeDetectionTimeoutMillisProperty(),
+                newPropertyString);
         try (X509Util tempX509Util = new ClientX509Util()) {
             Assert.assertEquals(
                     X509Util.DEFAULT_HANDSHAKE_DETECTION_TIMEOUT_MILLIS + 1,
@@ -496,26 +507,6 @@ public class X509UtilTest extends BaseX509ParameterizedTestCase {
             Assert.assertEquals(
                     X509Util.DEFAULT_HANDSHAKE_DETECTION_TIMEOUT_MILLIS,
                     tempX509Util.getSslHandshakeTimeoutMillis());
-        }
-    }
-
-    private static void forceClose(Socket s) {
-        if (s == null || s.isClosed()) {
-            return;
-        }
-        try {
-            s.close();
-        } catch (IOException e) {
-        }
-    }
-
-    private static void forceClose(ServerSocket s) {
-        if (s == null || s.isClosed()) {
-            return;
-        }
-        try {
-            s.close();
-        } catch (IOException e) {
         }
     }
 
@@ -623,7 +614,8 @@ public class X509UtilTest extends BaseX509ParameterizedTestCase {
 
     // Warning: this will reset the x509Util
     private void setCustomCipherSuites() {
-        System.setProperty(x509Util.getCipherSuitesProperty(), customCipherSuites[0] + "," + customCipherSuites[1]);
+        System.setProperty(x509Util.getCipherSuitesProperty(),
+                customCipherSuites[0] + "," + customCipherSuites[1]);
         x509Util.close(); // remember to close old instance before replacing it
         x509Util = new ClientX509Util();
     }

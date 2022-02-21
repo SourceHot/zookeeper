@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,69 +18,53 @@
 
 package org.apache.zookeeper;
 
-import java.io.IOException;
-import java.net.SocketAddress;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
 import org.apache.jute.Record;
 import org.apache.zookeeper.admin.ZooKeeperAdmin;
 import org.apache.zookeeper.client.HostProvider;
 import org.apache.zookeeper.proto.ReplyHeader;
 import org.apache.zookeeper.proto.RequestHeader;
 
+import java.io.IOException;
+import java.net.SocketAddress;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
 public class TestableZooKeeper extends ZooKeeperAdmin {
 
     public TestableZooKeeper(String host, int sessionTimeout,
-            Watcher watcher) throws IOException {
+                             Watcher watcher) throws IOException {
         super(host, sessionTimeout, watcher);
     }
 
-    class TestableClientCnxn extends ClientCnxn {
-        TestableClientCnxn(String chrootPath, HostProvider hostProvider, int sessionTimeout, ZooKeeper zooKeeper,
-            ClientWatchManager watcher, ClientCnxnSocket clientCnxnSocket, boolean canBeReadOnly)
-                throws IOException {
-            super(chrootPath, hostProvider, sessionTimeout, zooKeeper, watcher,
-                clientCnxnSocket, 0, new byte[16], canBeReadOnly);
-        }
-
-        void setXid(int newXid) {
-            xid = newXid;
-        }
-
-        int checkXid() {
-            return xid;
-        }
-    }
-
     protected ClientCnxn createConnection(String chrootPath,
-            HostProvider hostProvider, int sessionTimeout, ZooKeeper zooKeeper,
-            ClientWatchManager watcher, ClientCnxnSocket clientCnxnSocket,
-            boolean canBeReadOnly) throws IOException {
+                                          HostProvider hostProvider,
+                                          int sessionTimeout,
+                                          ZooKeeper zooKeeper,
+                                          ClientWatchManager watcher,
+                                          ClientCnxnSocket clientCnxnSocket,
+                                          boolean canBeReadOnly) throws IOException {
         return new TestableClientCnxn(chrootPath, hostProvider, sessionTimeout, this,
                 watcher, clientCnxnSocket, canBeReadOnly);
     }
 
     public void setXid(int xid) {
-        ((TestableClientCnxn)cnxn).setXid(xid);
+        ((TestableClientCnxn) cnxn).setXid(xid);
     }
 
     public int checkXid() {
-        return ((TestableClientCnxn)cnxn).checkXid();
+        return ((TestableClientCnxn) cnxn).checkXid();
     }
-    
+
     @Override
     public List<String> getChildWatches() {
         return super.getChildWatches();
     }
 
-
     @Override
     public List<String> getDataWatches() {
         return super.getDataWatches();
     }
-
 
     @Override
     public List<String> getExistWatches() {
@@ -92,7 +76,7 @@ public class TestableZooKeeper extends ZooKeeperAdmin {
      * later attempt to reconnect.
      */
     public void testableConnloss() throws IOException {
-        synchronized(cnxn) {
+        synchronized (cnxn) {
             cnxn.sendThread.testableCloseSocket();
         }
     }
@@ -107,7 +91,7 @@ public class TestableZooKeeper extends ZooKeeperAdmin {
         final CountDownLatch initiatedPause = new CountDownLatch(1);
         new Thread() {
             public void run() {
-                synchronized(cnxn) {
+                synchronized (cnxn) {
                     try {
                         try {
                             cnxn.sendThread.testableCloseSocket();
@@ -147,7 +131,8 @@ public class TestableZooKeeper extends ZooKeeperAdmin {
     }
 
     public ReplyHeader submitRequest(RequestHeader h, Record request,
-            Record response, WatchRegistration watchRegistration) throws InterruptedException {
+                                     Record response, WatchRegistration watchRegistration)
+            throws InterruptedException {
         return cnxn.submitRequest(h, request, response, watchRegistration);
     }
 
@@ -158,5 +143,28 @@ public class TestableZooKeeper extends ZooKeeperAdmin {
      */
     public void disconnect() {
         cnxn.disconnect();
+    }
+
+
+    class TestableClientCnxn extends ClientCnxn {
+        TestableClientCnxn(String chrootPath,
+                           HostProvider hostProvider,
+                           int sessionTimeout,
+                           ZooKeeper zooKeeper,
+                           ClientWatchManager watcher,
+                           ClientCnxnSocket clientCnxnSocket,
+                           boolean canBeReadOnly)
+                throws IOException {
+            super(chrootPath, hostProvider, sessionTimeout, zooKeeper, watcher,
+                    clientCnxnSocket, 0, new byte[16], canBeReadOnly);
+        }
+
+        void setXid(int newXid) {
+            xid = newXid;
+        }
+
+        int checkXid() {
+            return xid;
+        }
     }
 }

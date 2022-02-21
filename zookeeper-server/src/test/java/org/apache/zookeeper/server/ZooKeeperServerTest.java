@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,16 +18,16 @@
 
 package org.apache.zookeeper.server;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.List;
-
 import org.apache.zookeeper.ZKTestCase;
 import org.apache.zookeeper.server.persistence.FileTxnLog;
 import org.apache.zookeeper.server.persistence.Util;
 import org.apache.zookeeper.test.ClientBase;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.List;
 
 public class ZooKeeperServerTest extends ZKTestCase {
     @Test
@@ -86,7 +86,7 @@ public class ZooKeeperServerTest extends ZKTestCase {
 
         File[] filelist =
                 FileTxnLog.getLogFiles(files,
-                Long.parseLong("10027c6de", 16));
+                        Long.parseLong("10027c6de", 16));
 
         Assert.assertEquals(3, filelist.length);
         Assert.assertEquals(orig[0], filelist[0]);
@@ -105,13 +105,12 @@ public class ZooKeeperServerTest extends ZKTestCase {
     public void testForceSyncDefaultDisabled() {
         try {
             File file = new File("foo.10027c6de");
-            System.setProperty("zookeeper.forceSync","no");
+            System.setProperty("zookeeper.forceSync", "no");
             FileTxnLog log = new FileTxnLog(file);
             Assert.assertFalse(log.isForceSync());
-        }
-        finally {
+        } finally {
             //Reset back to default.
-            System.setProperty("zookeeper.forceSync","yes");
+            System.setProperty("zookeeper.forceSync", "yes");
         }
     }
 
@@ -125,7 +124,8 @@ public class ZooKeeperServerTest extends ZKTestCase {
             if (!f.exists()) {
                 f.createNewFile();
             }
-            Assert.assertFalse("Snapshot file size is greater than 9 bytes", Util.isValidSnapshot(f));
+            Assert.assertFalse("Snapshot file size is greater than 9 bytes",
+                    Util.isValidSnapshot(f));
             Assert.assertTrue("Can't delete file", f.delete());
         } catch (IOException e) {
         } finally {

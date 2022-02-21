@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,6 +17,16 @@
  */
 
 package org.apache.zookeeper;
+
+import org.apache.jute.BinaryInputArchive;
+import org.apache.zookeeper.ClientCnxn.Packet;
+import org.apache.zookeeper.client.ZKClientConfig;
+import org.apache.zookeeper.common.Time;
+import org.apache.zookeeper.common.ZKConfig;
+import org.apache.zookeeper.proto.ConnectResponse;
+import org.apache.zookeeper.server.ByteBufferInputStream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -27,54 +37,40 @@ import java.util.List;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.jute.BinaryInputArchive;
-import org.apache.zookeeper.ClientCnxn.Packet;
-import org.apache.zookeeper.client.ZKClientConfig;
-import org.apache.zookeeper.common.ZKConfig;
-import org.apache.zookeeper.common.Time;
-import org.apache.zookeeper.proto.ConnectResponse;
-import org.apache.zookeeper.server.ByteBufferInputStream;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 /**
  * A ClientCnxnSocket does the lower level communication with a socket
  * implementation.
- * 
+ *
  * This code has been moved out of ClientCnxn so that a Netty implementation can
  * be provided as an alternative to the NIO socket code.
- * 
+ *
  */
 abstract class ClientCnxnSocket {
     private static final Logger LOG = LoggerFactory.getLogger(ClientCnxnSocket.class);
-
-    protected boolean initialized;
-
     /**
      * This buffer is only used to read the length of the incoming message.
      */
     protected final ByteBuffer lenBuffer = ByteBuffer.allocateDirect(4);
-
+    protected final AtomicLong sentCount = new AtomicLong(0L);
+    protected final AtomicLong recvCount = new AtomicLong(0L);
+    protected boolean initialized;
     /**
      * After the length is read, a new incomingBuffer is allocated in
      * readLength() to receive the full message.
      */
     protected ByteBuffer incomingBuffer = lenBuffer;
-    protected final AtomicLong sentCount = new AtomicLong(0L);
-    protected final AtomicLong recvCount = new AtomicLong(0L);
     protected long lastHeard;
     protected long lastSend;
     protected long now;
     protected ClientCnxn.SendThread sendThread;
     protected LinkedBlockingDeque<Packet> outgoingQueue;
     protected ZKClientConfig clientConfig;
-    private int packetLen = ZKClientConfig.CLIENT_MAX_PACKET_LENGTH_DEFAULT;
-
     /**
      * The sessionId is only available here for Log and Exception messages.
      * Otherwise the socket doesn't need to know it.
      */
     protected long sessionId;
+    private int packetLen = ZKClientConfig.CLIENT_MAX_PACKET_LENGTH_DEFAULT;
 
     void introduce(ClientCnxn.SendThread sendThread, long sessionId,
                    LinkedBlockingDeque<Packet> outgoingQueue) {
@@ -209,7 +205,7 @@ abstract class ClientCnxnSocket {
      * @throws InterruptedException
      */
     abstract void doTransport(int waitTimeOut, List<Packet> pendingQueue,
-            ClientCnxn cnxn)
+                              ClientCnxn cnxn)
             throws IOException, InterruptedException;
 
     /**

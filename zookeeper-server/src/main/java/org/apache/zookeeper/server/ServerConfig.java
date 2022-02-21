@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,13 +18,13 @@
 
 package org.apache.zookeeper.server;
 
-import java.io.File;
-import java.net.InetSocketAddress;
-import java.util.Arrays;
-
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig;
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig.ConfigException;
+
+import java.io.File;
+import java.net.InetSocketAddress;
+import java.util.Arrays;
 
 /**
  * Server configuration storage.
@@ -57,7 +57,8 @@ public class ServerConfig {
      */
     public void parse(String[] args) {
         if (args.length < 2 || args.length > 4) {
-            throw new IllegalArgumentException("Invalid number of arguments:" + Arrays.toString(args));
+            throw new IllegalArgumentException(
+                    "Invalid number of arguments:" + Arrays.toString(args));
         }
 
         clientPortAddress = new InetSocketAddress(Integer.parseInt(args[0]));
@@ -108,15 +109,34 @@ public class ServerConfig {
     public InetSocketAddress getClientPortAddress() {
         return clientPortAddress;
     }
+
     public InetSocketAddress getSecureClientPortAddress() {
         return secureClientPortAddress;
     }
-    public File getDataDir() { return dataDir; }
-    public File getDataLogDir() { return dataLogDir; }
-    public int getTickTime() { return tickTime; }
-    public int getMaxClientCnxns() { return maxClientCnxns; }
+
+    public File getDataDir() {
+        return dataDir;
+    }
+
+    public File getDataLogDir() {
+        return dataLogDir;
+    }
+
+    public int getTickTime() {
+        return tickTime;
+    }
+
+    public int getMaxClientCnxns() {
+        return maxClientCnxns;
+    }
+
     /** minimum session timeout in milliseconds, -1 if unset */
-    public int getMinSessionTimeout() { return minSessionTimeout; }
+    public int getMinSessionTimeout() {
+        return minSessionTimeout;
+    }
+
     /** maximum session timeout in milliseconds, -1 if unset */
-    public int getMaxSessionTimeout() { return maxSessionTimeout; }
+    public int getMaxSessionTimeout() {
+        return maxSessionTimeout;
+    }
 }

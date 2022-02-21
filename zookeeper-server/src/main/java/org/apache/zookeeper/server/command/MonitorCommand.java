@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,8 +18,6 @@
 
 package org.apache.zookeeper.server.command;
 
-import java.io.PrintWriter;
-
 import org.apache.zookeeper.Version;
 import org.apache.zookeeper.server.ServerCnxn;
 import org.apache.zookeeper.server.ServerStats;
@@ -27,6 +25,8 @@ import org.apache.zookeeper.server.ZKDatabase;
 import org.apache.zookeeper.server.quorum.Leader;
 import org.apache.zookeeper.server.quorum.LeaderZooKeeperServer;
 import org.apache.zookeeper.server.util.OSMXBean;
+
+import java.io.PrintWriter;
 
 public class MonitorCommand extends AbstractFourLetterCommand {
 
@@ -69,7 +69,7 @@ public class MonitorCommand extends AbstractFourLetterCommand {
         }
 
         if (stats.getServerState().equals("leader")) {
-            Leader leader = ((LeaderZooKeeperServer)zkServer).getLeader();
+            Leader leader = ((LeaderZooKeeperServer) zkServer).getLeader();
 
             print("followers", leader.getLearners().size());
             print("synced_followers", leader.getForwardingFollowers().size());

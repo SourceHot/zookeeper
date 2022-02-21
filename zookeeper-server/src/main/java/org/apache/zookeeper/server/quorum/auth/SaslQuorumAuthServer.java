@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,19 +17,6 @@
  */
 
 package org.apache.zookeeper.server.quorum.auth;
-
-import java.io.BufferedOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.net.Socket;
-import java.util.Set;
-
-import javax.security.auth.login.AppConfigurationEntry;
-import javax.security.auth.login.Configuration;
-import javax.security.auth.login.LoginException;
-import javax.security.sasl.SaslException;
-import javax.security.sasl.SaslServer;
 
 import org.apache.jute.BinaryInputArchive;
 import org.apache.jute.BinaryOutputArchive;
@@ -40,6 +27,18 @@ import org.apache.zookeeper.util.SecurityUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.security.auth.login.AppConfigurationEntry;
+import javax.security.auth.login.Configuration;
+import javax.security.auth.login.LoginException;
+import javax.security.sasl.SaslException;
+import javax.security.sasl.SaslServer;
+import java.io.BufferedOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.net.Socket;
+import java.util.Set;
+
 public class SaslQuorumAuthServer implements QuorumAuthServer {
 
     private static final Logger LOG = LoggerFactory
@@ -49,7 +48,9 @@ public class SaslQuorumAuthServer implements QuorumAuthServer {
     private final Login serverLogin;
     private final boolean quorumRequireSasl;
 
-    public SaslQuorumAuthServer(boolean quorumRequireSasl, String loginContext, Set<String> authzHosts)
+    public SaslQuorumAuthServer(boolean quorumRequireSasl,
+                                String loginContext,
+                                Set<String> authzHosts)
             throws SaslException {
         this.quorumRequireSasl = quorumRequireSasl;
         try {
@@ -60,8 +61,9 @@ public class SaslQuorumAuthServer implements QuorumAuthServer {
                         + " because the specified JAAS configuration "
                         + "section '" + loginContext + "' could not be found.");
             }
-            SaslQuorumServerCallbackHandler saslServerCallbackHandler = new SaslQuorumServerCallbackHandler(
-                    Configuration.getConfiguration(), loginContext, authzHosts);
+            SaslQuorumServerCallbackHandler saslServerCallbackHandler =
+                    new SaslQuorumServerCallbackHandler(
+                            Configuration.getConfiguration(), loginContext, authzHosts);
             serverLogin = new Login(loginContext, saslServerCallbackHandler, new ZKConfig());
             serverLogin.startThreadIfNeeded();
         } catch (Throwable e) {
@@ -80,7 +82,7 @@ public class SaslQuorumAuthServer implements QuorumAuthServer {
             if (!QuorumAuth.nextPacketIsAuth(din)) {
                 if (quorumRequireSasl) {
                     throw new SaslException("Learner not trying to authenticate"
-                                            + " and authentication is required");
+                            + " and authentication is required");
                 } else {
                     // let it through, we don't require auth
                     return;
@@ -101,7 +103,8 @@ public class SaslQuorumAuthServer implements QuorumAuthServer {
                     // limited number of retries.
                     if (++tries > MAX_RETRIES) {
                         send(dout, challenge, QuorumAuth.Status.ERROR);
-                        LOG.warn("Failed to authenticate using SASL, server addr: {}, retries={} exceeded.",
+                        LOG.warn(
+                                "Failed to authenticate using SASL, server addr: {}, retries={} exceeded.",
                                 sock.getRemoteSocketAddress(), tries);
                         break;
                     }
@@ -136,9 +139,9 @@ public class SaslQuorumAuthServer implements QuorumAuthServer {
                 LOG.warn("Failed to authenticate using SASL", e);
                 LOG.warn("Maintaining learner connection despite SASL authentication failure."
                                 + " server addr: {}, {}: {}",
-                        new Object[] { sock.getRemoteSocketAddress(),
+                        new Object[] {sock.getRemoteSocketAddress(),
                                 QuorumAuth.QUORUM_SERVER_SASL_AUTH_REQUIRED,
-                                quorumRequireSasl });
+                                quorumRequireSasl});
                 return; // let it through, we don't require auth
             }
         } finally {
@@ -161,7 +164,7 @@ public class SaslQuorumAuthServer implements QuorumAuthServer {
     }
 
     private void send(DataOutputStream dout, byte[] challenge,
-            QuorumAuth.Status s) throws IOException {
+                      QuorumAuth.Status s) throws IOException {
         BufferedOutputStream bufferedOutput = new BufferedOutputStream(dout);
         BinaryOutputArchive boa = BinaryOutputArchive
                 .getArchive(bufferedOutput);

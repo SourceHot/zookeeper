@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,16 +17,17 @@
  */
 package org.apache.zookeeper.test;
 
-import static org.junit.Assert.*;
-
-import java.util.Arrays;
-
 import org.apache.zookeeper.ZKTestCase;
 import org.apache.zookeeper.server.quorum.QuorumPeer;
 import org.apache.zookeeper.server.quorum.QuorumStats;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.util.Arrays;
+
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 public class ObserverLETest extends ZKTestCase {
     final QuorumBase qb = new QuorumBase();
@@ -61,7 +62,7 @@ public class ObserverLETest extends ZKTestCase {
                 server.shutdown();
                 assertTrue("Waiting for server down", ClientBase
                         .waitForServerDown("127.0.0.1:"
-                                + server.getClientPort(),
+                                        + server.getClientPort(),
                                 ClientBase.CONNECTION_TIMEOUT));
             } else {
                 assertNull("More than one leader found", leader);

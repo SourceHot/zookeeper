@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -29,11 +29,7 @@ import org.apache.zookeeper.server.DataTree;
 import org.apache.zookeeper.server.persistence.FileHeader;
 import org.apache.zookeeper.server.persistence.FileTxnLog;
 import org.apache.zookeeper.server.persistence.FileTxnSnapLog;
-import org.apache.zookeeper.txn.CreateTxn;
-import org.apache.zookeeper.txn.DeleteTxn;
-import org.apache.zookeeper.txn.MultiTxn;
-import org.apache.zookeeper.txn.Txn;
-import org.apache.zookeeper.txn.TxnHeader;
+import org.apache.zookeeper.txn.*;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -117,17 +113,16 @@ public class LoadFromLogNoServerTest extends ZKTestCase {
             txnHeader = new TxnHeader(0xabcd, 0x123, prevPzxid + 1,
                     Time.currentElapsedTime(), ZooDefs.OpCode.create);
             txn = new CreateTxn(path, new byte[0], null, false, cversion);
-        }
-        else if (type == ZooDefs.OpCode.multi) {
+        } else if (type == ZooDefs.OpCode.multi) {
             txnHeader = new TxnHeader(0xabcd, 0x123, prevPzxid + 1,
                     Time.currentElapsedTime(), ZooDefs.OpCode.create);
             txn = new CreateTxn(path, new byte[0], null, false, cversion);
             List<Txn> txnList = new ArrayList<Txn>();
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             BinaryOutputArchive boa = BinaryOutputArchive.getArchive(baos);
-            txn.serialize(boa, "request") ;
+            txn.serialize(boa, "request");
             ByteBuffer bb = ByteBuffer.wrap(baos.toByteArray());
-            Txn txact = new Txn(ZooDefs.OpCode.create,  bb.array());
+            Txn txact = new Txn(ZooDefs.OpCode.create, bb.array());
             txnList.add(txact);
             txn = new MultiTxn(txnList);
             txnHeader = new TxnHeader(0xabcd, 0x123, prevPzxid + 1,
@@ -143,7 +138,7 @@ public class LoadFromLogNoServerTest extends ZKTestCase {
             childStr.append(s).append(" ");
         }
         LOG.info("Children: " + childStr + " for " + parentName);
-        LOG.info("(cverions, pzxid): " +newCversion + ", " + newPzxid);
+        LOG.info("(cverions, pzxid): " + newCversion + ", " + newPzxid);
         Assert.assertTrue(type + " <cversion, pzxid> verification failed. Expected: <" +
                         (prevCversion + 1) + ", " + (prevPzxid + 1) + ">, found: <" +
                         newCversion + ", " + newPzxid + ">",
@@ -164,7 +159,7 @@ public class LoadFromLogNoServerTest extends ZKTestCase {
         txnLog.append(txnHeader, txn);
         FileInputStream in = new FileInputStream(tmpDir.getPath() + "/log." +
                 Long.toHexString(txnHeader.getZxid()));
-        BinaryInputArchive ia  = BinaryInputArchive.getArchive(in);
+        BinaryInputArchive ia = BinaryInputArchive.getArchive(in);
         FileHeader header = new FileHeader();
         header.deserialize(ia, "fileheader");
         LOG.info("Received magic : " + header.getMagic() +

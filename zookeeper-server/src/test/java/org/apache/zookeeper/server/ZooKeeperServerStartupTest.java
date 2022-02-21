@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,14 +16,6 @@
  * limitations under the License.
  */
 package org.apache.zookeeper.server;
-
-import static org.apache.zookeeper.client.FourLetterWordMain.send4LetterWord;
-import static org.apache.zookeeper.server.command.AbstractFourLetterCommand.ZK_NOT_SERVING;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.zookeeper.PortAssignment;
 import org.apache.zookeeper.ZKTestCase;
@@ -36,6 +28,14 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+
+import static org.apache.zookeeper.client.FourLetterWordMain.send4LetterWord;
+import static org.apache.zookeeper.server.command.AbstractFourLetterCommand.ZK_NOT_SERVING;
 
 /**
  * This class tests the startup behavior of ZooKeeper server.
@@ -215,7 +215,9 @@ public class ZooKeeperServerStartupTest extends ZKTestCase {
                     // Ignoring exception. If there is an interrupted exception
                     // then one of the following assertion will fail
                 }
-            };
+            }
+
+            ;
         };
         LOG.info("Starting zk server {}", HOSTPORT);
         startupThread.start();
@@ -228,7 +230,7 @@ public class ZooKeeperServerStartupTest extends ZKTestCase {
                 1);
 
         public SimpleZooKeeperServer(File snapDir, File logDir, int tickTime,
-                CountDownLatch startupDelayLatch) throws IOException {
+                                     CountDownLatch startupDelayLatch) throws IOException {
             super(snapDir, logDir, tickTime);
             this.startupDelayLatch = startupDelayLatch;
         }

@@ -20,11 +20,7 @@ package org.apache.zookeeper;
 import org.apache.jute.Record;
 import org.apache.zookeeper.common.PathUtils;
 import org.apache.zookeeper.data.ACL;
-import org.apache.zookeeper.proto.CheckVersionRequest;
-import org.apache.zookeeper.proto.CreateRequest;
-import org.apache.zookeeper.proto.CreateTTLRequest;
-import org.apache.zookeeper.proto.DeleteRequest;
-import org.apache.zookeeper.proto.SetDataRequest;
+import org.apache.zookeeper.proto.*;
 import org.apache.zookeeper.server.EphemeralType;
 
 import java.util.Arrays;
@@ -34,7 +30,7 @@ import java.util.List;
 /**
  * Represents a single operation in a multi-operation transaction.  Each operation can be a create, update
  * or delete or can just be a version check.
- *
+ * <p>
  * Sub-classes of Op each represent each detailed type but should not normally be referenced except via
  * the provided factory methods.
  *
@@ -55,18 +51,14 @@ public abstract class Op {
 
     /**
      * Constructs a create operation.  Arguments are as for the ZooKeeper method of the same name.
+     *
+     * @param path  the path for the node
+     * @param data  the initial data for the node
+     * @param acl   the acl for the node
+     * @param flags specifying whether the node to be created is ephemeral
+     *              and/or sequential but using the integer encoding.
      * @see ZooKeeper#create(String, byte[], java.util.List, CreateMode)
      * @see CreateMode#fromFlag(int)
-     *
-     * @param path
-     *                the path for the node
-     * @param data
-     *                the initial data for the node
-     * @param acl
-     *                the acl for the node
-     * @param flags
-     *                specifying whether the node to be created is ephemeral
-     *                and/or sequential but using the integer encoding.
      */
     public static Op create(String path, byte[] data, List<ACL> acl, int flags) {
         return new Create(path, data, acl, flags);
@@ -75,20 +67,15 @@ public abstract class Op {
     /**
      * Constructs a create operation.  Arguments are as for the ZooKeeper method of the same name
      * but adding an optional ttl
+     *
+     * @param path  the path for the node
+     * @param data  the initial data for the node
+     * @param acl   the acl for the node
+     * @param flags specifying whether the node to be created is ephemeral
+     *              and/or sequential but using the integer encoding.
+     * @param ttl   optional ttl or 0 (flags must imply a TTL creation mode)
      * @see ZooKeeper#create(String, byte[], java.util.List, CreateMode)
      * @see CreateMode#fromFlag(int)
-     *
-     * @param path
-     *                the path for the node
-     * @param data
-     *                the initial data for the node
-     * @param acl
-     *                the acl for the node
-     * @param flags
-     *                specifying whether the node to be created is ephemeral
-     *                and/or sequential but using the integer encoding.
-     * @param ttl
-     *                optional ttl or 0 (flags must imply a TTL creation mode)
      */
     public static Op create(String path, byte[] data, List<ACL> acl, int flags, long ttl) {
         CreateMode createMode = CreateMode.fromFlag(flags, CreateMode.PERSISTENT);
@@ -100,17 +87,13 @@ public abstract class Op {
 
     /**
      * Constructs a create operation.  Arguments are as for the ZooKeeper method of the same name.
-     * @see ZooKeeper#create(String, byte[], java.util.List, CreateMode)
      *
-     * @param path
-     *                the path for the node
-     * @param data
-     *                the initial data for the node
-     * @param acl
-     *                the acl for the node
-     * @param createMode
-     *                specifying whether the node to be created is ephemeral
-     *                and/or sequential
+     * @param path       the path for the node
+     * @param data       the initial data for the node
+     * @param acl        the acl for the node
+     * @param createMode specifying whether the node to be created is ephemeral
+     *                   and/or sequential
+     * @see ZooKeeper#create(String, byte[], java.util.List, CreateMode)
      */
     public static Op create(String path, byte[] data, List<ACL> acl, CreateMode createMode) {
         return new Create(path, data, acl, createMode);
@@ -119,21 +102,20 @@ public abstract class Op {
     /**
      * Constructs a create operation.  Arguments are as for the ZooKeeper method of the same name
      * but adding an optional ttl
-     * @see ZooKeeper#create(String, byte[], java.util.List, CreateMode)
      *
-     * @param path
-     *                the path for the node
-     * @param data
-     *                the initial data for the node
-     * @param acl
-     *                the acl for the node
-     * @param createMode
-     *                specifying whether the node to be created is ephemeral
-     *                and/or sequential
-     * @param ttl
-     *                optional ttl or 0 (createMode must imply a TTL)
+     * @param path       the path for the node
+     * @param data       the initial data for the node
+     * @param acl        the acl for the node
+     * @param createMode specifying whether the node to be created is ephemeral
+     *                   and/or sequential
+     * @param ttl        optional ttl or 0 (createMode must imply a TTL)
+     * @see ZooKeeper#create(String, byte[], java.util.List, CreateMode)
      */
-    public static Op create(String path, byte[] data, List<ACL> acl, CreateMode createMode, long ttl) {
+    public static Op create(String path,
+                            byte[] data,
+                            List<ACL> acl,
+                            CreateMode createMode,
+                            long ttl) {
         if (createMode.isTTL()) {
             return new CreateTTL(path, data, acl, createMode, ttl);
         }
@@ -142,12 +124,10 @@ public abstract class Op {
 
     /**
      * Constructs a delete operation.  Arguments are as for the ZooKeeper method of the same name.
-     * @see ZooKeeper#delete(String, int)
      *
-     * @param path
-     *                the path of the node to be deleted.
-     * @param version
-     *                the expected node version.
+     * @param path    the path of the node to be deleted.
+     * @param version the expected node version.
+     * @see ZooKeeper#delete(String, int)
      */
     public static Op delete(String path, int version) {
         return new Delete(path, version);
@@ -155,14 +135,11 @@ public abstract class Op {
 
     /**
      * Constructs an update operation.  Arguments are as for the ZooKeeper method of the same name.
-     * @see ZooKeeper#setData(String, byte[], int)
      *
-     * @param path
-     *                the path of the node
-     * @param data
-     *                the data to set
-     * @param version
-     *                the expected matching version
+     * @param path    the path of the node
+     * @param data    the data to set
+     * @param version the expected matching version
+     * @see ZooKeeper#setData(String, byte[], int)
      */
     public static Op setData(String path, byte[] data, int version) {
         return new SetData(path, data, version);
@@ -176,10 +153,8 @@ public abstract class Op {
      * not the write.  A similar effect could be achieved by writing the same data back, but that leads to
      * way more version updates than are necessary and more writing in general.
      *
-     * @param path
-     *                the path of the node
-     * @param version
-     *                the expected matching version
+     * @param path    the path of the node
+     * @param version the expected matching version
      */
     public static Op check(String path, int version) {
         return new Check(path, version);
@@ -187,8 +162,9 @@ public abstract class Op {
 
     /**
      * Gets the integer type code for an Op.  This code should be as from ZooDefs.OpCode
+     *
+     * @return The type code.
      * @see ZooDefs.OpCode
-     * @return  The type code.
      */
     public int getType() {
         return type;
@@ -196,7 +172,8 @@ public abstract class Op {
 
     /**
      * Gets the path for an Op.
-     * @return  The path.
+     *
+     * @return The path.
      */
     public String getPath() {
         return path;
@@ -204,23 +181,23 @@ public abstract class Op {
 
     /**
      * Encodes an op for wire transmission.
+     *
      * @return An appropriate Record structure.
      */
-    public abstract Record toRequestRecord() ;
-    
+    public abstract Record toRequestRecord();
+
     /**
      * Reconstructs the transaction with the chroot prefix.
+     *
      * @return transaction with chroot.
      */
     abstract Op withChroot(String addRootPrefix);
 
     /**
      * Performs client path validations.
-     * 
-     * @throws IllegalArgumentException
-     *             if an invalid path is specified
-     * @throws KeeperException.BadArgumentsException
-     *             if an invalid create mode flag is specified
+     *
+     * @throws IllegalArgumentException              if an invalid path is specified
+     * @throws KeeperException.BadArgumentsException if an invalid create mode flag is specified
      */
     void validate() throws KeeperException {
         PathUtils.validatePath(path);
@@ -241,13 +218,6 @@ public abstract class Op {
             this.flags = flags;
         }
 
-        private static int getOpcode(CreateMode createMode) {
-            if (createMode.isTTL()) {
-                return ZooDefs.OpCode.createTTL;
-            }
-            return createMode.isContainer() ? ZooDefs.OpCode.createContainer : ZooDefs.OpCode.create;
-        }
-
         private Create(String path, byte[] data, List<ACL> acl, CreateMode createMode) {
             super(getOpcode(createMode), path);
             this.data = data;
@@ -255,10 +225,21 @@ public abstract class Op {
             this.flags = createMode.toFlag();
         }
 
+        private static int getOpcode(CreateMode createMode) {
+            if (createMode.isTTL()) {
+                return ZooDefs.OpCode.createTTL;
+            }
+            return createMode.isContainer() ?
+                    ZooDefs.OpCode.createContainer :
+                    ZooDefs.OpCode.create;
+        }
+
         @Override
         public boolean equals(Object o) {
-            if (this == o) return true;
-            if (!(o instanceof Create)) return false;
+            if (this == o)
+                return true;
+            if (!(o instanceof Create))
+                return false;
 
             Create op = (Create) o;
 
@@ -276,7 +257,8 @@ public abstract class Op {
                     break;
                 }
             }
-            return !i.hasNext() && getType() == op.getType() && Arrays.equals(data, op.data) && flags == op.flags && aclEquals;
+            return !i.hasNext() && getType() == op.getType() && Arrays.equals(data, op.data)
+                    && flags == op.flags && aclEquals;
         }
 
         @Override
@@ -302,6 +284,7 @@ public abstract class Op {
         }
     }
 
+
     public static class CreateTTL extends Create {
         private final long ttl;
 
@@ -310,19 +293,23 @@ public abstract class Op {
             this.ttl = ttl;
         }
 
-        private CreateTTL(String path, byte[] data, List<ACL> acl, CreateMode createMode, long ttl) {
+        private CreateTTL(String path,
+                          byte[] data,
+                          List<ACL> acl,
+                          CreateMode createMode,
+                          long ttl) {
             super(path, data, acl, createMode);
             this.ttl = ttl;
         }
 
         @Override
         public boolean equals(Object o) {
-            return super.equals(o) && (o instanceof CreateTTL) && (ttl == ((CreateTTL)o).ttl);
+            return super.equals(o) && (o instanceof CreateTTL) && (ttl == ((CreateTTL) o).ttl);
         }
 
         @Override
         public int hashCode() {
-            return super.hashCode() + (int)(ttl ^ (ttl >>> 32));
+            return super.hashCode() + (int) (ttl ^ (ttl >>> 32));
         }
 
         @Override
@@ -343,6 +330,7 @@ public abstract class Op {
         }
     }
 
+
     public static class Delete extends Op {
         private int version;
 
@@ -353,13 +341,15 @@ public abstract class Op {
 
         @Override
         public boolean equals(Object o) {
-            if (this == o) return true;
-            if (!(o instanceof Delete)) return false;
+            if (this == o)
+                return true;
+            if (!(o instanceof Delete))
+                return false;
 
             Delete op = (Delete) o;
 
-            return getType() == op.getType() && version == op.version 
-                   && getPath().equals(op.getPath());
+            return getType() == op.getType() && version == op.version
+                    && getPath().equals(op.getPath());
         }
 
         @Override
@@ -378,6 +368,7 @@ public abstract class Op {
         }
     }
 
+
     public static class SetData extends Op {
         private byte[] data;
         private int version;
@@ -390,13 +381,15 @@ public abstract class Op {
 
         @Override
         public boolean equals(Object o) {
-            if (this == o) return true;
-            if (!(o instanceof SetData)) return false;
+            if (this == o)
+                return true;
+            if (!(o instanceof SetData))
+                return false;
 
             SetData op = (SetData) o;
 
-            return getType() == op.getType() && version == op.version 
-                   && getPath().equals(op.getPath()) && Arrays.equals(data, op.data);
+            return getType() == op.getType() && version == op.version
+                    && getPath().equals(op.getPath()) && Arrays.equals(data, op.data);
         }
 
         @Override
@@ -415,6 +408,7 @@ public abstract class Op {
         }
     }
 
+
     public static class Check extends Op {
         private int version;
 
@@ -425,12 +419,15 @@ public abstract class Op {
 
         @Override
         public boolean equals(Object o) {
-            if (this == o) return true;
-            if (!(o instanceof Check)) return false;
+            if (this == o)
+                return true;
+            if (!(o instanceof Check))
+                return false;
 
             Check op = (Check) o;
 
-            return getType() == op.getType() && getPath().equals(op.getPath()) && version == op.version;
+            return getType() == op.getType() && getPath().equals(op.getPath())
+                    && version == op.version;
         }
 
         @Override

@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -34,10 +34,9 @@ public class LearnerSnapshotThrottler {
             LoggerFactory.getLogger(LearnerSnapshotThrottler.class);
 
     private final Object snapCountSyncObject = new Object();
-    private int snapsInProgress;
-
     private final int maxConcurrentSnapshots;
     private final long timeoutMillis;
+    private int snapsInProgress;
 
     /**
      * Constructs a new instance limiting the concurrent number of snapshots to
@@ -77,7 +76,7 @@ public class LearnerSnapshotThrottler {
 
     /**
      * Indicates that a new snapshot is about to be sent.
-     * 
+     *
      * @param essential if <code>true</code>, do not throw an exception even
      *                  if throttling limit is reached
      * @throws SnapshotThrottleException if throttling limit has been exceeded
@@ -94,13 +93,13 @@ public class LearnerSnapshotThrottler {
 
         synchronized (snapCountSyncObject) {
             if (!essential
-                && timeoutMillis > 0
-                && snapsInProgress >= maxConcurrentSnapshots) {
+                    && timeoutMillis > 0
+                    && snapsInProgress >= maxConcurrentSnapshots) {
                 long timestamp = Time.currentElapsedTime();
                 do {
                     snapCountSyncObject.wait(timeoutMillis);
                 } while (snapsInProgress >= maxConcurrentSnapshots
-                         && timestamp + timeoutMillis < Time.currentElapsedTime());
+                        && timestamp + timeoutMillis < Time.currentElapsedTime());
             }
 
             if (essential || snapsInProgress < maxConcurrentSnapshots) {
@@ -108,7 +107,7 @@ public class LearnerSnapshotThrottler {
                 snapshotNumber = snapsInProgress;
             } else {
                 throw new SnapshotThrottleException(snapsInProgress + 1,
-                                                    maxConcurrentSnapshots);
+                        maxConcurrentSnapshots);
             }
         }
 

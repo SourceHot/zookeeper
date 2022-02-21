@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,17 +18,11 @@
 
 package org.apache.zookeeper.server.quorum;
 
-import java.io.PrintWriter;
-
 import org.apache.zookeeper.jmx.MBeanRegistry;
-import org.apache.zookeeper.server.DataTreeBean;
-import org.apache.zookeeper.server.FinalRequestProcessor;
-import org.apache.zookeeper.server.PrepRequestProcessor;
-import org.apache.zookeeper.server.RequestProcessor;
-import org.apache.zookeeper.server.ZKDatabase;
-import org.apache.zookeeper.server.ZooKeeperServer;
-import org.apache.zookeeper.server.ZooKeeperServerBean;
+import org.apache.zookeeper.server.*;
 import org.apache.zookeeper.server.persistence.FileTxnSnapLog;
+
+import java.io.PrintWriter;
 
 /**
  * A ZooKeeperServer which comes into play when peer is partitioned from the
@@ -46,7 +40,7 @@ public class ReadOnlyZooKeeperServer extends ZooKeeperServer {
     ReadOnlyZooKeeperServer(FileTxnSnapLog logFactory, QuorumPeer self,
                             ZKDatabase zkDb) {
         super(logFactory, self.tickTime, self.minSessionTimeout,
-              self.maxSessionTimeout, zkDb, self.isReconfigEnabled());
+                self.maxSessionTimeout, zkDb, self.isReconfigEnabled());
         this.self = self;
     }
 
@@ -126,6 +120,11 @@ public class ReadOnlyZooKeeperServer extends ZooKeeperServer {
         return "read-only";
     }
 
+    @Override
+    protected void setState(State state) {
+        this.state = state;
+    }
+
     /**
      * Returns the id of the associated QuorumPeer, which will do for a unique
      * id of this server.
@@ -171,10 +170,5 @@ public class ReadOnlyZooKeeperServer extends ZooKeeperServer {
         pwriter.println(self.getQuorumAddress().getPort());
         pwriter.print("peerType=");
         pwriter.println(self.getLearnerType().ordinal());
-    }
-
-    @Override
-    protected void setState(State state) {
-        this.state = state;
     }
 }

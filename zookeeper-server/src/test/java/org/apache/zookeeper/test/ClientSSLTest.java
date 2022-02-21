@@ -21,8 +21,6 @@
  */
 package org.apache.zookeeper.test;
 
-import static org.junit.Assert.fail;
-import java.io.IOException;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.PortAssignment;
 import org.apache.zookeeper.ZooDefs;
@@ -33,31 +31,34 @@ import org.apache.zookeeper.server.NettyServerCnxnFactory;
 import org.apache.zookeeper.server.ServerCnxnFactory;
 import org.apache.zookeeper.server.auth.ProviderRegistry;
 import org.apache.zookeeper.server.quorum.QuorumPeerTestBase;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.rules.ExpectedException;
+
+import java.io.IOException;
+
+import static org.junit.Assert.fail;
 
 public class ClientSSLTest extends QuorumPeerTestBase {
 
-    private ClientX509Util clientX509Util;
-
     @Rule
     public ExpectedException exceptionRule = ExpectedException.none();
+    private ClientX509Util clientX509Util;
 
     @Before
     public void setup() {
         System.setProperty(NettyServerCnxnFactory.PORT_UNIFICATION_KEY, Boolean.TRUE.toString());
         clientX509Util = new ClientX509Util();
         String testDataPath = System.getProperty("test.data.dir", "src/test/resources/data");
-        System.setProperty(ServerCnxnFactory.ZOOKEEPER_SERVER_CNXN_FACTORY, "org.apache.zookeeper.server.NettyServerCnxnFactory");
-        System.setProperty(ZKClientConfig.ZOOKEEPER_CLIENT_CNXN_SOCKET, "org.apache.zookeeper.ClientCnxnSocketNetty");
+        System.setProperty(ServerCnxnFactory.ZOOKEEPER_SERVER_CNXN_FACTORY,
+                "org.apache.zookeeper.server.NettyServerCnxnFactory");
+        System.setProperty(ZKClientConfig.ZOOKEEPER_CLIENT_CNXN_SOCKET,
+                "org.apache.zookeeper.ClientCnxnSocketNetty");
         System.setProperty(ZKClientConfig.SECURE_CLIENT, "true");
-        System.setProperty(clientX509Util.getSslKeystoreLocationProperty(), testDataPath + "/ssl/testKeyStore.jks");
+        System.setProperty(clientX509Util.getSslKeystoreLocationProperty(),
+                testDataPath + "/ssl/testKeyStore.jks");
         System.setProperty(clientX509Util.getSslKeystorePasswdProperty(), "testpass");
-        System.setProperty(clientX509Util.getSslTruststoreLocationProperty(), testDataPath + "/ssl/testTrustStore.jks");
+        System.setProperty(clientX509Util.getSslTruststoreLocationProperty(),
+                testDataPath + "/ssl/testTrustStore.jks");
         System.setProperty(clientX509Util.getSslTruststorePasswdProperty(), "testpass");
     }
 
@@ -172,7 +173,7 @@ public class ClientSSLTest extends QuorumPeerTestBase {
         exceptionRule.expectMessage("ZooKeeper client can not connect");
         try {
             System.setProperty(ProviderRegistry.AUTHPROVIDER_PROPERTY_PREFIX + "authfail",
-                "org.apache.zookeeper.test.AuthFailX509AuthenticationProvider");
+                    "org.apache.zookeeper.test.AuthFailX509AuthenticationProvider");
             System.setProperty(clientX509Util.getSslAuthProviderProperty(), "authfail");
 
             Integer secureClientPort = PortAssignment.unique();

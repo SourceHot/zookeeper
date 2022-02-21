@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,35 +18,11 @@
 
 package org.apache.zookeeper;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.util.Iterator;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLEngine;
-
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.*;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.concurrent.Future;
@@ -60,6 +36,21 @@ import org.apache.zookeeper.common.X509Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
+import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
 import static org.apache.zookeeper.common.X509Exception.SSLContextException;
 
 /**
@@ -69,18 +60,22 @@ import static org.apache.zookeeper.common.X509Exception.SSLContextException;
  */
 public class ClientCnxnSocketNetty extends ClientCnxnSocket {
     private static final Logger LOG = LoggerFactory.getLogger(ClientCnxnSocketNetty.class);
-
+    private static final AtomicReference<ByteBufAllocator> TEST_ALLOCATOR =
+            new AtomicReference<>(null);
     private final EventLoopGroup eventLoopGroup;
-    private Channel channel;
-    private CountDownLatch firstConnect;
-    private ChannelFuture connectFuture;
     private final Lock connectLock = new ReentrantLock();
     private final AtomicBoolean disconnected = new AtomicBoolean();
     private final AtomicBoolean needSasl = new AtomicBoolean();
     private final Semaphore waitSasl = new Semaphore(0);
-
-    private static final AtomicReference<ByteBufAllocator> TEST_ALLOCATOR =
-            new AtomicReference<>(null);
+    // Use a single listener instance to reduce GC
+    private final GenericFutureListener<Future<Void>> onSendPktDoneListener = f -> {
+        if (f.isSuccess()) {
+            sentCount.getAndIncrement();
+        }
+    };
+    private Channel channel;
+    private CountDownLatch firstConnect;
+    private ChannelFuture connectFuture;
 
     ClientCnxnSocketNetty(ZKClientConfig clientConfig) throws IOException {
         this.clientConfig = clientConfig;
@@ -88,6 +83,26 @@ public class ClientCnxnSocketNetty extends ClientCnxnSocket {
         // a single thread.
         eventLoopGroup = NettyUtils.newNioOrEpollEventLoopGroup(1 /* nThreads */);
         initProperties();
+    }
+
+    /**
+     * Sets the test ByteBufAllocator. This allocator will be used by all
+     * future instances of this class.
+     * It is not recommended to use this method outside of testing.
+     * @param allocator the ByteBufAllocator to use for all netty buffer
+     *                  allocations.
+     */
+    static void setTestAllocator(ByteBufAllocator allocator) {
+        TEST_ALLOCATOR.set(allocator);
+    }
+
+    /**
+     * Clears the test ByteBufAllocator. The default allocator will be used
+     * by all future instances of this class.
+     * It is not recommended to use this method outside of testing.
+     */
+    static void clearTestAllocator() {
+        TEST_ALLOCATOR.set(null);
     }
 
     /**
@@ -324,13 +339,6 @@ public class ClientCnxnSocketNetty extends ClientCnxnSocket {
         return sendPkt(p, false);
     }
 
-    // Use a single listener instance to reduce GC
-    private final GenericFutureListener<Future<Void>> onSendPktDoneListener = f -> {
-        if (f.isSuccess()) {
-            sentCount.getAndIncrement();
-        }
-    };
-
     private ChannelFuture sendPkt(Packet p, boolean doFlush) {
         // Assuming the packet will be sent out successfully. Because if it fails,
         // the channel will close and clean up queues.
@@ -422,6 +430,7 @@ public class ClientCnxnSocketNetty extends ClientCnxnSocket {
         }
     }
 
+
     /**
      * ZKClientPipelineFactory is the netty pipeline factory for this netty
      * connection implementation.
@@ -460,6 +469,7 @@ public class ClientCnxnSocketNetty extends ClientCnxnSocket {
             LOG.info("SSL handler added for channel: {}", pipeline.channel());
         }
     }
+
 
     /**
      * ZKClientHandler is the netty handler that sits in netty upstream last
@@ -527,25 +537,5 @@ public class ClientCnxnSocketNetty extends ClientCnxnSocket {
             LOG.warn("Exception caught", cause);
             cleanup();
         }
-    }
-
-    /**
-     * Sets the test ByteBufAllocator. This allocator will be used by all
-     * future instances of this class.
-     * It is not recommended to use this method outside of testing.
-     * @param allocator the ByteBufAllocator to use for all netty buffer
-     *                  allocations.
-     */
-    static void setTestAllocator(ByteBufAllocator allocator) {
-        TEST_ALLOCATOR.set(allocator);
-    }
-
-    /**
-     * Clears the test ByteBufAllocator. The default allocator will be used
-     * by all future instances of this class.
-     * It is not recommended to use this method outside of testing.
-     */
-    static void clearTestAllocator() {
-        TEST_ALLOCATOR.set(null);
     }
 }

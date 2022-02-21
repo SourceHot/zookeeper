@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,13 +18,6 @@
 
 package org.apache.zookeeper.server.quorum.auth;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import javax.security.auth.login.Configuration;
 import org.apache.commons.io.FileUtils;
 import org.apache.zookeeper.PortAssignment;
 import org.apache.zookeeper.ZKTestCase;
@@ -34,14 +27,22 @@ import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.security.auth.login.Configuration;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
 /**
  * QuorumAuthTestBase provides a base class for testing quorum peer mutual
  * authentication using SASL mechanisms.
  */
 public class QuorumAuthTestBase extends ZKTestCase {
     protected static final Logger LOG = LoggerFactory.getLogger(QuorumAuthTestBase.class);
-    protected List<MainThread> mt = new ArrayList<MainThread>();
     protected static File jaasConfigDir;
+    protected List<MainThread> mt = new ArrayList<MainThread>();
 
     public static void setupJaasConfig(String jaasEntries) {
         try {
@@ -70,7 +71,8 @@ public class QuorumAuthTestBase extends ZKTestCase {
     }
 
     protected String startQuorum(final int serverCount,
-            Map<String, String> authConfigs, int authServerCount) throws IOException {
+                                 Map<String, String> authConfigs, int authServerCount)
+            throws IOException {
         StringBuilder connectStr = new StringBuilder();
         final int[] clientPorts = startQuorum(serverCount, connectStr,
                 authConfigs, authServerCount);
@@ -83,7 +85,8 @@ public class QuorumAuthTestBase extends ZKTestCase {
     }
 
     protected int[] startQuorum(final int serverCount, StringBuilder connectStr,
-            Map<String, String> authConfigs, int authServerCount) throws IOException {
+                                Map<String, String> authConfigs, int authServerCount)
+            throws IOException {
         final int clientPorts[] = new int[serverCount];
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < serverCount; i++) {
@@ -113,8 +116,8 @@ public class QuorumAuthTestBase extends ZKTestCase {
     }
 
     private void startServer(Map<String, String> authConfigs,
-            final int[] clientPorts, String quorumCfg, int i)
-                    throws IOException {
+                             final int[] clientPorts, String quorumCfg, int i)
+            throws IOException {
         MainThread mthread = new MainThread(i, clientPorts[i], quorumCfg,
                 authConfigs);
         mt.add(mthread);
@@ -122,7 +125,7 @@ public class QuorumAuthTestBase extends ZKTestCase {
     }
 
     protected void startServer(MainThread restartPeer,
-            Map<String, String> authConfigs) throws IOException {
+                               Map<String, String> authConfigs) throws IOException {
         MainThread mthread = new MainThread(restartPeer.getMyid(),
                 restartPeer.getClientPort(), restartPeer.getQuorumCfgSection(),
                 authConfigs);

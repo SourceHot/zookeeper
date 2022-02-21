@@ -31,12 +31,16 @@ import java.util.List;
 
 public class ZKParameterized {
     private static final Logger LOG = LoggerFactory.getLogger(ZKParameterized.class);
+
+
     public static class RunnerFactory extends BlockJUnit4ClassRunnerWithParametersFactory {
         @Override
-        public org.junit.runner.Runner createRunnerForTestWithParameters(TestWithParameters test) throws InitializationError {
+        public org.junit.runner.Runner createRunnerForTestWithParameters(TestWithParameters test)
+                throws InitializationError {
             return new ZKParameterized.Runner(test);
         }
     }
+
 
     public static class Runner extends BlockJUnit4ClassRunnerWithParameters {
         public Runner(TestWithParameters test) throws InitializationError {
@@ -46,7 +50,8 @@ public class ZKParameterized {
 
         @Override
         protected List<FrameworkMethod> computeTestMethods() {
-            return JUnit4ZKTestRunner.computeTestMethodsForClass(getTestClass().getJavaClass(), super.computeTestMethods());
+            return JUnit4ZKTestRunner.computeTestMethodsForClass(getTestClass().getJavaClass(),
+                    super.computeTestMethods());
         }
 
 

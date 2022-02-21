@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,14 +18,14 @@
 
 package org.apache.zookeeper.server.command;
 
-import java.io.IOException;
-import java.io.PrintWriter;
-
 import org.apache.zookeeper.server.ServerCnxn;
 import org.apache.zookeeper.server.ServerCnxnFactory;
 import org.apache.zookeeper.server.ZooKeeperServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.io.PrintWriter;
 
 /**
  * Set of threads for command ports. All the 4 letter commands are run via a
@@ -33,11 +33,10 @@ import org.slf4j.LoggerFactory;
  * the abstract class from which all the others inherit.
  */
 public abstract class AbstractFourLetterCommand {
+    public static final String ZK_NOT_SERVING =
+            "This ZooKeeper instance is not currently serving requests";
     private static final Logger LOG = LoggerFactory
-        .getLogger(AbstractFourLetterCommand.class);
-
-    public static final String ZK_NOT_SERVING = "This ZooKeeper instance is not currently serving requests";
-
+            .getLogger(AbstractFourLetterCommand.class);
     protected PrintWriter pw;
     protected ServerCnxn serverCnxn;
     protected ZooKeeperServer zkServer;

@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,12 +25,12 @@ package org.apache.zookeeper.server.quorum;
  * like a standalone zookeeper server).
  */
 public interface LocalPeerMXBean extends ServerMXBean {
-    
+
     /**
      * @return the number of milliseconds of each tick
      */
     public int getTickTime();
-    
+
     /** Current maxClientCnxns allowed from a particular host */
     public int getMaxClientCnxnsPerHost();
 
@@ -38,38 +38,38 @@ public interface LocalPeerMXBean extends ServerMXBean {
      * @return the minimum number of milliseconds allowed for a session timeout
      */
     public int getMinSessionTimeout();
-    
+
     /**
      * @return the maximum number of milliseconds allowed for a session timeout
      */
     public int getMaxSessionTimeout();
-    
+
     /**
      * @return the number of ticks that the initial sync phase can take
      */
     public int getInitLimit();
-    
+
     /**
      * @return the number of ticks that can pass between sending a request
      * and getting a acknowledgment
      */
     public int getSyncLimit();
-    
+
     /**
      * @return the current tick
      */
     public int getTick();
-    
+
     /**
      * @return the current server state
      */
     public String getState();
-    
+
     /**
      * @return the quorum address
      */
     public String getQuorumAddress();
-    
+
     /**
      * @return the election type
      */

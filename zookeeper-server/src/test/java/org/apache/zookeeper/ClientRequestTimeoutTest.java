@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,12 +18,6 @@
 
 package org.apache.zookeeper;
 
-import static org.apache.zookeeper.test.ClientBase.CONNECTION_TIMEOUT;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-
-import java.io.IOException;
-
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.client.HostProvider;
 import org.apache.zookeeper.server.quorum.QuorumPeerTestBase;
@@ -31,6 +25,12 @@ import org.apache.zookeeper.test.ClientBase;
 import org.apache.zookeeper.test.ClientBase.CountdownWatcher;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.io.IOException;
+
+import static org.apache.zookeeper.test.ClientBase.CONNECTION_TIMEOUT;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 public class ClientRequestTimeoutTest extends QuorumPeerTestBase {
     private static final int SERVER_COUNT = 3;
@@ -119,9 +119,9 @@ public class ClientRequestTimeoutTest extends QuorumPeerTestBase {
     class CustomClientCnxn extends ClientCnxn {
 
         public CustomClientCnxn(String chrootPath, HostProvider hostProvider,
-                int sessionTimeout, ZooKeeper zooKeeper,
-                ClientWatchManager watcher, ClientCnxnSocket clientCnxnSocket,
-                boolean canBeReadOnly) throws IOException {
+                                int sessionTimeout, ZooKeeper zooKeeper,
+                                ClientWatchManager watcher, ClientCnxnSocket clientCnxnSocket,
+                                boolean canBeReadOnly) throws IOException {
             super(chrootPath, hostProvider, sessionTimeout, zooKeeper, watcher,
                     clientCnxnSocket, canBeReadOnly);
         }
@@ -137,18 +137,22 @@ public class ClientRequestTimeoutTest extends QuorumPeerTestBase {
         }
     }
 
+
     class CustomZooKeeper extends ZooKeeper {
         public CustomZooKeeper(String connectString, int sessionTimeout,
-                Watcher watcher) throws IOException {
+                               Watcher watcher) throws IOException {
             super(connectString, sessionTimeout, watcher);
         }
 
         @Override
         protected ClientCnxn createConnection(String chrootPath,
-                HostProvider hostProvider, int sessionTimeout,
-                ZooKeeper zooKeeper, ClientWatchManager watcher,
-                ClientCnxnSocket clientCnxnSocket, boolean canBeReadOnly)
-                        throws IOException {
+                                              HostProvider hostProvider,
+                                              int sessionTimeout,
+                                              ZooKeeper zooKeeper,
+                                              ClientWatchManager watcher,
+                                              ClientCnxnSocket clientCnxnSocket,
+                                              boolean canBeReadOnly)
+                throws IOException {
             return new CustomClientCnxn(chrootPath, hostProvider,
                     sessionTimeout, zooKeeper, watcher, clientCnxnSocket,
                     canBeReadOnly);

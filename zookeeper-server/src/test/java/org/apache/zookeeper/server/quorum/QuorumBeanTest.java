@@ -32,7 +32,8 @@ public class QuorumBeanTest {
         when(qpMock.getId()).thenReturn(1L);
         QuorumBean qb = new QuorumBean(qpMock);
 
-        assertThat("getName property should return Bean name in the right format", qb.getName(), equalTo("ReplicatedServer_id1"));
+        assertThat("getName property should return Bean name in the right format", qb.getName(),
+                equalTo("ReplicatedServer_id1"));
     }
 
     @Test
@@ -48,7 +49,8 @@ public class QuorumBeanTest {
         QuorumBean qb = new QuorumBean(qpMock);
 
         when(qpMock.getQuorumSize()).thenReturn(5);
-        assertThat("getQuorumSize property should return value of peet.getQuorumSize()", qb.getQuorumSize(), equalTo(5));
+        assertThat("getQuorumSize property should return value of peet.getQuorumSize()",
+                qb.getQuorumSize(), equalTo(5));
     }
 
     @Test
@@ -57,9 +59,11 @@ public class QuorumBeanTest {
         QuorumBean qb = new QuorumBean(qpMock);
 
         when(qpMock.isSslQuorum()).thenReturn(true);
-        assertThat("isSslQuorum property should return value of peer.isSslQuorum()", qb.isSslQuorum(), equalTo(true));
+        assertThat("isSslQuorum property should return value of peer.isSslQuorum()",
+                qb.isSslQuorum(), equalTo(true));
         when(qpMock.isSslQuorum()).thenReturn(false);
-        assertThat("isSslQuorum property should return value of peer.isSslQuorum()", qb.isSslQuorum(), equalTo(false));
+        assertThat("isSslQuorum property should return value of peer.isSslQuorum()",
+                qb.isSslQuorum(), equalTo(false));
     }
 
     @Test
@@ -68,8 +72,12 @@ public class QuorumBeanTest {
         QuorumBean qb = new QuorumBean(qpMock);
 
         when(qpMock.shouldUsePortUnification()).thenReturn(true);
-        assertThat("isPortUnification property should return value of peer.shouldUsePortUnification()", qb.isPortUnification(), equalTo(true));
+        assertThat(
+                "isPortUnification property should return value of peer.shouldUsePortUnification()",
+                qb.isPortUnification(), equalTo(true));
         when(qpMock.shouldUsePortUnification()).thenReturn(false);
-        assertThat("isPortUnification property should return value of peer.shouldUsePortUnification()", qb.isPortUnification(), equalTo(false));
+        assertThat(
+                "isPortUnification property should return value of peer.shouldUsePortUnification()",
+                qb.isPortUnification(), equalTo(false));
     }
 }

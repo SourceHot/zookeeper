@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,14 +18,7 @@
 
 package org.apache.zookeeper.test;
 
-import java.util.HashMap;
-import java.util.Map.Entry;
-
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.ZKTestCase;
-import org.apache.zookeeper.ZooDefs;
-import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.*;
 import org.apache.zookeeper.test.ClientBase.CountdownWatcher;
 import org.junit.After;
 import org.junit.Assert;
@@ -34,6 +27,9 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
+import java.util.Map.Entry;
+
 /**
  * Tests learners configured to use local sessions only. Expected
  * behavior is that sessions created on the learner will never be
@@ -41,10 +37,9 @@ import org.slf4j.LoggerFactory;
  * creation of ephemeral nodes) will fail with an error.
  */
 public class LocalSessionsOnlyTest extends ZKTestCase {
+    public static final int CONNECTION_TIMEOUT = ClientBase.CONNECTION_TIMEOUT;
     protected static final Logger LOG = LoggerFactory
             .getLogger(LocalSessionsOnlyTest.class);
-    public static final int CONNECTION_TIMEOUT = ClientBase.CONNECTION_TIMEOUT;
-
     private final QuorumBase qb = new QuorumBase();
 
     @Before
@@ -74,7 +69,7 @@ public class LocalSessionsOnlyTest extends ZKTestCase {
 
     private void testLocalSessions(boolean testLeader) throws Exception {
         String nodePrefix = "/testLocalSessions-"
-            + (testLeader ? "leaderTest-" : "followerTest-");
+                + (testLeader ? "leaderTest-" : "followerTest-");
         int leaderIdx = qb.getLeaderIndex();
         Assert.assertFalse("No leader in quorum?", leaderIdx == -1);
         int followerIdx = (leaderIdx + 1) % 5;
@@ -83,7 +78,7 @@ public class LocalSessionsOnlyTest extends ZKTestCase {
 
         CountdownWatcher watcher = new CountdownWatcher();
         ZooKeeper zk = qb.createClient(watcher, hostPorts[testPeerIdx],
-                                       CONNECTION_TIMEOUT);
+                CONNECTION_TIMEOUT);
         watcher.waitForConnected(CONNECTION_TIMEOUT);
 
         long localSessionId = zk.getSessionId();
@@ -91,14 +86,14 @@ public class LocalSessionsOnlyTest extends ZKTestCase {
         // Try creating some data.
         for (int i = 0; i < 5; i++) {
             zk.create(nodePrefix + i, new byte[0],
-                      ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+                    ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
         }
 
         // Now, try an ephemeral node.  This should fail since we
         // cannot create ephemeral nodes on a local session.
         try {
             zk.create(nodePrefix + "ephemeral", new byte[0],
-                      ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
+                    ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
             Assert.fail("Ephemeral node creation should fail.");
         } catch (KeeperException.EphemeralOnLocalSessionException e) {
         }
@@ -110,12 +105,12 @@ public class LocalSessionsOnlyTest extends ZKTestCase {
         HashMap<String, Integer> peers = new HashMap<String, Integer>();
         peers.put("leader", leaderIdx);
         peers.put("follower", followerIdx);
-        for (Entry<String, Integer> entry: peers.entrySet()) {
+        for (Entry<String, Integer> entry : peers.entrySet()) {
             watcher.reset();
             // Try reconnecting with a new session.
             // The data should be persisted, even though the session was not.
             zk = qb.createClient(watcher, hostPorts[entry.getValue()],
-                                 CONNECTION_TIMEOUT);
+                    CONNECTION_TIMEOUT);
             watcher.waitForConnected(CONNECTION_TIMEOUT);
 
             long newSessionId = zk.getSessionId();

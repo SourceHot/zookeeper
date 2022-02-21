@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,13 +18,15 @@
 
 package org.apache.zookeeper.common;
 
-import static org.junit.Assert.assertEquals;
 import org.apache.zookeeper.ZKTestCase;
 import org.hamcrest.core.AnyOf;
 import org.hamcrest.core.IsEqual;
 import org.junit.Assert;
 import org.junit.Test;
+
 import java.net.InetSocketAddress;
+
+import static org.junit.Assert.assertEquals;
 
 public class NetUtilsTest extends ZKTestCase {
 
@@ -94,14 +96,14 @@ public class NetUtilsTest extends ZKTestCase {
     @Test
     public void tetGetIPV6HostAndPort_EmptyStringArrayIfDoesNotStartWithBracket() {
         String[] ipv6HostAndPort =
-            NetUtils.getIPV6HostAndPort("2001:0db8:85a3:0000:0000:8a2e:0370:7334]");
+                NetUtils.getIPV6HostAndPort("2001:0db8:85a3:0000:0000:8a2e:0370:7334]");
         assertEquals(0, ipv6HostAndPort.length);
     }
 
     @Test
     public void tetGetIPV6HostAndPort_ReturnHostPort() {
         String[] ipv6HostAndPort =
-            NetUtils.getIPV6HostAndPort("[2001:0db8:85a3:0000:0000:8a2e:0370:7334]:2181");
+                NetUtils.getIPV6HostAndPort("[2001:0db8:85a3:0000:0000:8a2e:0370:7334]:2181");
         assertEquals(2, ipv6HostAndPort.length);
         assertEquals("2001:0db8:85a3:0000:0000:8a2e:0370:7334", ipv6HostAndPort[0]);
         assertEquals("2181", ipv6HostAndPort[1]);
@@ -110,7 +112,7 @@ public class NetUtilsTest extends ZKTestCase {
     @Test
     public void tetGetIPV6HostAndPort_ReturnHostPortPort() {
         String[] ipv6HostAndPort =
-            NetUtils.getIPV6HostAndPort("[2001:0db8:85a3:0000:0000:8a2e:0370:7334]:2181:3181");
+                NetUtils.getIPV6HostAndPort("[2001:0db8:85a3:0000:0000:8a2e:0370:7334]:2181:3181");
         assertEquals(2, ipv6HostAndPort.length);
         assertEquals("2001:0db8:85a3:0000:0000:8a2e:0370:7334", ipv6HostAndPort[0]);
         assertEquals("2181:3181", ipv6HostAndPort[1]);

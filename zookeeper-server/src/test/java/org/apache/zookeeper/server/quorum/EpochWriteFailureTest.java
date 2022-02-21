@@ -17,10 +17,6 @@
  */
 package org.apache.zookeeper.server.quorum;
 
-import static org.apache.zookeeper.test.ClientBase.CONNECTION_TIMEOUT;
-import java.io.File;
-import java.io.IOException;
-import java.util.Map;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.PortAssignment;
 import org.apache.zookeeper.ZooDefs.Ids;
@@ -31,11 +27,29 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.Map;
+
+import static org.apache.zookeeper.test.ClientBase.CONNECTION_TIMEOUT;
+
 public class EpochWriteFailureTest extends QuorumPeerTestBase {
     private static int SERVER_COUNT = 3;
     private static int[] clientPorts = new int[SERVER_COUNT];
     private static MainThread[] mt = new MainThread[SERVER_COUNT];
     private static ZooKeeper zk;
+
+    @AfterClass
+    public static void tearDownAfterClass() throws InterruptedException {
+        for (int i = 0; i < SERVER_COUNT; i++) {
+            if (mt[i] != null) {
+                mt[i].shutdown();
+            }
+        }
+        if (zk != null) {
+            zk.close();
+        }
+    }
 
     /*
      * Test case for https://issues.apache.org/jira/browse/ZOOKEEPER-2307
@@ -104,10 +118,19 @@ public class EpochWriteFailureTest extends QuorumPeerTestBase {
                 quorumPeer.getCurrentEpoch());
     }
 
+
     static class CustomQuorumPeer extends QuorumPeer {
-        CustomQuorumPeer(Map<Long, QuorumServer> quorumPeers, File snapDir, File logDir, int clientPort,
-                         int electionAlg, long myid, int tickTime, int initLimit, int syncLimit) throws IOException {
-            super(quorumPeers, snapDir, logDir, clientPort, electionAlg, myid, tickTime, initLimit, syncLimit);
+        CustomQuorumPeer(Map<Long, QuorumServer> quorumPeers,
+                         File snapDir,
+                         File logDir,
+                         int clientPort,
+                         int electionAlg,
+                         long myid,
+                         int tickTime,
+                         int initLimit,
+                         int syncLimit) throws IOException {
+            super(quorumPeers, snapDir, logDir, clientPort, electionAlg, myid, tickTime, initLimit,
+                    syncLimit);
         }
 
         @Override
@@ -118,6 +141,7 @@ public class EpochWriteFailureTest extends QuorumPeerTestBase {
             }
         }
     }
+
 
     private static class MockTestQPMain extends TestQPMain {
         @Override
@@ -134,18 +158,6 @@ public class EpochWriteFailureTest extends QuorumPeerTestBase {
             } catch (InterruptedException e) {
                 LOG.warn("Quorum Peer interrupted", e);
             }
-        }
-    }
-
-    @AfterClass
-    public static void tearDownAfterClass() throws InterruptedException {
-        for (int i = 0; i < SERVER_COUNT; i++) {
-            if (mt[i] != null) {
-                mt[i].shutdown();
-            }
-        }
-        if (zk != null) {
-            zk.close();
         }
     }
 }

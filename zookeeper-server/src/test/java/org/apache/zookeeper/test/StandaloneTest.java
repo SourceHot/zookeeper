@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,35 +18,35 @@
 
 package org.apache.zookeeper.test;
 
-import static org.apache.zookeeper.test.ClientBase.CONNECTION_TIMEOUT;
+import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.PortAssignment;
+import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.admin.ZooKeeperAdmin;
+import org.apache.zookeeper.data.Stat;
+import org.apache.zookeeper.server.ServerCnxnFactory;
+import org.apache.zookeeper.server.ZooKeeperServer;
+import org.apache.zookeeper.server.quorum.QuorumPeerConfig;
+import org.apache.zookeeper.server.quorum.QuorumPeerTestBase;
+import org.apache.zookeeper.test.ClientBase.CountdownWatcher;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.zookeeper.Watcher;
-import org.apache.zookeeper.PortAssignment;
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.server.quorum.QuorumPeerConfig;
-import org.apache.zookeeper.data.Stat;
-import org.apache.zookeeper.server.ServerCnxnFactory;
-import org.apache.zookeeper.server.ZooKeeperServer;
-import org.apache.zookeeper.server.quorum.QuorumPeerTestBase;
-import org.apache.zookeeper.test.ClientBase.CountdownWatcher;
-import org.apache.zookeeper.ZooKeeper;
-import org.apache.zookeeper.admin.ZooKeeperAdmin;
-import org.junit.Before;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.junit.Assert;
-import org.junit.Test;
+import static org.apache.zookeeper.test.ClientBase.CONNECTION_TIMEOUT;
 
 /**
  * Standalone server tests.
  */
-public class StandaloneTest extends QuorumPeerTestBase implements Watcher{
+public class StandaloneTest extends QuorumPeerTestBase implements Watcher {
     protected static final Logger LOG =
-        LoggerFactory.getLogger(StandaloneTest.class);
+            LoggerFactory.getLogger(StandaloneTest.class);
 
     @Before
     public void setup() {
@@ -153,7 +153,7 @@ public class StandaloneTest extends QuorumPeerTestBase implements Watcher{
             zkAdmin.addAuthInfo("digest", "super:test".getBytes());
             zkAdmin.reconfigure(joiners, null, null, -1, new Stat());
             Assert.fail("Reconfiguration in standalone should trigger " +
-                        "UnimplementedException");
+                    "UnimplementedException");
         } catch (KeeperException.UnimplementedException ex) {
             // expected
         }

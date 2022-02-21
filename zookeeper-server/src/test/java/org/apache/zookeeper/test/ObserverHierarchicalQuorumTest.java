@@ -27,7 +27,7 @@ public class ObserverHierarchicalQuorumTest extends HierarchicalQuorumTest {
     void startServers() throws Exception {
         startServers(true);
     }
-           
+
     protected void shutdown(QuorumPeer qp) {
         QuorumBase.shutdown(qp);
     }

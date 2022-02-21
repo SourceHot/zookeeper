@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,42 +17,25 @@
  */
 package org.apache.zookeeper.server.quorum;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.SocketOptions;
-import java.security.Security;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
-
 import org.apache.commons.io.FileUtils;
 import org.apache.zookeeper.PortAssignment;
 import org.apache.zookeeper.ZKTestCase;
-import org.apache.zookeeper.common.ClientX509Util;
-import org.apache.zookeeper.common.KeyStoreFileType;
-import org.apache.zookeeper.common.X509KeyType;
-import org.apache.zookeeper.common.X509TestContext;
-import org.apache.zookeeper.common.X509Util;
+import org.apache.zookeeper.common.*;
 import org.apache.zookeeper.test.ClientBase;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.*;
+import java.security.Security;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.concurrent.*;
 
 /**
  * This test makes sure that certain operations on a UnifiedServerSocket do not
@@ -63,18 +46,8 @@ import org.slf4j.LoggerFactory;
 public class UnifiedServerSocketModeDetectionTest extends ZKTestCase {
     private static final Logger LOG = LoggerFactory.getLogger(
             UnifiedServerSocketModeDetectionTest.class);
-
-    @Parameterized.Parameters
-    public static Collection<Object[]> params() {
-        ArrayList<Object[]> result = new ArrayList<>();
-        result.add(new Object[] { true });
-        result.add(new Object[] { false });
-        return result;
-    }
-
     private static File tempDir;
     private static X509TestContext x509TestContext;
-
     private boolean useSecureClient;
     private X509Util x509Util;
     private UnifiedServerSocket listeningSocket;
@@ -83,6 +56,17 @@ public class UnifiedServerSocketModeDetectionTest extends ZKTestCase {
     private ExecutorService workerPool;
     private int port;
     private InetSocketAddress localServerAddress;
+    public UnifiedServerSocketModeDetectionTest(Boolean useSecureClient) {
+        this.useSecureClient = useSecureClient;
+    }
+
+    @Parameterized.Parameters
+    public static Collection<Object[]> params() {
+        ArrayList<Object[]> result = new ArrayList<>();
+        result.add(new Object[] {true});
+        result.add(new Object[] {false});
+        return result;
+    }
 
     @BeforeClass
     public static void setUpClass() throws Exception {
@@ -125,10 +109,6 @@ public class UnifiedServerSocketModeDetectionTest extends ZKTestCase {
         }
     }
 
-    public UnifiedServerSocketModeDetectionTest(Boolean useSecureClient) {
-        this.useSecureClient = useSecureClient;
-    }
-
     @Before
     public void setUp() throws Exception {
         x509Util = new ClientX509Util();
@@ -157,7 +137,7 @@ public class UnifiedServerSocketModeDetectionTest extends ZKTestCase {
         } else {
             clientSocket = new Socket();
             clientSocket.connect(localServerAddress);
-            clientSocket.getOutputStream().write(new byte[] { 1, 2, 3, 4, 5 });
+            clientSocket.getOutputStream().write(new byte[] {1, 2, 3, 4, 5});
         }
         serverSideSocket = acceptFuture.get();
     }

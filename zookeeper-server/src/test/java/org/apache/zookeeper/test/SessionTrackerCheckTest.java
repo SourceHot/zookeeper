@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,8 +17,6 @@
  */
 
 package org.apache.zookeeper.test;
-
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.zookeeper.KeeperException.SessionExpiredException;
 import org.apache.zookeeper.ZKTestCase;
@@ -34,34 +32,20 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.ConcurrentHashMap;
+
 /**
  * Validate various type of sessions against leader session tracker and learner
  * session tracker
  */
 public class SessionTrackerCheckTest extends ZKTestCase {
 
-    protected static final Logger LOG = LoggerFactory
-            .getLogger(SessionTrackerCheckTest.class);
     public static final int TICK_TIME = 1000;
     public static final int CONNECTION_TIMEOUT = TICK_TIME * 10;
-
+    protected static final Logger LOG = LoggerFactory
+            .getLogger(SessionTrackerCheckTest.class);
     private ConcurrentHashMap<Long, Integer> sessionsWithTimeouts =
             new ConcurrentHashMap<Long, Integer>();
-
-    private class Expirer implements SessionExpirer {
-        long sid;
-
-        public Expirer(long sid) {
-            this.sid = sid;
-        }
-
-        public void expire(Session session) {
-        }
-
-        public long getServerId() {
-            return sid;
-        }
-    }
 
     @Before
     public void setUp() throws Exception {
@@ -226,5 +210,21 @@ public class SessionTrackerCheckTest extends ZKTestCase {
 
             }
         };
+    }
+
+
+    private class Expirer implements SessionExpirer {
+        long sid;
+
+        public Expirer(long sid) {
+            this.sid = sid;
+        }
+
+        public void expire(Session session) {
+        }
+
+        public long getServerId() {
+            return sid;
+        }
     }
 }

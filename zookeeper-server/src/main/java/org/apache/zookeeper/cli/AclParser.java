@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,11 +17,12 @@
  */
 package org.apache.zookeeper.cli;
 
-import java.util.ArrayList;
-import java.util.List;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Id;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * a parser for ACL strings
@@ -31,7 +32,7 @@ public class AclParser {
     /**
      * parse string into list of ACL
      * @param aclString
-     * @return 
+     * @return
      */
     public static List<ACL> parse(String aclString) {
         List<ACL> acl;

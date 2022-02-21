@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,7 +20,6 @@ package org.apache.zookeeper.server;
 
 import org.apache.jute.BinaryInputArchive;
 import org.apache.jute.BinaryOutputArchive;
-import org.apache.jute.InputArchive;
 import org.apache.jute.OutputArchive;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.data.ACL;
@@ -182,7 +181,8 @@ public class ReferenceCountedACLCacheTest {
         BinaryOutputArchive archive = BinaryOutputArchive.getArchive(baos);
         cache.serialize(archive);
 
-        BinaryInputArchive inArchive = BinaryInputArchive.getArchive(new ByteArrayInputStream(baos.toByteArray()));
+        BinaryInputArchive inArchive =
+                BinaryInputArchive.getArchive(new ByteArrayInputStream(baos.toByteArray()));
         ReferenceCountedACLCache deserializedCache = new ReferenceCountedACLCache();
         deserializedCache.deserialize(inArchive);
         callAddUsageNTimes(deserializedCache, aclId1, 1);
@@ -195,7 +195,7 @@ public class ReferenceCountedACLCacheTest {
 
     @Test
     public void testNPEInDeserialize() throws IOException {
-        ReferenceCountedACLCache serializeCache = new ReferenceCountedACLCache(){
+        ReferenceCountedACLCache serializeCache = new ReferenceCountedACLCache() {
             @Override
             public synchronized void serialize(OutputArchive oa) throws IOException {
                 oa.writeInt(1, "map");
@@ -207,11 +207,12 @@ public class ReferenceCountedACLCacheTest {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         BinaryOutputArchive archive = BinaryOutputArchive.getArchive(baos);
         serializeCache.serialize(archive);
-        BinaryInputArchive inArchive = BinaryInputArchive.getArchive(new ByteArrayInputStream(baos.toByteArray()));
+        BinaryInputArchive inArchive =
+                BinaryInputArchive.getArchive(new ByteArrayInputStream(baos.toByteArray()));
         ReferenceCountedACLCache deserializedCache = new ReferenceCountedACLCache();
         try {
             deserializedCache.deserialize(inArchive);
-        } catch (NullPointerException e){
+        } catch (NullPointerException e) {
             fail("should not throw NPE while do deserialized");
         } catch (RuntimeException e) {
             // do nothing.
@@ -219,7 +220,8 @@ public class ReferenceCountedACLCacheTest {
     }
 
 
-    private void assertCachesEqual(ReferenceCountedACLCache expected, ReferenceCountedACLCache actual){
+    private void assertCachesEqual(ReferenceCountedACLCache expected,
+                                   ReferenceCountedACLCache actual) {
         assertEquals(expected.aclIndex, actual.aclIndex);
         assertEquals(expected.aclKeyMap, actual.aclKeyMap);
         assertEquals(expected.longKeyMap, actual.longKeyMap);
@@ -246,7 +248,8 @@ public class ReferenceCountedACLCacheTest {
         BinaryOutputArchive archive = BinaryOutputArchive.getArchive(baos);
         cache.serialize(archive);
 
-        BinaryInputArchive inArchive = BinaryInputArchive.getArchive(new ByteArrayInputStream(baos.toByteArray()));
+        BinaryInputArchive inArchive =
+                BinaryInputArchive.getArchive(new ByteArrayInputStream(baos.toByteArray()));
         ReferenceCountedACLCache deserializedCache = new ReferenceCountedACLCache();
         deserializedCache.deserialize(inArchive);
         callAddUsageNTimes(deserializedCache, aclId1, 1);
@@ -261,7 +264,9 @@ public class ReferenceCountedACLCacheTest {
         assertFalse(acl5.equals(deserializedCache.convertAcls(acl5)));
     }
 
-    private void callAddUsageNTimes(ReferenceCountedACLCache deserializedCache, Long aclId, int num) {
+    private void callAddUsageNTimes(ReferenceCountedACLCache deserializedCache,
+                                    Long aclId,
+                                    int num) {
         for (int i = 0; i < num; i++) {
             deserializedCache.addUsage(aclId);
         }
@@ -272,7 +277,7 @@ public class ReferenceCountedACLCacheTest {
             return -1L;
         }
 
-        for (int i = 0; i < num -1; i++) {
+        for (int i = 0; i < num - 1; i++) {
             cache.convertAcls(acl);
         }
 

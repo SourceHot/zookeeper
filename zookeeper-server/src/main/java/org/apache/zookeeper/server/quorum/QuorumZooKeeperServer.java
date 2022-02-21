@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,10 +16,6 @@
  * limitations under the License.
  */
 package org.apache.zookeeper.server.quorum;
-
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.nio.ByteBuffer;
 
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
@@ -33,6 +29,10 @@ import org.apache.zookeeper.server.ZKDatabase;
 import org.apache.zookeeper.server.ZooKeeperServer;
 import org.apache.zookeeper.server.persistence.FileTxnSnapLog;
 
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.nio.ByteBuffer;
+
 /**
  * Abstract base class for all ZooKeeperServers that participate in
  * a quorum.
@@ -43,10 +43,10 @@ public abstract class QuorumZooKeeperServer extends ZooKeeperServer {
     protected UpgradeableSessionTracker upgradeableSessionTracker;
 
     protected QuorumZooKeeperServer(FileTxnSnapLog logFactory, int tickTime,
-            int minSessionTimeout, int maxSessionTimeout,
-            ZKDatabase zkDb, QuorumPeer self)
-    {
-        super(logFactory, tickTime, minSessionTimeout, maxSessionTimeout, zkDb, self.isReconfigEnabled());
+                                    int minSessionTimeout, int maxSessionTimeout,
+                                    ZKDatabase zkDb, QuorumPeer self) {
+        super(logFactory, tickTime, minSessionTimeout, maxSessionTimeout, zkDb,
+                self.isReconfigEnabled());
         this.self = self;
     }
 
@@ -64,8 +64,9 @@ public abstract class QuorumZooKeeperServer extends ZooKeeperServer {
         // This is called by the request processor thread (either follower
         // or observer request processor), which is unique to a learner.
         // So will not be called concurrently by two threads.
-        if ((request.type != OpCode.create && request.type != OpCode.create2 && request.type != OpCode.multi) ||
-            !upgradeableSessionTracker.isLocalSession(request.sessionId)) {
+        if ((request.type != OpCode.create && request.type != OpCode.create2
+                && request.type != OpCode.multi) ||
+                !upgradeableSessionTracker.isLocalSession(request.sessionId)) {
             return null;
         }
 
@@ -77,7 +78,7 @@ public abstract class QuorumZooKeeperServer extends ZooKeeperServer {
             boolean containsEphemeralCreate = false;
             for (Op op : multiTransactionRecord) {
                 if (op.getType() == OpCode.create || op.getType() == OpCode.create2) {
-                    CreateRequest createRequest = (CreateRequest)op.toRequestRecord();
+                    CreateRequest createRequest = (CreateRequest) op.toRequestRecord();
                     CreateMode createMode = CreateMode.fromFlag(createRequest.getFlags());
                     if (createMode.isEphemeral()) {
                         containsEphemeralCreate = true;
@@ -142,23 +143,23 @@ public abstract class QuorumZooKeeperServer extends ZooKeeperServer {
         // We need to set isLocalSession to tree for these type of request
         // so that the request processor can process them correctly.
         switch (si.type) {
-        case OpCode.createSession:
-            if (self.areLocalSessionsEnabled()) {
-                // All new sessions local by default.
-                si.setLocalSession(true);
-            }
-            break;
-        case OpCode.closeSession:
-            String reqType = "global";
-            if (upgradeableSessionTracker.isLocalSession(si.sessionId)) {
-                si.setLocalSession(true);
-                reqType = "local";
-            }
-            LOG.info("Submitting " + reqType + " closeSession request"
-                    + " for session 0x" + Long.toHexString(si.sessionId));
-            break;
-        default:
-            break;
+            case OpCode.createSession:
+                if (self.areLocalSessionsEnabled()) {
+                    // All new sessions local by default.
+                    si.setLocalSession(true);
+                }
+                break;
+            case OpCode.closeSession:
+                String reqType = "global";
+                if (upgradeableSessionTracker.isLocalSession(si.sessionId)) {
+                    si.setLocalSession(true);
+                    reqType = "local";
+                }
+                LOG.info("Submitting " + reqType + " closeSession request"
+                        + " for session 0x" + Long.toHexString(si.sessionId));
+                break;
+            default:
+                break;
         }
     }
 

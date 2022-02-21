@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,18 +17,13 @@
  */
 package org.apache.zookeeper.server.quorum;
 
+import org.apache.zookeeper.jmx.MBeanRegistry;
+import org.apache.zookeeper.server.*;
+import org.apache.zookeeper.server.persistence.FileTxnSnapLog;
+
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
-
-import org.apache.zookeeper.jmx.MBeanRegistry;
-import org.apache.zookeeper.server.DataTreeBean;
-import org.apache.zookeeper.server.quorum.LearnerSessionTracker;
-import org.apache.zookeeper.server.ServerCnxn;
-import org.apache.zookeeper.server.SyncRequestProcessor;
-import org.apache.zookeeper.server.ZKDatabase;
-import org.apache.zookeeper.server.ZooKeeperServerBean;
-import org.apache.zookeeper.server.persistence.FileTxnSnapLog;
 
 /**
  * Parent class for all ZooKeeperServers for Learners
@@ -42,10 +37,9 @@ public abstract class LearnerZooKeeperServer extends QuorumZooKeeperServer {
     protected SyncRequestProcessor syncProcessor;
 
     public LearnerZooKeeperServer(FileTxnSnapLog logFactory, int tickTime,
-            int minSessionTimeout, int maxSessionTimeout,
-            ZKDatabase zkDb, QuorumPeer self)
-        throws IOException
-    {
+                                  int minSessionTimeout, int maxSessionTimeout,
+                                  ZKDatabase zkDb, QuorumPeer self)
+            throws IOException {
         super(logFactory, tickTime, minSessionTimeout, maxSessionTimeout, zkDb, self);
     }
 
@@ -89,7 +83,7 @@ public abstract class LearnerZooKeeperServer extends QuorumZooKeeperServer {
 
     @Override
     protected void revalidateSession(ServerCnxn cnxn, long sessionId,
-            int sessionTimeout) throws IOException {
+                                     int sessionTimeout) throws IOException {
         if (upgradeableSessionTracker.isLocalSession(sessionId)) {
             super.revalidateSession(cnxn, sessionId, sessionTimeout);
         } else {
@@ -110,8 +104,7 @@ public abstract class LearnerZooKeeperServer extends QuorumZooKeeperServer {
     }
 
     public void registerJMX(ZooKeeperServerBean serverBean,
-            LocalPeerBean localPeerBean)
-    {
+                            LocalPeerBean localPeerBean) {
         // register with JMX
         if (self.jmxLeaderElectionBean != null) {
             try {

@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,9 +18,10 @@
 
 package org.apache.zookeeper.util;
 
-import java.security.Principal;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
+import org.apache.zookeeper.SaslClientCallbackHandler;
+import org.apache.zookeeper.server.auth.KerberosName;
+import org.ietf.jgss.*;
+import org.slf4j.Logger;
 
 import javax.security.auth.Subject;
 import javax.security.auth.callback.CallbackHandler;
@@ -28,16 +29,9 @@ import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
-
-import org.apache.zookeeper.SaslClientCallbackHandler;
-import org.apache.zookeeper.server.auth.KerberosName;
-import org.ietf.jgss.GSSContext;
-import org.ietf.jgss.GSSCredential;
-import org.ietf.jgss.GSSException;
-import org.ietf.jgss.GSSManager;
-import org.ietf.jgss.GSSName;
-import org.ietf.jgss.Oid;
-import org.slf4j.Logger;
+import java.security.Principal;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 
 public final class SecurityUtils {
 
@@ -57,8 +51,11 @@ public final class SecurityUtils {
      * @throws SaslException
      */
     public static SaslClient createSaslClient(final Subject subject,
-            final String servicePrincipal, final String protocol,
-            final String serverName, final Logger LOG, final String entity) throws SaslException {
+                                              final String servicePrincipal,
+                                              final String protocol,
+                                              final String serverName,
+                                              final Logger LOG,
+                                              final String entity) throws SaslException {
         SaslClient saslClient;
         // Use subject.getPrincipals().isEmpty() as an indication of which SASL
         // mechanism to use: if empty, use DIGEST-MD5; otherwise, use GSSAPI.
@@ -66,7 +63,7 @@ public final class SecurityUtils {
             // no principals: must not be GSSAPI: use DIGEST-MD5 mechanism
             // instead.
             LOG.info("{} will use DIGEST-MD5 as SASL mechanism.", entity);
-            String[] mechs = { "DIGEST-MD5" };
+            String[] mechs = {"DIGEST-MD5"};
             String username = (String) (subject.getPublicCredentials()
                     .toArray()[0]);
             String password = (String) (subject.getPrivateCredentials()
@@ -102,7 +99,7 @@ public final class SecurityUtils {
                             entity, clientPrincipal);
                 } catch (GSSException ex) {
                     LOG.warn("Cannot add private credential to subject; "
-                                    + "authentication at the server may fail", ex);
+                            + "authentication at the server may fail", ex);
                 }
             }
             final KerberosName clientKerberosName = new KerberosName(
@@ -126,9 +123,11 @@ public final class SecurityUtils {
                         new PrivilegedExceptionAction<SaslClient>() {
                             public SaslClient run() throws SaslException {
                                 LOG.info("{} will use GSSAPI as SASL mechanism.", entity);
-                                String[] mechs = { "GSSAPI" };
-                                LOG.debug("creating sasl client: {}={};service={};serviceHostname={}",
-                                        new Object[] { entity, clientPrincipalName, serviceName, serviceHostname });
+                                String[] mechs = {"GSSAPI"};
+                                LOG.debug(
+                                        "creating sasl client: {}={};service={};serviceHostname={}",
+                                        new Object[] {entity, clientPrincipalName, serviceName,
+                                                serviceHostname});
                                 SaslClient saslClient = Sasl.createSaslClient(
                                         mechs, clientPrincipalName, serviceName,
                                         serviceHostname, null,
@@ -155,8 +154,10 @@ public final class SecurityUtils {
      * @return sasl server object
      */
     public static SaslServer createSaslServer(final Subject subject,
-            final String protocol, final String serverName,
-            final CallbackHandler callbackHandler, final Logger LOG) {
+                                              final String protocol,
+                                              final String serverName,
+                                              final CallbackHandler callbackHandler,
+                                              final Logger LOG) {
         if (subject != null) {
             // server is using a JAAS-authenticated subject: determine service
             // principal name and hostname from zk server's subject.
@@ -222,10 +223,11 @@ public final class SecurityUtils {
                                     krb5Mechanism, GSSCredential.ACCEPT_ONLY);
                             subject.getPrivateCredentials().add(cred);
                             LOG.debug("Added private credential to service principal name: '{}',"
-                                            + " GSSCredential name: {}", servicePrincipalName, cred.getName());
+                                            + " GSSCredential name: {}", servicePrincipalName,
+                                    cred.getName());
                         } catch (GSSException ex) {
                             LOG.warn("Cannot add private credential to subject; "
-                                            + "clients authentication may fail", ex);
+                                    + "clients authentication may fail", ex);
                         }
                     }
                     try {
@@ -240,14 +242,18 @@ public final class SecurityUtils {
                                                     callbackHandler);
                                             return saslServer;
                                         } catch (SaslException e) {
-                                            LOG.error("Zookeeper Server failed to create a SaslServer to interact with a client during session initiation: ", e);
+                                            LOG.error(
+                                                    "Zookeeper Server failed to create a SaslServer to interact with a client during session initiation: ",
+                                                    e);
                                             return null;
                                         }
                                     }
                                 });
                     } catch (PrivilegedActionException e) {
                         // TODO: exit server at this point(?)
-                        LOG.error("Zookeeper Quorum member experienced a PrivilegedActionException exception while creating a SaslServer using a JAAS principal context:", e);
+                        LOG.error(
+                                "Zookeeper Quorum member experienced a PrivilegedActionException exception while creating a SaslServer using a JAAS principal context:",
+                                e);
                     }
                 } catch (IndexOutOfBoundsException e) {
                     LOG.error("server principal name/hostname determination error: ", e);
@@ -261,7 +267,9 @@ public final class SecurityUtils {
                             protocol, serverName, null, callbackHandler);
                     return saslServer;
                 } catch (SaslException e) {
-                    LOG.error("Zookeeper Quorum member failed to create a SaslServer to interact with a client during session initiation", e);
+                    LOG.error(
+                            "Zookeeper Quorum member failed to create a SaslServer to interact with a client during session initiation",
+                            e);
                 }
             }
         }
@@ -280,7 +288,7 @@ public final class SecurityUtils {
      * @return converted Kerberos principal name
      */
     public static String getServerPrincipal(String principalConfig,
-            String hostname) {
+                                            String hostname) {
         String[] components = getComponents(principalConfig);
         if (components == null || components.length != 2
                 || !components[1].equals(QUORUM_HOSTNAME_PATTERN)) {

@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,17 +17,6 @@
  */
 package org.apache.zookeeper.server.quorum;
 
-import java.io.PrintWriter;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
-
 import org.apache.zookeeper.KeeperException.SessionExpiredException;
 import org.apache.zookeeper.KeeperException.SessionMovedException;
 import org.apache.zookeeper.KeeperException.UnknownSessionException;
@@ -35,6 +24,13 @@ import org.apache.zookeeper.server.SessionTrackerImpl;
 import org.apache.zookeeper.server.ZooKeeperServerListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.PrintWriter;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * The learner session tracker is used by learners (followers and observers) to
@@ -54,7 +50,7 @@ public class LearnerSessionTracker extends UpgradeableSessionTracker {
     private final SessionExpirer expirer;
     // Touch table for the global sessions
     private final AtomicReference<Map<Long, Integer>> touchTable =
-        new AtomicReference<Map<Long, Integer>>();
+            new AtomicReference<Map<Long, Integer>>();
     private final long serverId;
     private final AtomicLong nextSessionId = new AtomicLong();
 
@@ -62,9 +58,9 @@ public class LearnerSessionTracker extends UpgradeableSessionTracker {
     private final ConcurrentMap<Long, Integer> globalSessionsWithTimeouts;
 
     public LearnerSessionTracker(SessionExpirer expirer,
-            ConcurrentMap<Long, Integer> sessionsWithTimeouts,
-            int tickTime, long id, boolean localSessionsEnabled,
-            ZooKeeperServerListener listener) {
+                                 ConcurrentMap<Long, Integer> sessionsWithTimeouts,
+                                 int tickTime, long id, boolean localSessionsEnabled,
+                                 ZooKeeperServerListener listener) {
         this.expirer = expirer;
         this.touchTable.set(new ConcurrentHashMap<Long, Integer>());
         this.globalSessionsWithTimeouts = sessionsWithTimeouts;
@@ -103,7 +99,7 @@ public class LearnerSessionTracker extends UpgradeableSessionTracker {
 
     public boolean addGlobalSession(long sessionId, int sessionTimeout) {
         boolean added =
-            globalSessionsWithTimeouts.put(sessionId, sessionTimeout) == null;
+                globalSessionsWithTimeouts.put(sessionId, sessionTimeout) == null;
         if (localSessionsEnabled && added) {
             // Only do extra logging so we know what kind of session this is
             // if we're supporting both kinds of sessions
@@ -123,7 +119,7 @@ public class LearnerSessionTracker extends UpgradeableSessionTracker {
                 localSessionTracker.removeSession(sessionId);
             } else if (added) {
                 LOG.info("Adding local session 0x"
-                         + Long.toHexString(sessionId));
+                        + Long.toHexString(sessionId));
             }
         } else {
             added = addGlobalSession(sessionId, sessionTimeout);
@@ -156,7 +152,7 @@ public class LearnerSessionTracker extends UpgradeableSessionTracker {
     }
 
     public void checkSession(long sessionId, Object owner)
-            throws SessionExpiredException, SessionMovedException  {
+            throws SessionExpiredException, SessionMovedException {
         if (localSessionTracker != null) {
             try {
                 localSessionTracker.checkSession(sessionId, owner);

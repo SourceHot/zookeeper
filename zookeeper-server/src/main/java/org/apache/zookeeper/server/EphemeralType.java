@@ -87,10 +87,12 @@ public enum EphemeralType {
         @Override
         public long toEphemeralOwner(long ttl) {
             if ((ttl > TTL.maxValue()) || (ttl <= 0)) {
-                throw new IllegalArgumentException("ttl must be positive and cannot be larger than: " + TTL.maxValue());
+                throw new IllegalArgumentException(
+                        "ttl must be positive and cannot be larger than: " + TTL.maxValue());
             }
             //noinspection PointlessBitwiseExpression
-            return EXTENDED_MASK | EXTENDED_BIT_TTL | ttl;  // TTL_RESERVED_BIT is actually zero - but it serves to document that the proper extended bit needs to be set
+            return EXTENDED_MASK | EXTENDED_BIT_TTL
+                    | ttl;  // TTL_RESERVED_BIT is actually zero - but it serves to document that the proper extended bit needs to be set
         }
 
         @Override
@@ -99,54 +101,23 @@ public enum EphemeralType {
         }
     };
 
-    /**
-     * For types that support it, the maximum extended value
-     *
-     * @return 0 or max
-     */
-    public long maxValue() {
-        return 0;
-    }
-
-    /**
-     * For types that support it, convert a value to an extended ephemeral owner
-     *
-     * @return 0 or extended ephemeral owner
-     */
-    public long toEphemeralOwner(long value) {
-        return 0;
-    }
-
-    /**
-     * For types that support it, return the extended value from an extended ephemeral owner
-     *
-     * @return 0 or extended value
-     */
-    public long getValue(long ephemeralOwner) {
-        return 0;
-    }
-
     public static final long CONTAINER_EPHEMERAL_OWNER = Long.MIN_VALUE;
     public static final long MAX_EXTENDED_SERVER_ID = 0xfe;  // 254
-
+    // Visible for testing
+    static final String EXTENDED_TYPES_ENABLED_PROPERTY = "zookeeper.extendedTypesEnabled";
+    static final String TTL_3_5_3_EMULATION_PROPERTY = "zookeeper.emulate353TTLNodes";
     private static final long EXTENDED_MASK = 0xff00000000000000L;
     private static final long EXTENDED_BIT_TTL = 0x0000;
     private static final long RESERVED_BITS_MASK = 0x00ffff0000000000L;
     private static final long RESERVED_BITS_SHIFT = 40;
-
     private static final Map<Long, EphemeralType> extendedFeatureMap;
+    private static final long EXTENDED_FEATURE_VALUE_MASK = ~(EXTENDED_MASK | RESERVED_BITS_MASK);
 
     static {
         Map<Long, EphemeralType> map = new HashMap<>();
         map.put(EXTENDED_BIT_TTL, TTL);
         extendedFeatureMap = Collections.unmodifiableMap(map);
     }
-
-    private static final long EXTENDED_FEATURE_VALUE_MASK = ~(EXTENDED_MASK | RESERVED_BITS_MASK);
-
-    // Visible for testing
-    static final String EXTENDED_TYPES_ENABLED_PROPERTY = "zookeeper.extendedTypesEnabled";
-    static final String TTL_3_5_3_EMULATION_PROPERTY = "zookeeper.emulate353TTLNodes";
 
     /**
      * Return true if extended ephemeral types are enabled
@@ -176,7 +147,8 @@ public enum EphemeralType {
                 long extendedFeatureBit = getExtendedFeatureBit(ephemeralOwner);
                 EphemeralType ephemeralType = extendedFeatureMap.get(extendedFeatureBit);
                 if (ephemeralType == null) {
-                    throw new IllegalArgumentException(String.format("Invalid ephemeralOwner. [%s]", Long.toHexString(ephemeralOwner)));
+                    throw new IllegalArgumentException(String.format("Invalid ephemeralOwner. [%s]",
+                            Long.toHexString(ephemeralOwner)));
                 }
                 return ephemeralType;
             }
@@ -199,7 +171,9 @@ public enum EphemeralType {
 
         if (extendedEphemeralTypesEnabled()) {
             if (serverId > EphemeralType.MAX_EXTENDED_SERVER_ID) {
-                throw new RuntimeException("extendedTypesEnabled is true but Server ID is too large. Cannot be larger than " + EphemeralType.MAX_EXTENDED_SERVER_ID);
+                throw new RuntimeException(
+                        "extendedTypesEnabled is true but Server ID is too large. Cannot be larger than "
+                                + EphemeralType.MAX_EXTENDED_SERVER_ID);
             }
         }
     }
@@ -227,5 +201,32 @@ public enum EphemeralType {
 
     private static long getExtendedFeatureValue(long ephemeralOwner) {
         return ephemeralOwner & EXTENDED_FEATURE_VALUE_MASK;
+    }
+
+    /**
+     * For types that support it, the maximum extended value
+     *
+     * @return 0 or max
+     */
+    public long maxValue() {
+        return 0;
+    }
+
+    /**
+     * For types that support it, convert a value to an extended ephemeral owner
+     *
+     * @return 0 or extended ephemeral owner
+     */
+    public long toEphemeralOwner(long value) {
+        return 0;
+    }
+
+    /**
+     * For types that support it, return the extended value from an extended ephemeral owner
+     *
+     * @return 0 or extended value
+     */
+    public long getValue(long ephemeralOwner) {
+        return 0;
     }
 }

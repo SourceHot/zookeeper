@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,6 +18,13 @@
 
 package org.apache.zookeeper.test;
 
+import org.apache.zookeeper.*;
+import org.apache.zookeeper.Watcher.Event.EventType;
+import org.apache.zookeeper.Watcher.Event.KeeperState;
+import org.apache.zookeeper.ZooDefs.Ids;
+import org.junit.Assert;
+import org.junit.Test;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,63 +32,13 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.WatchedEvent;
-import org.apache.zookeeper.Watcher;
-import org.apache.zookeeper.ZooKeeper;
-import org.apache.zookeeper.Watcher.Event.EventType;
-import org.apache.zookeeper.Watcher.Event.KeeperState;
-import org.apache.zookeeper.ZooDefs.Ids;
-import org.junit.Assert;
-import org.junit.Test;
-
 public class WatcherFuncTest extends ClientBase {
-    private static class SimpleWatcher implements Watcher {
-        private LinkedBlockingQueue<WatchedEvent> events =
-            new LinkedBlockingQueue<WatchedEvent>();
-        private CountDownLatch latch;
-
-        public SimpleWatcher(CountDownLatch latch) {
-            this.latch = latch;
-        }
-
-        public void process(WatchedEvent event) {
-            if (event.getState() == KeeperState.SyncConnected) {
-                if (latch != null) {
-                    latch.countDown();
-                }
-            }
-
-            if (event.getType() == EventType.None) {
-                return;
-            }
-            try {
-                events.put(event);
-            } catch (InterruptedException e) {
-                Assert.assertTrue("interruption unexpected", false);
-            }
-        }
-        public void verify(List<EventType> expected) throws InterruptedException{
-            WatchedEvent event;
-            int count = 0;
-            while (count < expected.size()
-                    && (event = events.poll(30, TimeUnit.SECONDS)) != null)
-            {
-                Assert.assertEquals(expected.get(count), event.getType());
-                count++;
-            }
-            Assert.assertEquals(expected.size(), count);
-            events.clear();
-        }
-    }
     private SimpleWatcher client_dwatch;
     private volatile CountDownLatch client_latch;
     private ZooKeeper client;
     private SimpleWatcher lsnr_dwatch;
     private volatile CountDownLatch lsnr_latch;
     private ZooKeeper lsnr;
-
     private List<EventType> expected;
 
     @Override
@@ -107,10 +64,9 @@ public class WatcherFuncTest extends ClientBase {
     }
 
     protected ZooKeeper createClient(Watcher watcher, CountDownLatch latch)
-        throws IOException, InterruptedException
-    {
+            throws IOException, InterruptedException {
         ZooKeeper zk = new ZooKeeper(hostPort, CONNECTION_TIMEOUT, watcher);
-        if(!latch.await(CONNECTION_TIMEOUT, TimeUnit.MILLISECONDS)){
+        if (!latch.await(CONNECTION_TIMEOUT, TimeUnit.MILLISECONDS)) {
             Assert.fail("Unable to connect to server");
         }
         return zk;
@@ -123,8 +79,7 @@ public class WatcherFuncTest extends ClientBase {
 
     @Test
     public void testExistsSync()
-        throws IOException, InterruptedException, KeeperException
-    {
+            throws IOException, InterruptedException, KeeperException {
         Assert.assertNull(lsnr.exists("/foo", true));
         Assert.assertNull(lsnr.exists("/foo/bar", true));
 
@@ -176,8 +131,7 @@ public class WatcherFuncTest extends ClientBase {
 
     @Test
     public void testGetDataSync()
-        throws IOException, InterruptedException, KeeperException
-    {
+            throws IOException, InterruptedException, KeeperException {
         try {
             lsnr.getData("/foo", true, null);
             Assert.fail();
@@ -218,8 +172,7 @@ public class WatcherFuncTest extends ClientBase {
 
     @Test
     public void testGetChildrenSync()
-        throws IOException, InterruptedException, KeeperException
-    {
+            throws IOException, InterruptedException, KeeperException {
         try {
             lsnr.getChildren("/foo", true);
             Assert.fail();
@@ -263,8 +216,7 @@ public class WatcherFuncTest extends ClientBase {
 
     @Test
     public void testExistsSyncWObj()
-        throws IOException, InterruptedException, KeeperException
-    {
+            throws IOException, InterruptedException, KeeperException {
         SimpleWatcher w1 = new SimpleWatcher(null);
         SimpleWatcher w2 = new SimpleWatcher(null);
         SimpleWatcher w3 = new SimpleWatcher(null);
@@ -340,8 +292,7 @@ public class WatcherFuncTest extends ClientBase {
 
     @Test
     public void testGetDataSyncWObj()
-        throws IOException, InterruptedException, KeeperException
-    {
+            throws IOException, InterruptedException, KeeperException {
         SimpleWatcher w1 = new SimpleWatcher(null);
         SimpleWatcher w2 = new SimpleWatcher(null);
         SimpleWatcher w3 = new SimpleWatcher(null);
@@ -409,8 +360,7 @@ public class WatcherFuncTest extends ClientBase {
 
     @Test
     public void testGetChildrenSyncWObj()
-        throws IOException, InterruptedException, KeeperException
-    {
+            throws IOException, InterruptedException, KeeperException {
         SimpleWatcher w1 = new SimpleWatcher(null);
         SimpleWatcher w2 = new SimpleWatcher(null);
         SimpleWatcher w3 = new SimpleWatcher(null);
@@ -474,5 +424,45 @@ public class WatcherFuncTest extends ClientBase {
         w4.verify(e2);
         expected.clear();
         e2.clear();
+    }
+
+
+    private static class SimpleWatcher implements Watcher {
+        private LinkedBlockingQueue<WatchedEvent> events =
+                new LinkedBlockingQueue<WatchedEvent>();
+        private CountDownLatch latch;
+
+        public SimpleWatcher(CountDownLatch latch) {
+            this.latch = latch;
+        }
+
+        public void process(WatchedEvent event) {
+            if (event.getState() == KeeperState.SyncConnected) {
+                if (latch != null) {
+                    latch.countDown();
+                }
+            }
+
+            if (event.getType() == EventType.None) {
+                return;
+            }
+            try {
+                events.put(event);
+            } catch (InterruptedException e) {
+                Assert.assertTrue("interruption unexpected", false);
+            }
+        }
+
+        public void verify(List<EventType> expected) throws InterruptedException {
+            WatchedEvent event;
+            int count = 0;
+            while (count < expected.size()
+                    && (event = events.poll(30, TimeUnit.SECONDS)) != null) {
+                Assert.assertEquals(expected.get(count), event.getType());
+                count++;
+            }
+            Assert.assertEquals(expected.size(), count);
+            events.clear();
+        }
     }
 }

@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,9 +16,6 @@
  * limitations under the License.
  */
 package org.apache.zookeeper.server;
-
-import java.io.IOException;
-
 
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
@@ -31,15 +28,16 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 
 public class NIOServerCnxnTest extends ClientBase {
     private static final Logger LOG = LoggerFactory
-                        .getLogger(NIOServerCnxnTest.class);
+            .getLogger(NIOServerCnxnTest.class);
 
     /**
      * Test operations on ServerCnxn after socket closure.
@@ -79,16 +77,19 @@ public class NIOServerCnxnTest extends ClientBase {
     }
 
     @Test
-    public void testClientResponseStatsUpdate() throws IOException, InterruptedException, KeeperException {
+    public void testClientResponseStatsUpdate()
+            throws IOException, InterruptedException, KeeperException {
         try (ZooKeeper zk = createClient()) {
-            BufferStats clientResponseStats = serverFactory.getZooKeeperServer().serverStats().getClientResponseStats();
+            BufferStats clientResponseStats =
+                    serverFactory.getZooKeeperServer().serverStats().getClientResponseStats();
             assertThat("Last client response size should be initialized with INIT_VALUE",
                     clientResponseStats.getLastBufferSize(), equalTo(BufferStats.INIT_VALUE));
 
             zk.create("/a", "test".getBytes(), Ids.OPEN_ACL_UNSAFE,
                     CreateMode.PERSISTENT);
 
-            assertThat("Last client response size should be greater then zero after client request was performed",
+            assertThat(
+                    "Last client response size should be greater then zero after client request was performed",
                     clientResponseStats.getLastBufferSize(), greaterThan(0));
         }
     }

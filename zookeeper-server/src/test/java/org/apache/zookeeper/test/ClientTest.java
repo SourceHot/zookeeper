@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,28 +18,13 @@
 
 package org.apache.zookeeper.test;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
-
-import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.zookeeper.AsyncCallback;
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.*;
 import org.apache.zookeeper.KeeperException.Code;
 import org.apache.zookeeper.KeeperException.InvalidACLException;
-import org.apache.zookeeper.TestableZooKeeper;
-import org.apache.zookeeper.WatchedEvent;
-import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.Watcher.Event.EventType;
 import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.ZooDefs.Perms;
-import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Id;
 import org.apache.zookeeper.data.Stat;
@@ -49,11 +34,19 @@ import org.apache.zookeeper.proto.ReplyHeader;
 import org.apache.zookeeper.proto.RequestHeader;
 import org.apache.zookeeper.server.PrepRequestProcessor;
 import org.apache.zookeeper.server.util.OSMXBean;
-import static org.apache.zookeeper.test.ClientBase.CONNECTION_TIMEOUT;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class ClientTest extends ClientBase {
     protected static final Logger LOG = LoggerFactory.getLogger(ClientTest.class);
@@ -95,15 +88,13 @@ public class ClientTest extends ClientBase {
 
     @Test
     public void testClientwithoutWatcherObj() throws IOException,
-            InterruptedException, KeeperException
-    {
+            InterruptedException, KeeperException {
         performClientTest(false);
     }
 
     @Test
     public void testClientWithWatcherObj() throws IOException,
-            InterruptedException, KeeperException
-    {
+            InterruptedException, KeeperException {
         performClientTest(true);
     }
 
@@ -112,14 +103,14 @@ public class ClientTest extends ClientBase {
     public void testTestability() throws Exception {
         TestableZooKeeper zk = createClient();
         try {
-            LOG.info("{}",zk.testableLocalSocketAddress());
-            LOG.info("{}",zk.testableRemoteSocketAddress());
-            LOG.info("{}",zk.toString());
+            LOG.info("{}", zk.testableLocalSocketAddress());
+            LOG.info("{}", zk.testableRemoteSocketAddress());
+            LOG.info("{}", zk.toString());
         } finally {
             zk.close(CONNECTION_TIMEOUT);
-            LOG.info("{}",zk.testableLocalSocketAddress());
-            LOG.info("{}",zk.testableRemoteSocketAddress());
-            LOG.info("{}",zk.toString());
+            LOG.info("{}", zk.testableLocalSocketAddress());
+            LOG.info("{}", zk.testableRemoteSocketAddress());
+            LOG.info("{}", zk.toString());
         }
     }
 
@@ -131,7 +122,7 @@ public class ClientTest extends ClientBase {
             try {
                 zk.create("/acltest", new byte[0], Ids.CREATOR_ALL_ACL, CreateMode.PERSISTENT);
                 Assert.fail("Should have received an invalid acl error");
-            } catch(InvalidACLException e) {
+            } catch (InvalidACLException e) {
                 LOG.info("Test successful, invalid acl received : "
                         + e.getMessage());
             }
@@ -141,7 +132,7 @@ public class ClientTest extends ClientBase {
                 testACL.add(new ACL(Perms.ALL | Perms.ADMIN, new Id("ip", "127.0.0.1/8")));
                 zk.create("/acltest", new byte[0], testACL, CreateMode.PERSISTENT);
                 Assert.fail("Should have received an invalid acl error");
-            } catch(InvalidACLException e) {
+            } catch (InvalidACLException e) {
                 LOG.info("Test successful, invalid acl received : "
                         + e.getMessage());
             }
@@ -150,13 +141,13 @@ public class ClientTest extends ClientBase {
                 testACL.add(new ACL(Perms.ALL | Perms.ADMIN, new Id()));
                 zk.create("/nullidtest", new byte[0], testACL, CreateMode.PERSISTENT);
                 Assert.fail("Should have received an invalid acl error");
-            } catch(InvalidACLException e) {
+            } catch (InvalidACLException e) {
                 LOG.info("Test successful, invalid acl received : "
                         + e.getMessage());
             }
             zk.addAuthInfo("digest", "ben:passwd".getBytes());
             ArrayList<ACL> testACL = new ArrayList<ACL>();
-            testACL.add(new ACL(Perms.ALL, new Id("auth","")));
+            testACL.add(new ACL(Perms.ALL, new Id("auth", "")));
             testACL.add(new ACL(Perms.WRITE, new Id("ip", "127.0.0.1")));
             zk.create("/acltest", new byte[0], testACL, CreateMode.PERSISTENT);
             zk.close();
@@ -241,30 +232,13 @@ public class ClientTest extends ClientBase {
         }
     }
 
-    private class MyWatcher extends CountdownWatcher {
-        LinkedBlockingQueue<WatchedEvent> events =
-            new LinkedBlockingQueue<WatchedEvent>();
-
-        public void process(WatchedEvent event) {
-            super.process(event);
-            if (event.getType() != EventType.None) {
-                try {
-                    events.put(event);
-                } catch (InterruptedException e) {
-                    LOG.warn("ignoring interrupt during event.put");
-                }
-            }
-        }
-    }
-
     /**
      * Register multiple watchers and verify that they all get notified and
      * in the right order.
      */
     @Test
     public void testMutipleWatcherObjs()
-        throws IOException, InterruptedException, KeeperException
-    {
+            throws IOException, InterruptedException, KeeperException {
         ZooKeeper zk = createClient(new CountdownWatcher(), hostPort);
         try {
             MyWatcher watchers[] = new MyWatcher[100];
@@ -294,7 +268,7 @@ public class ClientTest extends ClientBase {
             }
             for (int i = 0; i < watchers.length; i++) {
                 WatchedEvent event =
-                    watchers[i].events.poll(10, TimeUnit.SECONDS);
+                        watchers[i].events.poll(10, TimeUnit.SECONDS);
                 Assert.assertEquals("/foo-" + i, event.getPath());
                 Assert.assertEquals(EventType.NodeDataChanged, event.getType());
                 Assert.assertEquals(KeeperState.SyncConnected, event.getState());
@@ -320,7 +294,7 @@ public class ClientTest extends ClientBase {
             }
             for (int i = 0; i < watchers.length; i++) {
                 WatchedEvent event =
-                    watchers[i].events.poll(10, TimeUnit.SECONDS);
+                        watchers[i].events.poll(10, TimeUnit.SECONDS);
                 Assert.assertEquals("/foo-" + i, event.getPath());
                 Assert.assertEquals(EventType.NodeDataChanged, event.getType());
                 Assert.assertEquals(KeeperState.SyncConnected, event.getState());
@@ -345,7 +319,7 @@ public class ClientTest extends ClientBase {
             }
             for (int i = 0; i < watchers.length; i++) {
                 WatchedEvent event =
-                    watchers[i].events.poll(10, TimeUnit.SECONDS);
+                        watchers[i].events.poll(10, TimeUnit.SECONDS);
                 Assert.assertEquals("/foo-" + i, event.getPath());
                 Assert.assertEquals(EventType.NodeDataChanged, event.getType());
                 Assert.assertEquals(KeeperState.SyncConnected, event.getState());
@@ -357,7 +331,7 @@ public class ClientTest extends ClientBase {
 
                 // watchers2
                 WatchedEvent event2 =
-                    watchers2[i].events.poll(10, TimeUnit.SECONDS);
+                        watchers2[i].events.poll(10, TimeUnit.SECONDS);
                 Assert.assertEquals("/foo-" + i, event2.getPath());
                 Assert.assertEquals(EventType.NodeDataChanged, event2.getType());
                 Assert.assertEquals(KeeperState.SyncConnected, event2.getState());
@@ -376,8 +350,7 @@ public class ClientTest extends ClientBase {
     }
 
     private void performClientTest(boolean withWatcherObj)
-        throws IOException, InterruptedException, KeeperException
-    {
+            throws IOException, InterruptedException, KeeperException {
         ZooKeeper zk = null;
         try {
             MyWatcher watcher = new MyWatcher();
@@ -389,7 +362,7 @@ public class ClientTest extends ClientBase {
             try {
                 zk.setData("/benwashere", "hi".getBytes(), 57);
                 Assert.fail("Should have gotten BadVersion exception");
-            } catch(KeeperException.BadVersionException e) {
+            } catch (KeeperException.BadVersionException e) {
                 // expected that
             } catch (KeeperException e) {
                 Assert.fail("Should have gotten BadVersion exception");
@@ -408,7 +381,7 @@ public class ClientTest extends ClientBase {
             try {
                 zk.delete("/", -1);
                 Assert.fail("deleted root!");
-            } catch(KeeperException.BadArgumentsException e) {
+            } catch (KeeperException.BadArgumentsException e) {
                 // good, expected that
             }
             Stat stat = new Stat();
@@ -442,7 +415,7 @@ public class ClientTest extends ClientBase {
                     CreateMode.PERSISTENT);
             // the first poll is just a session delivery
             LOG.info("Comment: checking for events length "
-                     + watcher.events.size());
+                    + watcher.events.size());
             WatchedEvent event = watcher.events.poll(10, TimeUnit.SECONDS);
             Assert.assertEquals("/frog", event.getPath());
             Assert.assertEquals(EventType.NodeCreated, event.getType());
@@ -471,7 +444,7 @@ public class ClientTest extends ClientBase {
                 if (withWatcherObj) {
                     stat = zk.exists("/pat/ben/" + name, watcher);
                 } else {
-                stat = zk.exists("/pat/ben/" + name, true);
+                    stat = zk.exists("/pat/ben/" + name, true);
                 }
                 zk.delete("/pat/ben/" + name, stat.getVersion());
             }
@@ -499,7 +472,7 @@ public class ClientTest extends ClientBase {
                 zk.create("/duplicate", "".getBytes(), Ids.OPEN_ACL_UNSAFE,
                         CreateMode.PERSISTENT);
                 Assert.fail("duplicate create allowed");
-            } catch(KeeperException.NodeExistsException e) {
+            } catch (KeeperException.NodeExistsException e) {
                 // OK, expected that
             }
         } finally {
@@ -508,13 +481,12 @@ public class ClientTest extends ClientBase {
             }
         }
     }
-    
+
     // Test that sequential filenames are being created correctly,
     // with 0-padding in the filename
     @Test
     public void testSequentialNodeNames()
-        throws IOException, InterruptedException, KeeperException
-    {
+            throws IOException, InterruptedException, KeeperException {
         String path = "/SEQUENCE";
         String file = "TEST";
         String filepath = path + "/" + file;
@@ -531,35 +503,35 @@ public class ClientTest extends ClientBase {
             zk.create(filepath, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT_SEQUENTIAL);
             children = zk.getChildren(path, false);
             Assert.assertEquals(2, children.size());
-            Assert.assertTrue("contains child 1",  children.contains(file + "0000000001"));
+            Assert.assertTrue("contains child 1", children.contains(file + "0000000001"));
 
             zk.create(filepath, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT_SEQUENTIAL);
             children = zk.getChildren(path, false);
             Assert.assertEquals(3, children.size());
             Assert.assertTrue("contains child 2",
-                       children.contains(file + "0000000002"));
+                    children.contains(file + "0000000002"));
 
             // The pattern is holding so far.  Let's run the counter a bit
             // to be sure it continues to spit out the correct answer
-            for(int i = children.size(); i < 105; i++)
-               zk.create(filepath, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT_SEQUENTIAL);
+            for (int i = children.size(); i < 105; i++)
+                zk.create(filepath, new byte[0], Ids.OPEN_ACL_UNSAFE,
+                        CreateMode.PERSISTENT_SEQUENTIAL);
 
             children = zk.getChildren(path, false);
             Assert.assertTrue("contains child 104",
-                       children.contains(file + "0000000104"));
+                    children.contains(file + "0000000104"));
 
-        }
-        finally {
-            if(zk != null)
+        } finally {
+            if (zk != null)
                 zk.close();
         }
     }
-    
-    // Test that data provided when 
+
+    // Test that data provided when
     // creating sequential nodes is stored properly
     @Test
     public void testSequentialNodeData() throws Exception {
-        ZooKeeper zk= null;
+        ZooKeeper zk = null;
         String queue_handle = "/queue";
         try {
             zk = createClient();
@@ -598,7 +570,7 @@ public class ClientTest extends ClientBase {
 
     @Test
     public void testLargeNodeData() throws Exception {
-        ZooKeeper zk= null;
+        ZooKeeper zk = null;
         String queue_handle = "/large";
         try {
             zk = createClient();
@@ -659,11 +631,11 @@ public class ClientTest extends ClientBase {
             zk.create("/createseqpar/", null, Ids.OPEN_ACL_UNSAFE,
                     CreateMode.PERSISTENT);
             Assert.assertTrue(false);
-        } catch(IllegalArgumentException be) {
+        } catch (IllegalArgumentException be) {
             // catch this.
         }
 
-        // 2) verify that empty child name success if sequential 
+        // 2) verify that empty child name success if sequential
         zk.create("/createseqpar/", null, Ids.OPEN_ACL_UNSAFE,
                 CreateMode.PERSISTENT_SEQUENTIAL);
         zk.create("/createseqpar/.", null, Ids.OPEN_ACL_UNSAFE,
@@ -674,31 +646,31 @@ public class ClientTest extends ClientBase {
             zk.create("/createseqpar//", null, Ids.OPEN_ACL_UNSAFE,
                     CreateMode.PERSISTENT_SEQUENTIAL);
             Assert.assertTrue(false);
-        } catch(IllegalArgumentException be) {
+        } catch (IllegalArgumentException be) {
             // catch this.
         }
         try {
             zk.create("/createseqpar/./", null, Ids.OPEN_ACL_UNSAFE,
                     CreateMode.PERSISTENT_SEQUENTIAL);
             Assert.assertTrue(false);
-        } catch(IllegalArgumentException be) {
+        } catch (IllegalArgumentException be) {
             // catch this.
         }
         try {
             zk.create("/createseqpar/../", null, Ids.OPEN_ACL_UNSAFE,
                     CreateMode.PERSISTENT_SEQUENTIAL);
             Assert.assertTrue(false);
-        } catch(IllegalArgumentException be) {
+        } catch (IllegalArgumentException be) {
             // catch this.
         }
 
-        
+
         //check for the code path that throws at server
         PrepRequestProcessor.setFailCreate(true);
         try {
             zk.create("/m", null, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
             Assert.assertTrue(false);
-        } catch(KeeperException.BadArgumentsException be) {
+        } catch (KeeperException.BadArgumentsException be) {
             // catch this.
         }
         PrepRequestProcessor.setFailCreate(false);
@@ -717,21 +689,6 @@ public class ClientTest extends ClientBase {
         zk.create("/f/f./f", null, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
     }
 
-//    private void notestConnections()
-//        throws IOException, InterruptedException, KeeperException
-//    {
-//        ZooKeeper zk;
-//        for(int i = 0; i < 2000; i++) {
-//            if (i % 100 == 0) {
-//                LOG.info("Testing " + i + " connections");
-//            }
-//            // We want to make sure socket descriptors are going away
-//            zk = new ZooKeeper(hostPort, 30000, this);
-//            zk.getData("/", false, new Stat());
-//            zk.close();
-//        }
-//    }
-
     @Test
     public void testDeleteWithChildren() throws Exception {
         ZooKeeper zk = createClient();
@@ -748,29 +705,20 @@ public class ClientTest extends ClientBase {
         zk.close();
     }
 
-    private class VerifyClientCleanup extends Thread {
-        int count;
-        int current = 0;
-
-        VerifyClientCleanup(String name, int count) {
-            super(name);
-            this.count = count;
-        }
-
-        public void run() {
-            try {
-                for (; current < count; current++) {
-                    TestableZooKeeper zk = createClient();
-                    // we've asked to close, wait for it to finish closing
-                    // all the sub-threads otw the selector may not be
-                    // closed when we check (false positive on test Assert.failure
-                    zk.close(CONNECTION_TIMEOUT);
-                }
-            } catch (Throwable t) {
-                LOG.error("test Assert.failed", t);
-            }
-        }
-    }
+    //    private void notestConnections()
+    //        throws IOException, InterruptedException, KeeperException
+    //    {
+    //        ZooKeeper zk;
+    //        for(int i = 0; i < 2000; i++) {
+    //            if (i % 100 == 0) {
+    //                LOG.info("Testing " + i + " connections");
+    //            }
+    //            // We want to make sure socket descriptors are going away
+    //            zk = new ZooKeeper(hostPort, 30000, this);
+    //            zk.getData("/", false, new Stat());
+    //            zk.close();
+    //        }
+    //    }
 
     /**
      * Verify that the client is cleaning up properly. Open/close a large
@@ -812,16 +760,16 @@ public class ClientTest extends ClientBase {
         // if this Assert.fails it means we are not cleaning up after the closed
         // sessions.
         long currentCount = osMbean.getOpenFileDescriptorCount();
-        final String logmsg = "open fds after test ({}) are not significantly higher than before ({})";
-        
+        final String logmsg =
+                "open fds after test ({}) are not significantly higher than before ({})";
+
         if (currentCount > initialFdCount + 10) {
             // consider as error
-        	LOG.error(logmsg,Long.valueOf(currentCount),Long.valueOf(initialFdCount));
+            LOG.error(logmsg, Long.valueOf(currentCount), Long.valueOf(initialFdCount));
         } else {
-        	LOG.info(logmsg,Long.valueOf(currentCount),Long.valueOf(initialFdCount));
+            LOG.info(logmsg, Long.valueOf(currentCount), Long.valueOf(initialFdCount));
         }
     }
-
 
     /**
      * We create a perfectly valid 'exists' request, except that the opcode is wrong.
@@ -829,7 +777,7 @@ public class ClientTest extends ClientBase {
      * @throws Exception
      */
     @Test
-    public void testNonExistingOpCode() throws Exception  {
+    public void testNonExistingOpCode() throws Exception {
         final CountDownLatch clientDisconnected = new CountDownLatch(1);
         Watcher watcher = new Watcher() {
             @Override
@@ -879,20 +827,23 @@ public class ClientTest extends ClientBase {
             zk.setXid(Integer.MAX_VALUE - 10);
 
             zk.create("/testnode", "".getBytes(), Ids.OPEN_ACL_UNSAFE,
-                CreateMode.PERSISTENT);
+                    CreateMode.PERSISTENT);
             for (int i = 0; i < 20; ++i) {
                 final CountDownLatch latch = new CountDownLatch(1);
                 final AtomicInteger rc = new AtomicInteger(0);
                 zk.setData("/testnode", "".getBytes(), -1,
-                    new AsyncCallback.StatCallback() {
-                        @Override
-                        public void processResult(int retcode, String path, Object ctx, Stat stat) {
-                            rc.set(retcode);
-                            latch.countDown();
-                        }
-                    }, null);
+                        new AsyncCallback.StatCallback() {
+                            @Override
+                            public void processResult(int retcode,
+                                                      String path,
+                                                      Object ctx,
+                                                      Stat stat) {
+                                rc.set(retcode);
+                                latch.countDown();
+                            }
+                        }, null);
                 Assert.assertTrue("setData should complete within 5s",
-                    latch.await(zk.getSessionTimeout(), TimeUnit.MILLISECONDS));
+                        latch.await(zk.getSessionTimeout(), TimeUnit.MILLISECONDS));
                 Assert.assertEquals("setData should have succeeded", Code.OK.intValue(), rc.get());
             }
             zk.delete("/testnode", -1);
@@ -900,6 +851,48 @@ public class ClientTest extends ClientBase {
         } finally {
             if (zk != null) {
                 zk.close();
+            }
+        }
+    }
+
+
+    private class MyWatcher extends CountdownWatcher {
+        LinkedBlockingQueue<WatchedEvent> events =
+                new LinkedBlockingQueue<WatchedEvent>();
+
+        public void process(WatchedEvent event) {
+            super.process(event);
+            if (event.getType() != EventType.None) {
+                try {
+                    events.put(event);
+                } catch (InterruptedException e) {
+                    LOG.warn("ignoring interrupt during event.put");
+                }
+            }
+        }
+    }
+
+
+    private class VerifyClientCleanup extends Thread {
+        int count;
+        int current = 0;
+
+        VerifyClientCleanup(String name, int count) {
+            super(name);
+            this.count = count;
+        }
+
+        public void run() {
+            try {
+                for (; current < count; current++) {
+                    TestableZooKeeper zk = createClient();
+                    // we've asked to close, wait for it to finish closing
+                    // all the sub-threads otw the selector may not be
+                    // closed when we check (false positive on test Assert.failure
+                    zk.close(CONNECTION_TIMEOUT);
+                }
+            } catch (Throwable t) {
+                LOG.error("test Assert.failed", t);
             }
         }
     }

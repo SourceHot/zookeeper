@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -27,31 +27,16 @@ import org.junit.Test;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
-import static org.hamcrest.CoreMatchers.anyOf;
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.hasItems;
-import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
 
 public class StaticHostProviderTest extends ZKTestCase {
+    private final double slackPercent = 10;
+    private final int numClients = 10000;
     private Random r = new Random(1);
 
     @Test
@@ -112,9 +97,13 @@ public class StaticHostProviderTest extends ZKTestCase {
 
         // Act & Assert
         InetSocketAddress n1 = sp.next(0);
-        assertTrue("Provider should return unresolved address is host is unresolvable", n1.isUnresolved());
-        assertSame("Provider should return original address is host is unresolvable", unresolved, n1);
+        assertTrue("Provider should return unresolved address is host is unresolvable",
+                n1.isUnresolved());
+        assertSame("Provider should return original address is host is unresolvable", unresolved,
+                n1);
     }
+
+    /* Reconfig tests with IP addresses */
 
     @Test
     public void testTwoConsequitiveCallsToNextReturnDifferentElement() {
@@ -131,23 +120,21 @@ public class StaticHostProviderTest extends ZKTestCase {
         assertNotSame(first, second);
     }
 
-    /* Reconfig tests with IP addresses */
-
-    private final double slackPercent = 10;
-    private final int numClients = 10000;
-
     @Test
     public void testUpdateClientMigrateOrNot() throws UnknownHostException {
-        HostProvider hostProvider = getHostProvider((byte) 4); // 10.10.10.4:1238, 10.10.10.3:1237, 10.10.10.2:1236, 10.10.10.1:1235
-        Collection<InetSocketAddress> newList = getServerAddresses((byte) 3); // 10.10.10.3:1237, 10.10.10.2:1236, 10.10.10.1:1235
+        HostProvider hostProvider = getHostProvider(
+                (byte) 4); // 10.10.10.4:1238, 10.10.10.3:1237, 10.10.10.2:1236, 10.10.10.1:1235
+        Collection<InetSocketAddress> newList =
+                getServerAddresses((byte) 3); // 10.10.10.3:1237, 10.10.10.2:1236, 10.10.10.1:1235
 
-        InetSocketAddress myServer = new InetSocketAddress(InetAddress.getByAddress(new byte[]{10, 10, 10, 3}), 1237);
+        InetSocketAddress myServer =
+                new InetSocketAddress(InetAddress.getByAddress(new byte[] {10, 10, 10, 3}), 1237);
 
         // Number of machines becomes smaller, my server is in the new cluster
         boolean disconnectRequired = hostProvider.updateServerList(newList, myServer);
         assertFalse(disconnectRequired);
         hostProvider.onConnected();
-        
+
         // Number of machines stayed the same, my server is in the new cluster
         disconnectRequired = hostProvider.updateServerList(newList, myServer);
         assertFalse(disconnectRequired);
@@ -169,9 +156,11 @@ public class StaticHostProviderTest extends ZKTestCase {
         // Number of machines increased, my server is not in the new cluster
         newList = new ArrayList<InetSocketAddress>(3);
         for (byte i = 4; i > 1; i--) { // 10.10.10.4:1238, 10.10.10.3:1237, 10.10.10.2:1236
-            newList.add(new InetSocketAddress(InetAddress.getByAddress(new byte[]{10, 10, 10, i}), 1234 + i));
+            newList.add(new InetSocketAddress(InetAddress.getByAddress(new byte[] {10, 10, 10, i}),
+                    1234 + i));
         }
-        myServer = new InetSocketAddress(InetAddress.getByAddress(new byte[]{10, 10, 10, 1}), 1235);
+        myServer =
+                new InetSocketAddress(InetAddress.getByAddress(new byte[] {10, 10, 10, 1}), 1235);
         disconnectRequired = hostProvider.updateServerList(newList, myServer);
         assertTrue(disconnectRequired);
         hostProvider.onConnected();
@@ -202,20 +191,25 @@ public class StaticHostProviderTest extends ZKTestCase {
         // old list (just the ports): 1238, 1237, 1236, 1235
         Collection<InetSocketAddress> newList = new ArrayList<InetSocketAddress>(10);
         for (byte i = 12; i > 2; i--) { // 1246, 1245, 1244, 1243, 1242, 1241,
-                                       // 1240, 1239, 1238, 1237
-            newList.add(new InetSocketAddress(InetAddress.getByAddress(new byte[]{10, 10, 10, i}), 1234 + i));
+            // 1240, 1239, 1238, 1237
+            newList.add(new InetSocketAddress(InetAddress.getByAddress(new byte[] {10, 10, 10, i}),
+                    1234 + i));
         }
 
         // servers from the old list that appear in the new list
         Collection<InetSocketAddress> oldStaying = new ArrayList<InetSocketAddress>(2);
         for (byte i = 4; i > 2; i--) { // 1238, 1237
-            oldStaying.add(new InetSocketAddress(InetAddress.getByAddress(new byte[]{10, 10, 10, i}), 1234 + i));
+            oldStaying.add(
+                    new InetSocketAddress(InetAddress.getByAddress(new byte[] {10, 10, 10, i}),
+                            1234 + i));
         }
 
         // servers in the new list that are not in the old list
         Collection<InetSocketAddress> newComing = new ArrayList<InetSocketAddress>(10);
         for (byte i = 12; i > 4; i--) {// 1246, 1245, 1244, 1243, 1242, 1241, 1240, 1139
-            newComing.add(new InetSocketAddress(InetAddress.getByAddress(new byte[]{10, 10, 10, i}), 1234 + i));
+            newComing.add(
+                    new InetSocketAddress(InetAddress.getByAddress(new byte[] {10, 10, 10, i}),
+                            1234 + i));
         }
 
         // Number of machines increases, my server is not in the new cluster
@@ -223,7 +217,8 @@ public class StaticHostProviderTest extends ZKTestCase {
         // new servers
         // i.e., pNew = 1.
 
-        boolean disconnectRequired = hostProvider.updateServerList(newList, new InetSocketAddress(InetAddress.getByAddress(new byte[]{10, 10, 10, 1}), 1235));
+        boolean disconnectRequired = hostProvider.updateServerList(newList,
+                new InetSocketAddress(InetAddress.getByAddress(new byte[] {10, 10, 10, 1}), 1235));
         assertTrue(disconnectRequired);
 
         // This means reconfigMode = true, and nextHostInReconfigMode will be
@@ -284,8 +279,10 @@ public class StaticHostProviderTest extends ZKTestCase {
         Collection<InetSocketAddress> newList = getServerAddresses((byte) 8);
 
         for (int i = 0; i < numClients; i++) {
-            disconnectRequired = hostProviderArray[i].updateServerList(newList, curHostForEachClient[i]);
-            if (disconnectRequired) curHostForEachClient[i] = hostProviderArray[i].next(0);
+            disconnectRequired =
+                    hostProviderArray[i].updateServerList(newList, curHostForEachClient[i]);
+            if (disconnectRequired)
+                curHostForEachClient[i] = hostProviderArray[i].next(0);
             numClientsPerHost[curHostForEachClient[i].getPort() - 1235]++;
             hostProviderArray[i].onConnected();
         }
@@ -301,8 +298,10 @@ public class StaticHostProviderTest extends ZKTestCase {
         newList = getServerAddresses((byte) 6);
 
         for (int i = 0; i < numClients; i++) {
-            disconnectRequired = hostProviderArray[i].updateServerList(newList, curHostForEachClient[i]);
-            if (disconnectRequired) curHostForEachClient[i] = hostProviderArray[i].next(0);
+            disconnectRequired =
+                    hostProviderArray[i].updateServerList(newList, curHostForEachClient[i]);
+            if (disconnectRequired)
+                curHostForEachClient[i] = hostProviderArray[i].next(0);
             numClientsPerHost[curHostForEachClient[i].getPort() - 1235]++;
             hostProviderArray[i].onConnected();
         }
@@ -320,12 +319,15 @@ public class StaticHostProviderTest extends ZKTestCase {
         // and add back hosts 6, 7 and 8
         newList = new ArrayList<InetSocketAddress>(8);
         for (byte i = 9; i > 1; i--) {
-            newList.add(new InetSocketAddress(InetAddress.getByAddress(new byte[]{10, 10, 10, i}), 1234 + i));
+            newList.add(new InetSocketAddress(InetAddress.getByAddress(new byte[] {10, 10, 10, i}),
+                    1234 + i));
         }
 
         for (int i = 0; i < numClients; i++) {
-            disconnectRequired = hostProviderArray[i].updateServerList(newList, curHostForEachClient[i]);
-            if (disconnectRequired) curHostForEachClient[i] = hostProviderArray[i].next(0);
+            disconnectRequired =
+                    hostProviderArray[i].updateServerList(newList, curHostForEachClient[i]);
+            if (disconnectRequired)
+                curHostForEachClient[i] = hostProviderArray[i].next(0);
             numClientsPerHost[curHostForEachClient[i].getPort() - 1235]++;
             hostProviderArray[i].onConnected();
         }
@@ -342,8 +344,10 @@ public class StaticHostProviderTest extends ZKTestCase {
         newList = getServerAddresses((byte) 9);
 
         for (int i = 0; i < numClients; i++) {
-            disconnectRequired = hostProviderArray[i].updateServerList(newList, curHostForEachClient[i]);
-            if (disconnectRequired) curHostForEachClient[i] = hostProviderArray[i].next(0);
+            disconnectRequired =
+                    hostProviderArray[i].updateServerList(newList, curHostForEachClient[i]);
+            if (disconnectRequired)
+                curHostForEachClient[i] = hostProviderArray[i].next(0);
             numClientsPerHost[curHostForEachClient[i].getPort() - 1235]++;
             hostProviderArray[i].onConnected();
         }
@@ -481,12 +485,13 @@ public class StaticHostProviderTest extends ZKTestCase {
         return new StaticHostProvider(getServerAddresses(size), r.nextLong());
     }
 
-    private Collection<InetSocketAddress> getServerAddresses(byte size)   {
+    private Collection<InetSocketAddress> getServerAddresses(byte size) {
         ArrayList<InetSocketAddress> list = new ArrayList<InetSocketAddress>(
                 size);
         while (size > 0) {
             try {
-                list.add(new InetSocketAddress(InetAddress.getByAddress(new byte[]{10, 10, 10, size}), 1234 + size));
+                list.add(new InetSocketAddress(
+                        InetAddress.getByAddress(new byte[] {10, 10, 10, size}), 1234 + size));
             } catch (UnknownHostException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
@@ -508,7 +513,8 @@ public class StaticHostProviderTest extends ZKTestCase {
         HostProvider hostProvider = getHostProviderWithUnresolvedHostnames(4);
         // [testhost-3.testdomain.com:1237, testhost-2.testdomain.com:1236, testhost-1.testdomain.com:1235]
         Collection<InetSocketAddress> newList = getUnresolvedHostnames(3);
-        InetSocketAddress myServer = InetSocketAddress.createUnresolved("testhost-3.testdomain.com", 1237);
+        InetSocketAddress myServer =
+                InetSocketAddress.createUnresolved("testhost-3.testdomain.com", 1237);
 
         // Act
         boolean disconnectRequired = hostProvider.updateServerList(newList, myServer);
@@ -528,7 +534,8 @@ public class StaticHostProviderTest extends ZKTestCase {
         HostProvider hostProvider = getHostProviderWithUnresolvedHostnames(3);
         // [testhost-3.testdomain.com:1237, testhost-2.testdomain.com:1236, testhost-1.testdomain.com:1235]
         Collection<InetSocketAddress> newList = getUnresolvedHostnames(3);
-        InetSocketAddress myServer = InetSocketAddress.createUnresolved("testhost-3.testdomain.com", 1237);
+        InetSocketAddress myServer =
+                InetSocketAddress.createUnresolved("testhost-3.testdomain.com", 1237);
 
         // Act
         boolean disconnectRequired = hostProvider.updateServerList(newList, myServer);
@@ -548,7 +555,8 @@ public class StaticHostProviderTest extends ZKTestCase {
         HostProvider hostProvider = getHostProviderWithUnresolvedHostnames(3);
         // [testhost-2.testdomain.com:1236, testhost-1.testdomain.com:1235]
         Collection<InetSocketAddress> newList = getUnresolvedHostnames(2);
-        InetSocketAddress myServer = InetSocketAddress.createUnresolved("testhost-3.testdomain.com", 1237);
+        InetSocketAddress myServer =
+                InetSocketAddress.createUnresolved("testhost-3.testdomain.com", 1237);
 
         // Act
         boolean disconnectRequired = hostProvider.updateServerList(newList, myServer);
@@ -568,7 +576,8 @@ public class StaticHostProviderTest extends ZKTestCase {
         HostProvider hostProvider = getHostProviderWithUnresolvedHostnames(3);
         // [testhost-3.testdomain.com:1237, testhost-2.testdomain.com:1236, testhost-1.testdomain.com:1235]
         Collection<InetSocketAddress> newList = getUnresolvedHostnames(3);
-        InetSocketAddress myServer = InetSocketAddress.createUnresolved("testhost-4.testdomain.com", 1237);
+        InetSocketAddress myServer =
+                InetSocketAddress.createUnresolved("testhost-4.testdomain.com", 1237);
 
         // Act
         boolean disconnectRequired = hostProvider.updateServerList(newList, myServer);
@@ -587,15 +596,18 @@ public class StaticHostProviderTest extends ZKTestCase {
         );
         HostProvider hostProvider = new StaticHostProvider(addresses, new TestResolver());
         InetSocketAddress currentHost = hostProvider.next(100);
-        assertThat("CurrentHost is which the client is currently connecting to, it should be resolved",
+        assertThat(
+                "CurrentHost is which the client is currently connecting to, it should be resolved",
                 currentHost.isUnresolved(), is(false));
 
         // Act
-        InetSocketAddress replaceHost = InetSocketAddress.createUnresolved("testhost-1.resolvable.zk", 1235);
-        assertThat("Replace host must be unresolved in this test case", replaceHost.isUnresolved(), is(true));
+        InetSocketAddress replaceHost =
+                InetSocketAddress.createUnresolved("testhost-1.resolvable.zk", 1235);
+        assertThat("Replace host must be unresolved in this test case", replaceHost.isUnresolved(),
+                is(true));
         boolean disconnect = hostProvider.updateServerList(new ArrayList<>(
-            Collections.singletonList(replaceHost)),
-            currentHost
+                        Collections.singletonList(replaceHost)),
+                currentHost
         );
 
         // Assert
@@ -603,7 +615,8 @@ public class StaticHostProviderTest extends ZKTestCase {
     }
 
     @Test
-    public void testUpdateServerList_ResolvedWithResolvedAddress_NoDisconnect() throws UnknownHostException {
+    public void testUpdateServerList_ResolvedWithResolvedAddress_NoDisconnect()
+            throws UnknownHostException {
         // Arrange
         // Create a HostProvider with a list of unresolved server address(es)
         List<InetSocketAddress> addresses = Collections.singletonList(
@@ -611,17 +624,19 @@ public class StaticHostProviderTest extends ZKTestCase {
         );
         HostProvider hostProvider = new StaticHostProvider(addresses, new TestResolver());
         InetSocketAddress currentHost = hostProvider.next(100);
-        assertThat("CurrentHost is which the client is currently connecting to, it should be resolved",
+        assertThat(
+                "CurrentHost is which the client is currently connecting to, it should be resolved",
                 currentHost.isUnresolved(), is(false));
 
         // Act
         InetSocketAddress replaceHost =
                 new InetSocketAddress(InetAddress.getByAddress(currentHost.getHostString(),
                         currentHost.getAddress().getAddress()), currentHost.getPort());
-        assertThat("Replace host must be resolved in this test case", replaceHost.isUnresolved(), is(false));
+        assertThat("Replace host must be resolved in this test case", replaceHost.isUnresolved(),
+                is(false));
         boolean disconnect = hostProvider.updateServerList(new ArrayList<>(
-            Collections.singletonList(replaceHost)),
-            currentHost
+                        Collections.singletonList(replaceHost)),
+                currentHost
         );
 
         // Assert
@@ -641,8 +656,10 @@ public class StaticHostProviderTest extends ZKTestCase {
                 currentHost.isUnresolved(), is(true));
 
         // Act
-        InetSocketAddress replaceHost = InetSocketAddress.createUnresolved("testhost-1.resolvable.zk", 1235);
-        assertThat("Replace host must be unresolved in this test case", replaceHost.isUnresolved(), is(true));
+        InetSocketAddress replaceHost =
+                InetSocketAddress.createUnresolved("testhost-1.resolvable.zk", 1235);
+        assertThat("Replace host must be unresolved in this test case", replaceHost.isUnresolved(),
+                is(true));
         boolean disconnect = hostProvider.updateServerList(new ArrayList<>(
                         Collections.singletonList(replaceHost)),
                 currentHost
@@ -653,7 +670,8 @@ public class StaticHostProviderTest extends ZKTestCase {
     }
 
     @Test
-    public void testUpdateServerList_UnResolvedWithResolvedAddress_ForceDisconnect() throws UnknownHostException {
+    public void testUpdateServerList_UnResolvedWithResolvedAddress_ForceDisconnect()
+            throws UnknownHostException {
         // Arrange
         // Create a HostProvider with a list of unresolved server address(es)
         List<InetSocketAddress> addresses = Collections.singletonList(
@@ -665,11 +683,12 @@ public class StaticHostProviderTest extends ZKTestCase {
                 currentHost.isUnresolved(), is(true));
 
         // Act
-        byte[] addr = new byte[] { 10, 0, 0, 1 };
+        byte[] addr = new byte[] {10, 0, 0, 1};
         InetSocketAddress replaceHost =
                 new InetSocketAddress(InetAddress.getByAddress(currentHost.getHostString(), addr),
                         currentHost.getPort());
-        assertThat("Replace host must be resolved in this test case", replaceHost.isUnresolved(), is(false));
+        assertThat("Replace host must be resolved in this test case", replaceHost.isUnresolved(),
+                is(false));
         boolean disconnect = hostProvider.updateServerList(new ArrayList<>(
                         Collections.singletonList(replaceHost)),
                 currentHost
@@ -679,28 +698,13 @@ public class StaticHostProviderTest extends ZKTestCase {
         assertThat(disconnect, equalTo(false));
     }
 
-    private class TestResolver implements StaticHostProvider.Resolver {
-        private byte counter = 1;
-
-        @Override
-        public InetAddress[] getAllByName(String name) throws UnknownHostException {
-            if (name.contains("resolvable")) {
-                byte[] addr = new byte[] { 10, 0, 0, (byte)(counter++ % 10) };
-                return new InetAddress[] { InetAddress.getByAddress(name, addr) };
-            }
-            throw new UnknownHostException();
-        }
-    }
-
     private double lowerboundCPS(int numClients, int numServers) {
-        return (1 - slackPercent/100.0) * numClients / numServers;
+        return (1 - slackPercent / 100.0) * numClients / numServers;
     }
 
     private double upperboundCPS(int numClients, int numServers) {
-        return (1 + slackPercent/100.0) * numClients / numServers;
+        return (1 + slackPercent / 100.0) * numClients / numServers;
     }
-
-    /* DNS resolution tests */
 
     @Test
     public void testLiteralIPNoReverseNS() {
@@ -717,6 +721,8 @@ public class StaticHostProviderTest extends ZKTestCase {
             assertEquals(next.getAddress().getHostAddress(), hostname);
         }
     }
+
+    /* DNS resolution tests */
 
     @Test
     public void testReResolvingSingle() throws UnknownHostException {
@@ -790,7 +796,9 @@ public class StaticHostProviderTest extends ZKTestCase {
 
         for (int i = 0; i < 10; i++) {
             InetSocketAddress next = hostProvider.next(0);
-            assertThat("Bad IP address returned", next.getAddress().getHostAddress(), anyOf(equalTo(apacheOrg1.getHostAddress()), equalTo(apacheOrg2.getHostAddress())));
+            assertThat("Bad IP address returned", next.getAddress().getHostAddress(),
+                    anyOf(equalTo(apacheOrg1.getHostAddress()),
+                            equalTo(apacheOrg2.getHostAddress())));
             assertEquals(1, hostProvider.size()); // resolve() call keeps the size of provider
         }
         // Resolver called 10 times, because we shouldn't cache the resolved addresses
@@ -805,10 +813,10 @@ public class StaticHostProviderTest extends ZKTestCase {
         final List<String> ipList = new ArrayList<String>();
         final List<InetAddress> resolvedAddresses = new ArrayList<InetAddress>();
         for (int i = 0; i < 3; i++) {
-            ipList.add(String.format("192.168.1.%d", i+1));
+            ipList.add(String.format("192.168.1.%d", i + 1));
             final InetAddress apacheOrg = mock(InetAddress.class);
-            when(apacheOrg.getHostAddress()).thenReturn(String.format("192.168.1.%d", i+1));
-            when(apacheOrg.toString()).thenReturn(String.format("192.168.1.%d", i+1));
+            when(apacheOrg.getHostAddress()).thenReturn(String.format("192.168.1.%d", i + 1));
+            when(apacheOrg.toString()).thenReturn(String.format("192.168.1.%d", i + 1));
             when(apacheOrg.getHostName()).thenReturn("www.apache.org");
             resolvedAddresses.add(apacheOrg);
         }
@@ -825,22 +833,26 @@ public class StaticHostProviderTest extends ZKTestCase {
         // Act & Assert
         InetSocketAddress resolvedFirst = hostProvider.next(0);
         assertFalse("HostProvider should return resolved addresses", resolvedFirst.isUnresolved());
-        assertThat("Bad IP address returned", ipList, hasItems(resolvedFirst.getAddress().getHostAddress()));
+        assertThat("Bad IP address returned", ipList,
+                hasItems(resolvedFirst.getAddress().getHostAddress()));
 
         hostProvider.onConnected(); // first address worked
 
         InetSocketAddress resolvedSecond = hostProvider.next(0);
         assertFalse("HostProvider should return resolved addresses", resolvedSecond.isUnresolved());
-        assertThat("Bad IP address returned", ipList, hasItems(resolvedSecond.getAddress().getHostAddress()));
+        assertThat("Bad IP address returned", ipList,
+                hasItems(resolvedSecond.getAddress().getHostAddress()));
 
         // Second address doesn't work, so we don't call onConnected() this time
         // StaticHostProvider should try to re-resolve the address in this case
 
         InetSocketAddress resolvedThird = hostProvider.next(0);
         assertFalse("HostProvider should return resolved addresses", resolvedThird.isUnresolved());
-        assertThat("Bad IP address returned", ipList, hasItems(resolvedThird.getAddress().getHostAddress()));
+        assertThat("Bad IP address returned", ipList,
+                hasItems(resolvedThird.getAddress().getHostAddress()));
 
-        verify(spyResolver, times(3)).getAllByName("www.apache.org");  // resolution occured every time
+        verify(spyResolver, times(3)).getAllByName(
+                "www.apache.org");  // resolution occured every time
     }
 
     @Test
@@ -876,9 +888,11 @@ public class StaticHostProviderTest extends ZKTestCase {
             InetSocketAddress resolved = hostProvider.next(0);
             hostProvider.onConnected();
             if (resolved.getHostName().equals("www.google.com")) {
-                assertTrue("HostProvider should return unresolved address if host is unresolvable", resolved.isUnresolved());
+                assertTrue("HostProvider should return unresolved address if host is unresolvable",
+                        resolved.isUnresolved());
             } else {
-                assertFalse("HostProvider should return resolved addresses", resolved.isUnresolved());
+                assertFalse("HostProvider should return resolved addresses",
+                        resolved.isUnresolved());
                 assertEquals("192.168.1.1", resolved.getAddress().getHostAddress());
             }
         }
@@ -923,10 +937,25 @@ public class StaticHostProviderTest extends ZKTestCase {
     private Collection<InetSocketAddress> getUnresolvedHostnames(int size) {
         ArrayList<InetSocketAddress> list = new ArrayList<>(size);
         while (size > 0) {
-            list.add(InetSocketAddress.createUnresolved(String.format("testhost-%d.testdomain.com", size), 1234 + size));
+            list.add(InetSocketAddress.createUnresolved(
+                    String.format("testhost-%d.testdomain.com", size), 1234 + size));
             --size;
         }
         System.out.println(Arrays.toString(list.toArray()));
         return list;
+    }
+
+
+    private class TestResolver implements StaticHostProvider.Resolver {
+        private byte counter = 1;
+
+        @Override
+        public InetAddress[] getAllByName(String name) throws UnknownHostException {
+            if (name.contains("resolvable")) {
+                byte[] addr = new byte[] {10, 0, 0, (byte) (counter++ % 10)};
+                return new InetAddress[] {InetAddress.getByAddress(name, addr)};
+            }
+            throw new UnknownHostException();
+        }
     }
 }

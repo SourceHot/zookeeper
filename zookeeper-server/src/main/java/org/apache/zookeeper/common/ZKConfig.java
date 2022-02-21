@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,6 +18,12 @@
 
 package org.apache.zookeeper.common;
 
+import org.apache.zookeeper.Environment;
+import org.apache.zookeeper.server.quorum.QuorumPeerConfig.ConfigException;
+import org.apache.zookeeper.server.util.VerifyingFileFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -25,12 +31,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
-
-import org.apache.zookeeper.Environment;
-import org.apache.zookeeper.server.quorum.QuorumPeerConfig.ConfigException;
-import org.apache.zookeeper.server.util.VerifyingFileFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * This class is a base class for the configurations of both client and server.
@@ -41,17 +41,14 @@ import org.slf4j.LoggerFactory;
  */
 public class ZKConfig {
 
-    private static final Logger LOG = LoggerFactory.getLogger(ZKConfig.class);
-
     public static final String JUTE_MAXBUFFER = "jute.maxbuffer";
-
     /**
      * Path to a kinit binary: {@value}. Defaults to
      * <code>"/usr/bin/kinit"</code>
      */
     public static final String KINIT_COMMAND = "zookeeper.kinit";
     public static final String JGSS_NATIVE = "sun.security.jgss.native";
-
+    private static final Logger LOG = LoggerFactory.getLogger(ZKConfig.class);
     private final Map<String, String> properties = new HashMap<String, String>();
 
     /**
@@ -113,7 +110,7 @@ public class ZKConfig {
             putSSLProperties(x509Util);
         }
     }
-    
+
     private void putSSLProperties(X509Util x509Util) {
         properties.put(x509Util.getSslProtocolProperty(),
                 System.getProperty(x509Util.getSslProtocolProperty()));
@@ -182,7 +179,7 @@ public class ZKConfig {
      * key can not be <code>null</code>. If key is already mapped then the old
      * value of the <code>key</code> is replaced by the specified
      * <code>value</code>.
-     * 
+     *
      * @param key
      * @param value
      */
@@ -208,7 +205,8 @@ public class ZKConfig {
     public void addConfiguration(File configFile) throws ConfigException {
         LOG.info("Reading configuration from: {}", configFile.getAbsolutePath());
         try {
-            configFile = (new VerifyingFileFactory.Builder(LOG).warnForRelativePath().failForNonExistingPath().build())
+            configFile = (new VerifyingFileFactory.Builder(LOG).warnForRelativePath()
+                    .failForNonExistingPath().build())
                     .validate(configFile);
             Properties cfg = new Properties();
             FileInputStream in = new FileInputStream(configFile);
@@ -276,7 +274,7 @@ public class ZKConfig {
     /**
      * Get the value of the <code>key</code> property as an <code>int</code>. If
      * property is not set, the provided <code>defaultValue</code> is returned
-     * 
+     *
      * @param key
      *            property key.
      * @param defaultValue

@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,13 +17,6 @@
  */
 package org.apache.zookeeper;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
 import org.apache.zookeeper.Watcher.Event.EventType;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.test.ClientBase;
@@ -31,6 +24,13 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Testing remove watches using command line
@@ -257,17 +257,17 @@ public class RemoveWatchesCmdTest extends ClientBase {
             @Override
             public void process(WatchedEvent event) {
                 switch (event.getType()) {
-                case ChildWatchRemoved:
-                case DataWatchRemoved: {
-                    addWatchNotifications(pathVsEvent, event);
-                    watcherLatch.countDown();
-                    break;
-                }
-                case NodeChildrenChanged:
-                case NodeDataChanged: {
-                    addWatchNotifications(pathVsEvent, event);
-                    break;
-                }
+                    case ChildWatchRemoved:
+                    case DataWatchRemoved: {
+                        addWatchNotifications(pathVsEvent, event);
+                        watcherLatch.countDown();
+                        break;
+                    }
+                    case NodeChildrenChanged:
+                    case NodeDataChanged: {
+                        addWatchNotifications(pathVsEvent, event);
+                        break;
+                    }
                 }
             }
 
@@ -312,9 +312,9 @@ public class RemoveWatchesCmdTest extends ClientBase {
 
     private class MyWatcher implements Watcher {
         private final String path;
-        private String eventPath;
         private final CountDownLatch latch;
         private final List<EventType> expectedEvents = new ArrayList<EventType>();
+        private String eventPath;
 
         public MyWatcher(String path, List<EventType> expectedEvents, int count) {
             this.path = path;
@@ -324,7 +324,7 @@ public class RemoveWatchesCmdTest extends ClientBase {
 
         public void process(WatchedEvent event) {
             LOG.debug("Event path : {}, eventPath : {}"
-                    + new Object[] { path, event.getPath() });
+                    + new Object[] {path, event.getPath()});
             this.eventPath = event.getPath();
             if (expectedEvents.contains(event.getType())) {
                 latch.countDown();
@@ -336,8 +336,8 @@ public class RemoveWatchesCmdTest extends ClientBase {
                 LOG.error("Failed to get watch notifications!");
                 return false;
             }
-            LOG.debug("Client path : {} eventPath : {}", new Object[] { path,
-                    eventPath });
+            LOG.debug("Client path : {} eventPath : {}", new Object[] {path,
+                    eventPath});
             return path.equals(eventPath);
         }
     }

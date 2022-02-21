@@ -5,9 +5,9 @@
  * licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
@@ -16,10 +16,11 @@
  */
 package org.apache.zookeeper.cli;
 
-import java.util.List;
 import org.apache.commons.cli.*;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.Stat;
+
+import java.util.List;
 
 /**
  * ls2 command for cli
@@ -28,11 +29,11 @@ public class Ls2Command extends CliCommand {
 
     private static Options options = new Options();
     private String args[];
-    
+
     public Ls2Command() {
         super("ls2", "path [watch]");
     }
-    
+
     @Override
     public CliCommand parse(String[] cmdArgs) throws CliParseException {
         Parser parser = new PosixParser();
@@ -46,14 +47,14 @@ public class Ls2Command extends CliCommand {
         if (args.length < 2) {
             throw new CliParseException(getUsageStr());
         }
-        
+
         return this;
     }
 
     @Override
     public boolean exec() throws CliException {
         err.println("'ls2' has been deprecated. "
-                  + "Please use 'ls [-s] path' instead.");
+                + "Please use 'ls [-s] path' instead.");
         String path = args[1];
         boolean watch = args.length > 2;
         Stat stat = new Stat();
@@ -62,7 +63,7 @@ public class Ls2Command extends CliCommand {
             children = zk.getChildren(path, watch, stat);
         } catch (IllegalArgumentException ex) {
             throw new MalformedPathException(ex.getMessage());
-        } catch (KeeperException|InterruptedException ex) {
+        } catch (KeeperException | InterruptedException ex) {
             throw new CliWrapperException(ex);
         }
         out.println(children);

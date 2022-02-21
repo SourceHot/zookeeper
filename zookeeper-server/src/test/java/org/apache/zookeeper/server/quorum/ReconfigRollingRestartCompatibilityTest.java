@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,25 +18,21 @@
 
 package org.apache.zookeeper.server.quorum;
 
-import static org.apache.zookeeper.test.ClientBase.CONNECTION_TIMEOUT;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.Set;
-import java.util.List;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.ArrayList;
-import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.PortAssignment;
+import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.test.ClientBase;
 import org.apache.zookeeper.test.ReconfigTest;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.util.*;
+
+import static org.apache.zookeeper.test.ClientBase.CONNECTION_TIMEOUT;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 
 /**
@@ -114,7 +110,8 @@ public class ReconfigRollingRestartCompatibilityTest extends QuorumPeerTestBase 
                     mt[i].getFileByName(ZOO_CFG_BAK_FILE));
             Assert.assertNull("dynamic configuration file (zoo.cfg.dynamic.*) shouldn't exist!",
                     mt[i].getFileByName(mt[i].getQuorumPeer().getNextDynamicConfigFilename()));
-            staticFileContent[i] = Files.readAllLines(mt[i].confFile.toPath(), StandardCharsets.UTF_8).toString();
+            staticFileContent[i] =
+                    Files.readAllLines(mt[i].confFile.toPath(), StandardCharsets.UTF_8).toString();
             assertTrue("static config file should contain server entry " + serverAddress.get(i),
                     staticFileContent[i].contains(serverAddress.get(i)));
         }
@@ -242,7 +239,9 @@ public class ReconfigRollingRestartCompatibilityTest extends QuorumPeerTestBase 
             joiningServers.add(serverAddress.get(i));
         }
         for (int i = 0; i < serverCount; i++) {
-            assertTrue("waiting for server " + i + " being up", ClientBase.waitForServerUp("127.0.0.1:" + clientPorts.get(i), CONNECTION_TIMEOUT));
+            assertTrue("waiting for server " + i + " being up",
+                    ClientBase.waitForServerUp("127.0.0.1:" + clientPorts.get(i),
+                            CONNECTION_TIMEOUT));
         }
         for (int i = 0; i < serverCount; i++) {
             verifyQuorumConfig(i, joiningServers, null);
@@ -260,7 +259,8 @@ public class ReconfigRollingRestartCompatibilityTest extends QuorumPeerTestBase 
         mt = Arrays.copyOf(mt, mt.length + 1);
         mt[3] = new QuorumPeerTestBase.MainThread(3, clientPorts.get(3), config, false);
         mt[3].start();
-        assertTrue("waiting for server 3 being up", ClientBase.waitForServerUp("127.0.0.1:" + clientPorts.get(3), CONNECTION_TIMEOUT));
+        assertTrue("waiting for server 3 being up",
+                ClientBase.waitForServerUp("127.0.0.1:" + clientPorts.get(3), CONNECTION_TIMEOUT));
         verifyQuorumConfig(3, newServers, null);
         verifyQuorumMembers(mt[3]);
 
@@ -269,11 +269,14 @@ public class ReconfigRollingRestartCompatibilityTest extends QuorumPeerTestBase 
             mt[i].shutdown();
 
             assertTrue(String.format("Timeout during waiting for server %d to go down", i),
-                       ClientBase.waitForServerDown("127.0.0.1:" + clientPorts.get(i), ClientBase.CONNECTION_TIMEOUT));
+                    ClientBase.waitForServerDown("127.0.0.1:" + clientPorts.get(i),
+                            ClientBase.CONNECTION_TIMEOUT));
 
             mt[i] = new QuorumPeerTestBase.MainThread(i, clientPorts.get(i), config, false);
             mt[i].start();
-            assertTrue("waiting for server " + i + " being up", ClientBase.waitForServerUp("127.0.0.1:" + clientPorts.get(i), CONNECTION_TIMEOUT));
+            assertTrue("waiting for server " + i + " being up",
+                    ClientBase.waitForServerUp("127.0.0.1:" + clientPorts.get(i),
+                            CONNECTION_TIMEOUT));
             verifyQuorumConfig(i, newServers, null);
             verifyQuorumMembers(mt[i]);
         }
@@ -305,7 +308,9 @@ public class ReconfigRollingRestartCompatibilityTest extends QuorumPeerTestBase 
             originalServers.add(serverAddress.get(i));
         }
         for (int i = 0; i < serverCount; i++) {
-            assertTrue("waiting for server " + i + " being up", ClientBase.waitForServerUp("127.0.0.1:" + clientPorts.get(i), CONNECTION_TIMEOUT));
+            assertTrue("waiting for server " + i + " being up",
+                    ClientBase.waitForServerUp("127.0.0.1:" + clientPorts.get(i),
+                            CONNECTION_TIMEOUT));
         }
         for (int i = 0; i < serverCount; i++) {
             verifyQuorumConfig(i, originalServers, null);
@@ -315,7 +320,8 @@ public class ReconfigRollingRestartCompatibilityTest extends QuorumPeerTestBase 
         // we are stopping the third server (myid=2)
         mt[2].shutdown();
         assertTrue(String.format("Timeout during waiting for server %d to go down", 2),
-                   ClientBase.waitForServerDown("127.0.0.1:" + clientPorts.get(2), ClientBase.CONNECTION_TIMEOUT));
+                ClientBase.waitForServerDown("127.0.0.1:" + clientPorts.get(2),
+                        ClientBase.CONNECTION_TIMEOUT));
         String leavingServer = originalServers.get(2);
 
         // Create updated config with the first 2 existing members, but we remove 3rd and add one with different myid
@@ -329,7 +335,8 @@ public class ReconfigRollingRestartCompatibilityTest extends QuorumPeerTestBase 
         mt = Arrays.copyOf(mt, mt.length + 1);
         mt[3] = new QuorumPeerTestBase.MainThread(3, clientPorts.get(3), config, false);
         mt[3].start();
-        assertTrue("waiting for server 3 being up", ClientBase.waitForServerUp("127.0.0.1:" + clientPorts.get(3), CONNECTION_TIMEOUT));
+        assertTrue("waiting for server 3 being up",
+                ClientBase.waitForServerUp("127.0.0.1:" + clientPorts.get(3), CONNECTION_TIMEOUT));
         verifyQuorumConfig(3, newServers, Arrays.asList(leavingServer));
         verifyQuorumMembers(mt[3]);
 
@@ -338,11 +345,14 @@ public class ReconfigRollingRestartCompatibilityTest extends QuorumPeerTestBase 
             mt[i].shutdown();
 
             assertTrue(String.format("Timeout during waiting for server %d to go down", i),
-                       ClientBase.waitForServerDown("127.0.0.1:" + clientPorts.get(i), ClientBase.CONNECTION_TIMEOUT));
+                    ClientBase.waitForServerDown("127.0.0.1:" + clientPorts.get(i),
+                            ClientBase.CONNECTION_TIMEOUT));
 
             mt[i] = new QuorumPeerTestBase.MainThread(i, clientPorts.get(i), config, false);
             mt[i].start();
-            assertTrue("waiting for server " + i + " being up", ClientBase.waitForServerUp("127.0.0.1:" + clientPorts.get(i), CONNECTION_TIMEOUT));
+            assertTrue("waiting for server " + i + " being up",
+                    ClientBase.waitForServerUp("127.0.0.1:" + clientPorts.get(i),
+                            CONNECTION_TIMEOUT));
             verifyQuorumConfig(i, newServers, null);
             verifyQuorumMembers(mt[i]);
         }
@@ -360,7 +370,9 @@ public class ReconfigRollingRestartCompatibilityTest extends QuorumPeerTestBase 
 
 
     // Verify each quorum peer has expected config in its config zNode.
-    private void verifyQuorumConfig(int sid, List<String> joiningServers, List<String> leavingServers) throws Exception {
+    private void verifyQuorumConfig(int sid,
+                                    List<String> joiningServers,
+                                    List<String> leavingServers) throws Exception {
         ZooKeeper zk = ClientBase.createZKClient("127.0.0.1:" + clientPorts.get(sid));
         ReconfigTest.testNormalOperation(zk, zk);
         ReconfigTest.testServerHasConfig(zk, joiningServers, leavingServers);
@@ -376,7 +388,8 @@ public class ReconfigRollingRestartCompatibilityTest extends QuorumPeerTestBase 
         verifyQuorumMembers(mt, expectedConfigs);
     }
 
-    private void verifyQuorumMembers(QuorumPeerTestBase.MainThread mt, Set<String> expectedConfigs) {
+    private void verifyQuorumMembers(QuorumPeerTestBase.MainThread mt,
+                                     Set<String> expectedConfigs) {
         Map<Long, QuorumPeer.QuorumServer> members =
                 mt.getQuorumPeer().getQuorumVerifier().getAllMembers();
 

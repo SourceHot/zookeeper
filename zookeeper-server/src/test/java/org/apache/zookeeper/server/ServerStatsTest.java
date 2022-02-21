@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,8 +25,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.mockito.Mockito.mock;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
+import static org.mockito.Mockito.mock;
 
 public class ServerStatsTest extends ZKTestCase {
 
@@ -52,7 +52,7 @@ public class ServerStatsTest extends ZKTestCase {
 
         // Then ...
         Assert.assertEquals(incrementCount, serverStats.getPacketsSent());
-        Assert.assertEquals(incrementCount*2, serverStats.getPacketsReceived());
+        Assert.assertEquals(incrementCount * 2, serverStats.getPacketsReceived());
 
         // When reset ...
         serverStats.resetRequestCounters();
@@ -68,8 +68,8 @@ public class ServerStatsTest extends ZKTestCase {
         ServerStats serverStats = new ServerStats(providerMock);
 
         // When incremented...
-        serverStats.updateLatency(Time.currentElapsedTime()-1000);
-        serverStats.updateLatency(Time.currentElapsedTime()-2000);
+        serverStats.updateLatency(Time.currentElapsedTime() - 1000);
+        serverStats.updateLatency(Time.currentElapsedTime() - 2000);
 
         // Then ...
         assertThat("Max latency check", 2000L,
@@ -119,7 +119,7 @@ public class ServerStatsTest extends ZKTestCase {
         // When ...
         serverStats.incrementPacketsSent();
         serverStats.incrementPacketsReceived();
-        serverStats.updateLatency(Time.currentElapsedTime()-1000);
+        serverStats.updateLatency(Time.currentElapsedTime() - 1000);
 
         serverStats.reset();
 

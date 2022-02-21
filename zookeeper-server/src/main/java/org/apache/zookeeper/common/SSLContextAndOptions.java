@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,24 +17,22 @@
  */
 package org.apache.zookeeper.common;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.net.Socket;
-import java.util.Arrays;
-
-import javax.net.ssl.SSLContext;
-import java.util.Collections;
-import java.util.List;
-
-import javax.net.ssl.SSLParameters;
-import javax.net.ssl.SSLServerSocket;
-import javax.net.ssl.SSLSocket;
-
 import io.netty.handler.ssl.IdentityCipherSuiteFilter;
 import io.netty.handler.ssl.JdkSslContext;
 import io.netty.handler.ssl.SslContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLParameters;
+import javax.net.ssl.SSLServerSocket;
+import javax.net.ssl.SSLSocket;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.net.Socket;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 import static java.util.Objects.requireNonNull;
 
@@ -63,7 +61,9 @@ public class SSLContextAndOptions {
      * @param config a ZKConfig that holds config properties.
      * @param sslContext the SSLContext.
      */
-    SSLContextAndOptions(final X509Util x509Util, final ZKConfig config, final SSLContext sslContext) {
+    SSLContextAndOptions(final X509Util x509Util,
+                         final ZKConfig config,
+                         final SSLContext sslContext) {
         this.x509Util = requireNonNull(x509Util);
         this.sslContext = requireNonNull(sslContext);
         this.enabledProtocols = getEnabledProtocols(requireNonNull(config), sslContext);
@@ -113,7 +113,9 @@ public class SSLContextAndOptions {
                 cipherSuitesAsList,
                 IdentityCipherSuiteFilter.INSTANCE,
                 null,
-                isClientSocket ? X509Util.ClientAuth.NONE.toNettyClientAuth() : clientAuth.toNettyClientAuth(),
+                isClientSocket ?
+                        X509Util.ClientAuth.NONE.toNettyClientAuth() :
+                        clientAuth.toNettyClientAuth(),
                 enabledProtocols,
                 false);
     }
@@ -164,16 +166,18 @@ public class SSLContextAndOptions {
                     sslParameters.setWantClientAuth(true);
                     break;
                 default:
-                    sslParameters.setNeedClientAuth(false); // also clears the wantClientAuth flag according to docs
+                    sslParameters.setNeedClientAuth(
+                            false); // also clears the wantClientAuth flag according to docs
                     break;
             }
         }
     }
 
     private String[] getEnabledProtocols(final ZKConfig config, final SSLContext sslContext) {
-        String enabledProtocolsInput = config.getProperty(x509Util.getSslEnabledProtocolsProperty());
+        String enabledProtocolsInput =
+                config.getProperty(x509Util.getSslEnabledProtocolsProperty());
         if (enabledProtocolsInput == null) {
-            return new String[] { sslContext.getProtocol() };
+            return new String[] {sslContext.getProtocol()};
         }
         return enabledProtocolsInput.split(",");
     }
@@ -188,11 +192,13 @@ public class SSLContextAndOptions {
     }
 
     private X509Util.ClientAuth getClientAuth(final ZKConfig config) {
-        return X509Util.ClientAuth.fromPropertyValue(config.getProperty(x509Util.getSslClientAuthProperty()));
+        return X509Util.ClientAuth.fromPropertyValue(
+                config.getProperty(x509Util.getSslClientAuthProperty()));
     }
 
     private int getHandshakeDetectionTimeoutMillis(final ZKConfig config) {
-        String propertyString = config.getProperty(x509Util.getSslHandshakeDetectionTimeoutMillisProperty());
+        String propertyString =
+                config.getProperty(x509Util.getSslHandshakeDetectionTimeoutMillisProperty());
         int result;
         if (propertyString == null) {
             result = X509Util.DEFAULT_HANDSHAKE_DETECTION_TIMEOUT_MILLIS;

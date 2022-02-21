@@ -18,27 +18,25 @@
 
 package org.apache.zookeeper.test;
 
-import static org.apache.zookeeper.client.ZKClientConfig.LOGIN_CONTEXT_NAME_KEY;
-import static org.junit.Assert.fail;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.net.InetSocketAddress;
-import javax.security.auth.login.Configuration;
 import org.apache.commons.io.FileUtils;
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.Environment;
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.PortAssignment;
+import org.apache.zookeeper.*;
 import org.apache.zookeeper.ZooDefs.Ids;
-import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.client.ZKClientConfig;
 import org.apache.zookeeper.common.ClientX509Util;
 import org.apache.zookeeper.server.ServerCnxnFactory;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import javax.security.auth.login.Configuration;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.net.InetSocketAddress;
+
+import static org.apache.zookeeper.client.ZKClientConfig.LOGIN_CONTEXT_NAME_KEY;
+import static org.junit.Assert.fail;
 
 
 public class SaslDigestAuthOverSSLTest extends ClientBase {
@@ -87,7 +85,8 @@ public class SaslDigestAuthOverSSLTest extends ClientBase {
 
 
     public void initSaslConfig() {
-        System.setProperty("zookeeper.authProvider.1", "org.apache.zookeeper.server.auth.SASLAuthenticationProvider");
+        System.setProperty("zookeeper.authProvider.1",
+                "org.apache.zookeeper.server.auth.SASLAuthenticationProvider");
         System.setProperty(LOGIN_CONTEXT_NAME_KEY, "ClientUsingDigest");
         try {
             File tmpDir = createTmpDir();
@@ -105,7 +104,8 @@ public class SaslDigestAuthOverSSLTest extends ClientBase {
             saslConf.close();
             System.setProperty(Environment.JAAS_CONF_KEY, saslConfFile.getAbsolutePath());
         } catch (IOException e) {
-            LOG.error("could not create tmp directory to hold JAAS conf file, test will fail...", e);
+            LOG.error("could not create tmp directory to hold JAAS conf file, test will fail...",
+                    e);
         }
 
         // refresh the SASL configuration in this JVM (making sure that we use the latest config
@@ -121,16 +121,20 @@ public class SaslDigestAuthOverSSLTest extends ClientBase {
 
     public ClientX509Util setUpSSLWithNoAuth() {
         String testDataPath = System.getProperty("test.data.dir", "src/test/resources/data");
-        System.setProperty(ServerCnxnFactory.ZOOKEEPER_SERVER_CNXN_FACTORY, "org.apache.zookeeper.server.NettyServerCnxnFactory");
-        System.setProperty(ZKClientConfig.ZOOKEEPER_CLIENT_CNXN_SOCKET, "org.apache.zookeeper.ClientCnxnSocketNetty");
+        System.setProperty(ServerCnxnFactory.ZOOKEEPER_SERVER_CNXN_FACTORY,
+                "org.apache.zookeeper.server.NettyServerCnxnFactory");
+        System.setProperty(ZKClientConfig.ZOOKEEPER_CLIENT_CNXN_SOCKET,
+                "org.apache.zookeeper.ClientCnxnSocketNetty");
         System.setProperty(ZKClientConfig.SECURE_CLIENT, "true");
         System.setProperty("zookeeper.ssl.clientAuth", "none");
         System.setProperty("zookeeper.ssl.quorum.clientAuth", "none");
 
         ClientX509Util x509Util = new ClientX509Util();
-        System.setProperty(x509Util.getSslTruststoreLocationProperty(), testDataPath + "/ssl/testTrustStore.jks");
+        System.setProperty(x509Util.getSslTruststoreLocationProperty(),
+                testDataPath + "/ssl/testTrustStore.jks");
         System.setProperty(x509Util.getSslTruststorePasswdProperty(), "testpass");
-        System.setProperty(x509Util.getSslKeystoreLocationProperty(), testDataPath + "/ssl/testKeyStore.jks");
+        System.setProperty(x509Util.getSslKeystoreLocationProperty(),
+                testDataPath + "/ssl/testKeyStore.jks");
         System.setProperty(x509Util.getSslKeystorePasswdProperty(), "testpass");
 
         return x509Util;

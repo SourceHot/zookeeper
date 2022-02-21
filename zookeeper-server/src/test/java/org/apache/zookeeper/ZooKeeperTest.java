@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,15 +16,6 @@
  * limitations under the License.
  */
 package org.apache.zookeeper;
-
-import static org.junit.Assert.*;
-
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.zookeeper.AsyncCallback.VoidCallback;
 import org.apache.zookeeper.ZooDefs.Ids;
@@ -39,6 +30,15 @@ import org.apache.zookeeper.test.ClientBase;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.junit.Assert.*;
+
 /**
  *
  * Testing ZooKeeper public methods
@@ -48,8 +48,22 @@ public class ZooKeeperTest extends ClientBase {
 
     private static final String LINE_SEPARATOR = System.getProperty("line.separator", "\n");
 
+    private static void runCommandExpect(CliCommand command, List<String> expectedResults)
+            throws Exception {
+        // call command and put result in byteStream
+        ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+        PrintStream out = new PrintStream(byteStream);
+        command.setOut(out);
+        command.exec();
+
+        String result = byteStream.toString();
+        assertTrue(result, result.contains(
+                StringUtils.joinStrings(expectedResults, LINE_SEPARATOR)));
+    }
+
     @Test
-    public void testDeleteRecursive() throws IOException, InterruptedException, CliException, KeeperException {
+    public void testDeleteRecursive()
+            throws IOException, InterruptedException, CliException, KeeperException {
         final ZooKeeper zk = createClient();
         // making sure setdata works on /
         zk.setData("/", "some".getBytes(), -1);
@@ -147,17 +161,18 @@ public class ZooKeeperTest extends ClientBase {
 
     @Test
     public void testStatWhenPathDoesNotExist() throws IOException,
-    		InterruptedException, MalformedCommandException {
-    	final ZooKeeper zk = createClient();
-    	ZooKeeperMain main = new ZooKeeperMain(zk);
-    	String cmdstring = "stat /invalidPath";
-    	main.cl.parseCommand(cmdstring);
-    	try {
-    		main.processZKCmd(main.cl);
-    		Assert.fail("As Node does not exist, command should fail by throwing No Node Exception.");
-    	} catch (CliException e) {
-    		Assert.assertEquals("Node does not exist: /invalidPath", e.getMessage());
-    	}
+            InterruptedException, MalformedCommandException {
+        final ZooKeeper zk = createClient();
+        ZooKeeperMain main = new ZooKeeperMain(zk);
+        String cmdstring = "stat /invalidPath";
+        main.cl.parseCommand(cmdstring);
+        try {
+            main.processZKCmd(main.cl);
+            Assert.fail(
+                    "As Node does not exist, command should fail by throwing No Node Exception.");
+        } catch (CliException e) {
+            Assert.assertEquals("Node does not exist: /invalidPath", e.getMessage());
+        }
     }
 
     @Test
@@ -179,9 +194,12 @@ public class ZooKeeperTest extends ClientBase {
             String cmdstring = String.format("create /node %1$squoted data%1$s", quoteChar);
             zkMain.cl.parseCommand(cmdstring);
             Assert.assertEquals("quotes combine arguments", zkMain.cl.getNumArguments(), 3);
-            Assert.assertEquals("create is not taken as first argument", zkMain.cl.getCmdArgument(0), "create");
-            Assert.assertEquals("/node is not taken as second argument", zkMain.cl.getCmdArgument(1), "/node");
-            Assert.assertEquals("quoted data is not taken as third argument", zkMain.cl.getCmdArgument(2), "quoted data");
+            Assert.assertEquals("create is not taken as first argument",
+                    zkMain.cl.getCmdArgument(0), "create");
+            Assert.assertEquals("/node is not taken as second argument",
+                    zkMain.cl.getCmdArgument(1), "/node");
+            Assert.assertEquals("quoted data is not taken as third argument",
+                    zkMain.cl.getCmdArgument(2), "quoted data");
         }
     }
 
@@ -192,12 +210,17 @@ public class ZooKeeperTest extends ClientBase {
         for (String[] quoteChars : new String[][] {{"'", "\""}, {"\"", "'"}}) {
             String outerQuotes = quoteChars[0];
             String innerQuotes = quoteChars[1];
-            String cmdstring = String.format("create /node %1$s%2$squoted data%2$s%1$s", outerQuotes, innerQuotes);
+            String cmdstring =
+                    String.format("create /node %1$s%2$squoted data%2$s%1$s", outerQuotes,
+                            innerQuotes);
             zkMain.cl.parseCommand(cmdstring);
             Assert.assertEquals("quotes combine arguments", zkMain.cl.getNumArguments(), 3);
-            Assert.assertEquals("create is not taken as first argument", zkMain.cl.getCmdArgument(0), "create");
-            Assert.assertEquals("/node is not taken as second argument", zkMain.cl.getCmdArgument(1), "/node");
-            Assert.assertEquals("quoted data is not taken as third argument", zkMain.cl.getCmdArgument(2), innerQuotes + "quoted data" + innerQuotes);
+            Assert.assertEquals("create is not taken as first argument",
+                    zkMain.cl.getCmdArgument(0), "create");
+            Assert.assertEquals("/node is not taken as second argument",
+                    zkMain.cl.getCmdArgument(1), "/node");
+            Assert.assertEquals("quoted data is not taken as third argument",
+                    zkMain.cl.getCmdArgument(2), innerQuotes + "quoted data" + innerQuotes);
         }
     }
 
@@ -207,10 +230,14 @@ public class ZooKeeperTest extends ClientBase {
         ZooKeeperMain zkMain = new ZooKeeperMain(zk);
         String cmdstring = "create /node ''";
         zkMain.cl.parseCommand(cmdstring);
-        Assert.assertEquals("empty quotes should produce arguments", zkMain.cl.getNumArguments(), 3);
-        Assert.assertEquals("create is not taken as first argument", zkMain.cl.getCmdArgument(0), "create");
-        Assert.assertEquals("/node is not taken as second argument", zkMain.cl.getCmdArgument(1), "/node");
-        Assert.assertEquals("empty string is not taken as third argument", zkMain.cl.getCmdArgument(2), "");
+        Assert.assertEquals("empty quotes should produce arguments", zkMain.cl.getNumArguments(),
+                3);
+        Assert.assertEquals("create is not taken as first argument", zkMain.cl.getCmdArgument(0),
+                "create");
+        Assert.assertEquals("/node is not taken as second argument", zkMain.cl.getCmdArgument(1),
+                "/node");
+        Assert.assertEquals("empty string is not taken as third argument",
+                zkMain.cl.getCmdArgument(2), "");
     }
 
     @Test
@@ -220,15 +247,19 @@ public class ZooKeeperTest extends ClientBase {
         String cmdstring = "create /node '' ''";
         zkMain.cl.parseCommand(cmdstring);
         Assert.assertEquals("expected 5 arguments", zkMain.cl.getNumArguments(), 4);
-        Assert.assertEquals("create is not taken as first argument", zkMain.cl.getCmdArgument(0), "create");
-        Assert.assertEquals("/node is not taken as second argument", zkMain.cl.getCmdArgument(1), "/node");
-        Assert.assertEquals("empty string is not taken as third argument", zkMain.cl.getCmdArgument(2), "");
-        Assert.assertEquals("empty string is not taken as fourth argument", zkMain.cl.getCmdArgument(3), "");
+        Assert.assertEquals("create is not taken as first argument", zkMain.cl.getCmdArgument(0),
+                "create");
+        Assert.assertEquals("/node is not taken as second argument", zkMain.cl.getCmdArgument(1),
+                "/node");
+        Assert.assertEquals("empty string is not taken as third argument",
+                zkMain.cl.getCmdArgument(2), "");
+        Assert.assertEquals("empty string is not taken as fourth argument",
+                zkMain.cl.getCmdArgument(3), "");
     }
 
     @Test
     public void testNonexistantCommand() throws Exception {
-      testInvalidCommand("cret -s /node1", 127);
+        testInvalidCommand("cret -s /node1", 127);
     }
 
     @Test
@@ -262,10 +293,10 @@ public class ZooKeeperTest extends ClientBase {
 
         // Verify that the correct exception is thrown
         try {
-          zkMain.processZKCmd(zkMain.cl);
-          Assert.fail();
+            zkMain.processZKCmd(zkMain.cl);
+            Assert.fail();
         } catch (CliException e) {
-          return;
+            return;
         }
         Assert.fail("invalid command should throw CliException");
     }
@@ -371,7 +402,8 @@ public class ZooKeeperTest extends ClientBase {
             Assert.assertFalse(zkMain.processZKCmd(zkMain.cl));
             Assert.fail("Path doesn't exists so, command should fail.");
         } catch (CliWrapperException e) {
-            Assert.assertEquals(KeeperException.Code.NONODE, ((KeeperException)e.getCause()).code());
+            Assert.assertEquals(KeeperException.Code.NONODE,
+                    ((KeeperException) e.getCause()).code());
         }
     }
 
@@ -398,24 +430,24 @@ public class ZooKeeperTest extends ClientBase {
 
     @Test
     public void testCheckInvalidAcls() throws Exception {
-         final ZooKeeper zk = createClient();
-            ZooKeeperMain zkMain = new ZooKeeperMain(zk);
-            String cmdstring = "create -s -e /node data ip:scheme:gggsd"; //invalid acl's
+        final ZooKeeper zk = createClient();
+        ZooKeeperMain zkMain = new ZooKeeperMain(zk);
+        String cmdstring = "create -s -e /node data ip:scheme:gggsd"; //invalid acl's
 
-            // For Invalid ACls should not throw exception
-            zkMain.executeLine(cmdstring);
+        // For Invalid ACls should not throw exception
+        zkMain.executeLine(cmdstring);
     }
 
     @Test
     public void testDeleteWithInvalidVersionNo() throws Exception {
-         final ZooKeeper zk = createClient();
-            ZooKeeperMain zkMain = new ZooKeeperMain(zk);
-            String cmdstring = "create -s -e /node1 data ";
-            String cmdstring1 = "delete /node1 2";//invalid dataversion no
-                 zkMain.executeLine(cmdstring);
+        final ZooKeeper zk = createClient();
+        ZooKeeperMain zkMain = new ZooKeeperMain(zk);
+        String cmdstring = "create -s -e /node1 data ";
+        String cmdstring1 = "delete /node1 2";//invalid dataversion no
+        zkMain.executeLine(cmdstring);
 
-            // For Invalid dataversion number should not throw exception
-            zkMain.executeLine(cmdstring1);
+        // For Invalid dataversion number should not throw exception
+        zkMain.executeLine(cmdstring1);
     }
 
     @Test
@@ -459,19 +491,6 @@ public class ZooKeeperTest extends ClientBase {
             // revert redirect of out/err streams - important step!
             System.setErr(systemErr);
         }
-    }
-
-    private static void runCommandExpect(CliCommand command, List<String> expectedResults)
-            throws Exception {
-        // call command and put result in byteStream
-        ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
-        PrintStream out = new PrintStream(byteStream);
-        command.setOut(out);
-        command.exec();
-
-        String result = byteStream.toString();
-        assertTrue(result, result.contains(
-                StringUtils.joinStrings(expectedResults, LINE_SEPARATOR)));
     }
 
     @Test
@@ -567,7 +586,8 @@ public class ZooKeeperTest extends ClientBase {
             runCommandExpect(cmd, new ArrayList<String>());
             Assert.fail("Path doesn't exists so, command should fail.");
         } catch (CliWrapperException e) {
-            Assert.assertEquals(KeeperException.Code.NONODE, ((KeeperException)e.getCause()).code());
+            Assert.assertEquals(KeeperException.Code.NONODE,
+                    ((KeeperException) e.getCause()).code());
         }
     }
 

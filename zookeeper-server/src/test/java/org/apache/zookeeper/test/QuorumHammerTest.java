@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,6 +17,7 @@
  */
 
 package org.apache.zookeeper.test;
+
 import org.apache.zookeeper.ZKTestCase;
 import org.junit.After;
 import org.junit.Before;
@@ -25,9 +26,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class QuorumHammerTest extends ZKTestCase {
-    protected static final Logger LOG = LoggerFactory.getLogger(QuorumHammerTest.class);
     public static final long CONNECTION_TIMEOUT = ClientTest.CONNECTION_TIMEOUT;
-
+    protected static final Logger LOG = LoggerFactory.getLogger(QuorumHammerTest.class);
     protected final QuorumBase qb = new QuorumBase();
     protected final ClientHammerTest cht = new ClientHammerTest();
 

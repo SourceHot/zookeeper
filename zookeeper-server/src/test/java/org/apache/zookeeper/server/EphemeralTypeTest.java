@@ -60,7 +60,8 @@ public class EphemeralTypeTest {
     @Test
     public void testContainerValue() {
         Assert.assertEquals(Long.MIN_VALUE, EphemeralType.CONTAINER_EPHEMERAL_OWNER);
-        Assert.assertEquals(EphemeralType.CONTAINER, EphemeralType.get(EphemeralType.CONTAINER_EPHEMERAL_OWNER));
+        Assert.assertEquals(EphemeralType.CONTAINER,
+                EphemeralType.get(EphemeralType.CONTAINER_EPHEMERAL_OWNER));
     }
 
     @Test
@@ -72,7 +73,7 @@ public class EphemeralTypeTest {
 
     @Test
     public void testServerIds() {
-        for ( int i = 0; i <= EphemeralType.MAX_EXTENDED_SERVER_ID; ++i ) {
+        for (int i = 0; i <= EphemeralType.MAX_EXTENDED_SERVER_ID; ++i) {
             EphemeralType.validateServerId(i);
         }
         try {

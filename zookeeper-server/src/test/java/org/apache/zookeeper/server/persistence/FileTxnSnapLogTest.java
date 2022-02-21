@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -26,8 +26,8 @@ import org.apache.zookeeper.test.TestUtils;
 import org.apache.zookeeper.txn.SetDataTxn;
 import org.apache.zookeeper.txn.TxnHeader;
 import org.junit.After;
-import org.junit.Before;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
@@ -54,7 +54,7 @@ public class FileTxnSnapLogTest {
 
     @After
     public void tearDown() throws Exception {
-        if(tmpDir != null){
+        if (tmpDir != null) {
             TestUtils.deleteFileRecursively(tmpDir);
         }
         this.tmpDir = null;
@@ -85,30 +85,35 @@ public class FileTxnSnapLogTest {
         snapVersionDir = createVersionDir(snapDir);
 
         // transaction log files in log dir
-        createLogFile(logVersionDir,1);
-        createLogFile(logVersionDir,2);
+        createLogFile(logVersionDir, 1);
+        createLogFile(logVersionDir, 2);
 
         // snapshot files in snap dir
-        createSnapshotFile(snapVersionDir,1);
-        createSnapshotFile(snapVersionDir,2);
+        createSnapshotFile(snapVersionDir, 1);
+        createSnapshotFile(snapVersionDir, 2);
     }
 
     private void singleDirSetupWithCorrectFiles() throws IOException {
         logVersionDir = createVersionDir(logDir);
 
         // transaction log and snapshot files in the same dir
-        createLogFile(logVersionDir,1);
-        createLogFile(logVersionDir,2);
-        createSnapshotFile(logVersionDir,1);
-        createSnapshotFile(logVersionDir,2);
+        createLogFile(logVersionDir, 1);
+        createLogFile(logVersionDir, 2);
+        createSnapshotFile(logVersionDir, 1);
+        createSnapshotFile(logVersionDir, 2);
     }
 
-    private FileTxnSnapLog createFileTxnSnapLogWithNoAutoCreateDataDir(File logDir, File snapDir) throws IOException {
+    private FileTxnSnapLog createFileTxnSnapLogWithNoAutoCreateDataDir(File logDir, File snapDir)
+            throws IOException {
         return createFileTxnSnapLogWithAutoCreateDataDir(logDir, snapDir, "false");
     }
 
-    private FileTxnSnapLog createFileTxnSnapLogWithAutoCreateDataDir(File logDir, File snapDir, String autoCreateValue) throws IOException {
-        String priorAutocreateDirValue = System.getProperty(FileTxnSnapLog.ZOOKEEPER_DATADIR_AUTOCREATE);
+    private FileTxnSnapLog createFileTxnSnapLogWithAutoCreateDataDir(File logDir,
+                                                                     File snapDir,
+                                                                     String autoCreateValue)
+            throws IOException {
+        String priorAutocreateDirValue =
+                System.getProperty(FileTxnSnapLog.ZOOKEEPER_DATADIR_AUTOCREATE);
         System.setProperty(FileTxnSnapLog.ZOOKEEPER_DATADIR_AUTOCREATE, autoCreateValue);
         FileTxnSnapLog fileTxnSnapLog;
         try {
@@ -117,7 +122,8 @@ public class FileTxnSnapLogTest {
             if (priorAutocreateDirValue == null) {
                 System.clearProperty(FileTxnSnapLog.ZOOKEEPER_DATADIR_AUTOCREATE);
             } else {
-                System.setProperty(FileTxnSnapLog.ZOOKEEPER_DATADIR_AUTOCREATE, priorAutocreateDirValue);
+                System.setProperty(FileTxnSnapLog.ZOOKEEPER_DATADIR_AUTOCREATE,
+                        priorAutocreateDirValue);
             }
         }
         return fileTxnSnapLog;
@@ -132,7 +138,8 @@ public class FileTxnSnapLogTest {
         Assert.assertFalse("log directory already exists", logDir.exists());
         Assert.assertFalse("snapshot directory already exists", snapDir.exists());
 
-        FileTxnSnapLog fileTxnSnapLog = createFileTxnSnapLogWithAutoCreateDataDir(logDir, snapDir, "true");
+        FileTxnSnapLog fileTxnSnapLog =
+                createFileTxnSnapLogWithAutoCreateDataDir(logDir, snapDir, "true");
 
         Assert.assertTrue(logDir.exists());
         Assert.assertTrue(snapDir.exists());
@@ -162,7 +169,8 @@ public class FileTxnSnapLogTest {
 
     @Test
     public void testGetTxnLogSyncElapsedTime() throws IOException {
-        FileTxnSnapLog fileTxnSnapLog = createFileTxnSnapLogWithAutoCreateDataDir(logDir, snapDir, "true");
+        FileTxnSnapLog fileTxnSnapLog =
+                createFileTxnSnapLogWithAutoCreateDataDir(logDir, snapDir, "true");
 
         TxnHeader hdr = new TxnHeader(1, 1, 1, 1, ZooDefs.OpCode.setData);
         Record txn = new SetDataTxn("/foo", new byte[0], 1);
@@ -205,8 +213,8 @@ public class FileTxnSnapLogTest {
         twoDirSetupWithCorrectFiles();
 
         // add snapshot files to the log version dir
-        createSnapshotFile(logVersionDir,3);
-        createSnapshotFile(logVersionDir,4);
+        createSnapshotFile(logVersionDir, 3);
+        createSnapshotFile(logVersionDir, 4);
 
         createFileTxnSnapLogWithNoAutoCreateDataDir(logDir, snapDir);
     }
@@ -216,8 +224,8 @@ public class FileTxnSnapLogTest {
         twoDirSetupWithCorrectFiles();
 
         // add transaction log files to the snap version dir
-        createLogFile(snapVersionDir,3);
-        createLogFile(snapVersionDir,4);
+        createLogFile(snapVersionDir, 3);
+        createLogFile(snapVersionDir, 4);
 
         createFileTxnSnapLogWithNoAutoCreateDataDir(logDir, snapDir);
     }

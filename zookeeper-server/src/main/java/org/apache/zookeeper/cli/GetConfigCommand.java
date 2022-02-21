@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -28,14 +28,15 @@ import org.apache.zookeeper.server.util.ConfigUtils;
 public class GetConfigCommand extends CliCommand {
 
     private static Options options = new Options();
-    private String args[];
-    private CommandLine cl;
 
     static {
         options.addOption("s", false, "stats");
         options.addOption("w", false, "watch");
         options.addOption("c", false, "client connection string");
     }
+
+    private String args[];
+    private CommandLine cl;
 
     public GetConfigCommand() {
         super("config", "[-c] [-w] [-s]");
@@ -60,12 +61,12 @@ public class GetConfigCommand extends CliCommand {
 
     @Override
     public boolean exec() throws CliException {
-        boolean watch = cl.hasOption("w");        
+        boolean watch = cl.hasOption("w");
         Stat stat = new Stat();
         byte data[];
         try {
             data = zk.getConfig(watch, stat);
-        } catch (KeeperException|InterruptedException ex) {
+        } catch (KeeperException | InterruptedException ex) {
             throw new CliWrapperException(ex);
         }
         data = (data == null) ? "null".getBytes() : data;
@@ -74,11 +75,11 @@ public class GetConfigCommand extends CliCommand {
         } else {
             out.println(new String(data));
         }
-        
+
         if (cl.hasOption("s")) {
             new StatPrinter(out).print(stat);
-        }                
-        
+        }
+
         return watch;
     }
 }

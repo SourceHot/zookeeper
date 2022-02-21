@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,7 +18,14 @@
 
 package org.apache.zookeeper.test;
 
-import java.lang.Exception;
+import org.apache.zookeeper.AsyncCallback.*;
+import org.apache.zookeeper.*;
+import org.apache.zookeeper.KeeperException.Code;
+import org.apache.zookeeper.ZooDefs.Ids;
+import org.apache.zookeeper.data.ACL;
+import org.apache.zookeeper.data.Stat;
+import org.junit.Assert;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -26,31 +33,11 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.Op;
-import org.apache.zookeeper.OpResult;
-import org.apache.zookeeper.ZooKeeper;
-import org.apache.zookeeper.AsyncCallback.ACLCallback;
-import org.apache.zookeeper.AsyncCallback.Children2Callback;
-import org.apache.zookeeper.AsyncCallback.ChildrenCallback;
-import org.apache.zookeeper.AsyncCallback.Create2Callback;
-import org.apache.zookeeper.AsyncCallback.DataCallback;
-import org.apache.zookeeper.AsyncCallback.StatCallback;
-import org.apache.zookeeper.AsyncCallback.StringCallback;
-import org.apache.zookeeper.AsyncCallback.VoidCallback;
-import org.apache.zookeeper.AsyncCallback.MultiCallback;
-import org.apache.zookeeper.KeeperException.Code;
-import org.apache.zookeeper.ZooDefs.Ids;
-import org.apache.zookeeper.data.ACL;
-import org.apache.zookeeper.data.Stat;
-import org.junit.Assert;
-
 public class AsyncOps {
     /**
      * This is the base class for all of the async callback classes. It will
      * verify the expected value against the actual value.
-     * 
+     *
      * Basic operation is that the subclasses will generate an "expected" value
      * which is defined by the "toString" method of the subclass. This is
      * passed through to the verify clause by specifying it as the ctx object
@@ -59,7 +46,7 @@ public class AsyncOps {
      * instance fields with matching parameter arguments to the processResult
      * method. The cb instance can then compare the expected to the
      * actual value by again calling toString and comparing the two.
-     * 
+     *
      * The format of each expected value differs (is defined) by subclass.
      * Generally the expected value starts with the result code (rc) and path
      * of the node being operated on, followed by the fields specific to
@@ -70,40 +57,39 @@ public class AsyncOps {
     public static abstract class AsyncCB {
         protected final ZooKeeper zk;
         protected long defaultTimeoutMillis = 30000;
-        
+
         /** the latch is used to await the results from the server */
         CountDownLatch latch;
 
         Code rc = Code.OK;
         String path = "/foo";
         String expected;
-        
+
         public AsyncCB(ZooKeeper zk, CountDownLatch latch) {
             this.zk = zk;
             this.latch = latch;
         }
-        
+
         public void setRC(Code rc) {
             this.rc = rc;
         }
-        
+
         public void setPath(String path) {
             this.path = path;
         }
-        
-        public void processResult(Code rc, String path, Object ctx)
-        {
+
+        public void processResult(Code rc, String path, Object ctx) {
             this.rc = rc;
             this.path = path;
-            this.expected = (String)ctx;
+            this.expected = (String) ctx;
             latch.countDown();
         }
-        
+
         /** String format is rc:path:<suffix> where <suffix> is defined by each
          * subclass individually. */
         @Override
         public String toString() {
-            return rc + ":" + path + ":"; 
+            return rc + ":" + path + ":";
         }
 
         protected void verify() {
@@ -114,38 +100,38 @@ public class AsyncOps {
             }
             // on the lookout for timeout
             Assert.assertSame(0L, latch.getCount());
-            
+
             String actual = toString();
-            
+
             Assert.assertEquals(expected, actual);
         }
     }
-    
+
+
     public static class StringCB extends AsyncCB implements StringCallback {
         byte[] data = new byte[10];
         List<ACL> acl = Ids.CREATOR_ALL_ACL;
         CreateMode flags = CreateMode.PERSISTENT;
         String name = path;
-        
+
         StringCB(ZooKeeper zk) {
             this(zk, new CountDownLatch(1));
         }
-        
+
         StringCB(ZooKeeper zk, CountDownLatch latch) {
             super(zk, latch);
         }
-        
+
         public void setPath(String path) {
             super.setPath(path);
             this.name = path;
         }
-        
+
         public String nodeName() {
             return path.substring(path.lastIndexOf('/') + 1);
         }
-        
-        public void processResult(int rc, String path, Object ctx, String name)
-        {
+
+        public void processResult(int rc, String path, Object ctx, String name) {
             this.name = name;
             super.processResult(Code.get(rc), path, ctx);
         }
@@ -159,7 +145,7 @@ public class AsyncOps {
             zk.create(path, data, acl, CreateMode.EPHEMERAL, this, toString());
             return this;
         }
-        
+
         public void verifyCreate() {
             create();
             verify();
@@ -169,10 +155,10 @@ public class AsyncOps {
             createEphemeral();
             verify();
         }
-        
+
         public void verifyCreateFailure_NodeExists() {
             new StringCB(zk).verifyCreate();
-            
+
             rc = Code.NODEEXISTS;
             name = null;
             zk.create(path, data, acl, flags, this, toString());
@@ -202,16 +188,17 @@ public class AsyncOps {
 
         @Override
         public String toString() {
-            return super.toString() + name; 
+            return super.toString() + name;
         }
     }
+
 
     public static class ACLCB extends AsyncCB implements ACLCallback {
         List<ACL> acl = Ids.CREATOR_ALL_ACL;
         int version = 0;
         Stat stat = new Stat();
         byte[] data = "testing".getBytes();
-        
+
         ACLCB(ZooKeeper zk) {
             this(zk, new CountDownLatch(1));
         }
@@ -225,13 +212,12 @@ public class AsyncOps {
         }
 
         public void processResult(int rc, String path, Object ctx,
-                List<ACL> acl, Stat stat)
-        {
+                                  List<ACL> acl, Stat stat) {
             this.acl = acl;
             this.stat = stat;
             super.processResult(Code.get(rc), path, ctx);
         }
-        
+
         public void verifyGetACL() {
             new StringCB(zk).verifyCreate();
 
@@ -239,7 +225,7 @@ public class AsyncOps {
             verify();
         }
 
-        public void verifyGetACLFailure_NoNode(){
+        public void verifyGetACLFailure_NoNode() {
             rc = Code.NONODE;
             stat = null;
             acl = null;
@@ -247,32 +233,33 @@ public class AsyncOps {
 
             verify();
         }
-        
+
         public String toString(List<ACL> acls) {
             if (acls == null) {
                 return "";
             }
 
             StringBuilder result = new StringBuilder();
-            for(ACL acl : acls) {
+            for (ACL acl : acls) {
                 result.append(acl.getPerms()).append("::");
             }
             return result.toString();
         }
-        
+
         @Override
         public String toString() {
-            return super.toString() + toString(acl) + ":" 
-                + ":" + version + ":" + new String(data)
-                + ":" + (stat == null ? "null" : stat.getAversion() + ":" 
-                        + stat.getCversion() + ":" + stat.getEphemeralOwner()
-                        + ":" + stat.getVersion()); 
+            return super.toString() + toString(acl) + ":"
+                    + ":" + version + ":" + new String(data)
+                    + ":" + (stat == null ? "null" : stat.getAversion() + ":"
+                    + stat.getCversion() + ":" + stat.getEphemeralOwner()
+                    + ":" + stat.getVersion());
         }
     }
 
+
     public static class ChildrenCB extends AsyncCB implements ChildrenCallback {
         List<String> children = new ArrayList<String>();
-        
+
         ChildrenCB(ZooKeeper zk) {
             this(zk, new CountDownLatch(1));
         }
@@ -280,23 +267,22 @@ public class AsyncOps {
         ChildrenCB(ZooKeeper zk, CountDownLatch latch) {
             super(zk, latch);
         }
-        
+
         public void processResult(int rc, String path, Object ctx,
-                List<String> children)
-        {
+                                  List<String> children) {
             this.children =
-                (children == null ? new ArrayList<String>() : children);
+                    (children == null ? new ArrayList<String>() : children);
             Collections.sort(this.children);
             super.processResult(Code.get(rc), path, ctx);
         }
-        
+
         public StringCB createNode() {
             StringCB parent = new StringCB(zk);
             parent.verifyCreate();
 
             return parent;
         }
-        
+
         public StringCB createNode(StringCB parent) {
             String childName = "bar";
 
@@ -307,10 +293,10 @@ public class AsyncOps {
             StringCB child = new StringCB(zk);
             child.setPath(parent.path + "/" + childName);
             child.verifyCreate();
-            
+
             return child;
         }
-        
+
         public void verifyGetChildrenEmpty() {
             StringCB parent = createNode();
             path = parent.path;
@@ -323,27 +309,27 @@ public class AsyncOps {
 
             path = parent.path;
             children.add(child.nodeName());
-            
+
             verify();
         }
-        
+
         public void verifyGetChildrenTwo() {
             StringCB parent = createNode();
             StringCB child1 = createNode(parent, "child1");
             StringCB child2 = createNode(parent, "child2");
-        
+
             path = parent.path;
             children.add(child1.nodeName());
             children.add(child2.nodeName());
-            
+
             verify();
         }
-        
+
         public void verifyGetChildrenFailure_NoNode() {
             rc = KeeperException.Code.NONODE;
             verify();
         }
-        
+
         @Override
         public void verify() {
             zk.getChildren(path, false, this, toString());
@@ -355,6 +341,7 @@ public class AsyncOps {
             return super.toString() + children.toString();
         }
     }
+
 
     public static class Children2CB extends AsyncCB implements Children2Callback {
         List<String> children = new ArrayList<String>();
@@ -368,21 +355,20 @@ public class AsyncOps {
         }
 
         public void processResult(int rc, String path, Object ctx,
-                List<String> children, Stat stat)
-        {
+                                  List<String> children, Stat stat) {
             this.children =
-                (children == null ? new ArrayList<String>() : children);
+                    (children == null ? new ArrayList<String>() : children);
             Collections.sort(this.children);
             super.processResult(Code.get(rc), path, ctx);
         }
-        
+
         public StringCB createNode() {
             StringCB parent = new StringCB(zk);
             parent.verifyCreate();
 
             return parent;
         }
-        
+
         public StringCB createNode(StringCB parent) {
             String childName = "bar";
 
@@ -393,10 +379,10 @@ public class AsyncOps {
             StringCB child = new StringCB(zk);
             child.setPath(parent.path + "/" + childName);
             child.verifyCreate();
-            
+
             return child;
         }
-        
+
         public void verifyGetChildrenEmpty() {
             StringCB parent = createNode();
             path = parent.path;
@@ -409,41 +395,42 @@ public class AsyncOps {
 
             path = parent.path;
             children.add(child.nodeName());
-            
+
             verify();
         }
-        
+
         public void verifyGetChildrenTwo() {
             StringCB parent = createNode();
             StringCB child1 = createNode(parent, "child1");
             StringCB child2 = createNode(parent, "child2");
-        
+
             path = parent.path;
             children.add(child1.nodeName());
             children.add(child2.nodeName());
-            
+
             verify();
         }
-        
+
         public void verifyGetChildrenFailure_NoNode() {
             rc = KeeperException.Code.NONODE;
             verify();
         }
-        
+
         @Override
         public void verify() {
             zk.getChildren(path, false, this, toString());
             super.verify();
         }
-        
+
         @Override
         public String toString() {
-            return super.toString() + children.toString(); 
+            return super.toString() + children.toString();
         }
     }
 
+
     public static class Create2CB extends AsyncCB implements Create2Callback {
-    	  byte[] data = new byte[10];
+        byte[] data = new byte[10];
         List<ACL> acl = Ids.CREATOR_ALL_ACL;
         CreateMode flags = CreateMode.PERSISTENT;
         String name = path;
@@ -467,7 +454,7 @@ public class AsyncOps {
         }
 
         public void processResult(int rc, String path, Object ctx,
-                String name, Stat stat) {
+                                  String name, Stat stat) {
             this.name = name;
             this.stat = stat;
             super.processResult(Code.get(rc), path, ctx);
@@ -517,16 +504,17 @@ public class AsyncOps {
         @Override
         public String toString() {
             return super.toString() + name + ":" +
-                (stat == null ? "null" : stat.getAversion() + ":" +
-            		 stat.getCversion() + ":" + stat.getEphemeralOwner() +
-                 ":" + stat.getVersion());
+                    (stat == null ? "null" : stat.getAversion() + ":" +
+                            stat.getCversion() + ":" + stat.getEphemeralOwner() +
+                            ":" + stat.getVersion());
         }
     }
+
 
     public static class DataCB extends AsyncCB implements DataCallback {
         byte[] data = new byte[10];
         Stat stat = new Stat();
-        
+
         DataCB(ZooKeeper zk) {
             this(zk, new CountDownLatch(1));
         }
@@ -538,22 +526,21 @@ public class AsyncOps {
             stat.setEphemeralOwner(0);
             stat.setVersion(0);
         }
-        
+
         public void processResult(int rc, String path, Object ctx, byte[] data,
-                Stat stat)
-        {
+                                  Stat stat) {
             this.data = data;
             this.stat = stat;
             super.processResult(Code.get(rc), path, ctx);
         }
-        
+
         public void verifyGetData() {
             new StringCB(zk).verifyCreate();
 
             zk.getData(path, false, this, toString());
             verify();
         }
-        
+
         public void verifyGetDataFailure_NoNode() {
             rc = KeeperException.Code.NONODE;
             data = null;
@@ -561,23 +548,24 @@ public class AsyncOps {
             zk.getData(path, false, this, toString());
             verify();
         }
-        
+
         @Override
         public String toString() {
             return super.toString()
-                + ":" + (data == null ? "null" : new String(data))
-                + ":" + (stat == null ? "null" : stat.getAversion() + ":" 
+                    + ":" + (data == null ? "null" : new String(data))
+                    + ":" + (stat == null ? "null" : stat.getAversion() + ":"
                     + stat.getCversion() + ":" + stat.getEphemeralOwner()
-                    + ":" + stat.getVersion()); 
+                    + ":" + stat.getVersion());
         }
     }
+
 
     public static class StatCB extends AsyncCB implements StatCallback {
         List<ACL> acl = Ids.CREATOR_ALL_ACL;
         int version = 0;
         Stat stat = new Stat();
         byte[] data = "testing".getBytes();
-        
+
         StatCB(ZooKeeper zk) {
             this(zk, new CountDownLatch(1));
         }
@@ -589,12 +577,12 @@ public class AsyncOps {
             stat.setEphemeralOwner(0);
             stat.setVersion(0);
         }
-        
+
         public void processResult(int rc, String path, Object ctx, Stat stat) {
             this.stat = stat;
             super.processResult(Code.get(rc), path, ctx);
         }
-        
+
         public void verifySetACL() {
             stat.setAversion(1);
             new StringCB(zk).verifyCreate();
@@ -602,7 +590,7 @@ public class AsyncOps {
             zk.setACL(path, acl, version, this, toString());
             verify();
         }
-        
+
         public void verifySetACLFailure_NoNode() {
             rc = KeeperException.Code.NONODE;
             stat = null;
@@ -619,11 +607,11 @@ public class AsyncOps {
 
             verify();
         }
-        
+
         public void setData() {
             zk.setData(path, data, version, this, toString());
         }
-        
+
         public void verifySetData() {
             stat.setVersion(1);
             new StringCB(zk).verifyCreate();
@@ -631,7 +619,7 @@ public class AsyncOps {
             setData();
             verify();
         }
-        
+
         public void verifySetDataFailure_NoNode() {
             rc = KeeperException.Code.NONODE;
             stat = null;
@@ -648,42 +636,43 @@ public class AsyncOps {
 
             verify();
         }
-        
+
         public void verifyExists() {
             new StringCB(zk).verifyCreate();
 
             zk.exists(path, false, this, toString());
             verify();
         }
-        
+
         public void verifyExistsFailure_NoNode() {
             rc = KeeperException.Code.NONODE;
             stat = null;
             zk.exists(path, false, this, toString());
             verify();
         }
-        
+
         @Override
         public String toString() {
             return super.toString() + version
-                + ":" + new String(data)
-                + ":" + (stat == null ? "null" : stat.getAversion() + ":" 
-                        + stat.getCversion() + ":" + stat.getEphemeralOwner()
-                        + ":" + stat.getVersion()); 
+                    + ":" + new String(data)
+                    + ":" + (stat == null ? "null" : stat.getAversion() + ":"
+                    + stat.getCversion() + ":" + stat.getEphemeralOwner()
+                    + ":" + stat.getVersion());
         }
     }
 
+
     public static class VoidCB extends AsyncCB implements VoidCallback {
         int version = 0;
-        
+
         VoidCB(ZooKeeper zk) {
             this(zk, new CountDownLatch(1));
         }
-        
+
         VoidCB(ZooKeeper zk, CountDownLatch latch) {
             super(zk, latch);
         }
-        
+
         public void processResult(int rc, String path, Object ctx) {
             super.processResult(Code.get(rc), path, ctx);
         }
@@ -691,14 +680,14 @@ public class AsyncOps {
         public void delete() {
             zk.delete(path, version, this, toString());
         }
-        
+
         public void verifyDelete() {
             new StringCB(zk).verifyCreate();
 
             delete();
             verify();
         }
-        
+
         public void verifyDeleteFailure_NoNode() {
             rc = Code.NONODE;
             zk.delete(path, version, this, toString());
@@ -722,27 +711,28 @@ public class AsyncOps {
             zk.delete(path, version, this, toString());
             verify();
         }
-        
+
         public void sync() {
             zk.sync(path, this, toString());
         }
-        
+
         public void verifySync() {
             sync();
             verify();
         }
-        
+
         @Override
         public String toString() {
-            return super.toString() + version; 
+            return super.toString() + version;
         }
     }
 
+
     public static class MultiCB implements MultiCallback {
+        final CountDownLatch latch = new CountDownLatch(1);
         ZooKeeper zk;
         int rc;
         List<OpResult> opResults;
-        final CountDownLatch latch = new CountDownLatch(1);
 
         MultiCB(ZooKeeper zk) {
             this.zk = zk;
@@ -755,7 +745,7 @@ public class AsyncOps {
             latch.countDown();
         }
 
-        void latch_await(){
+        void latch_await() {
             try {
                 latch.await(10000, TimeUnit.MILLISECONDS);
             } catch (InterruptedException e) {
@@ -803,7 +793,7 @@ public class AsyncOps {
             Assert.assertNull(zk.exists("/multi", false));
         }
 
-        public void verifyMultiSequential_NoSideEffect() throws Exception{
+        public void verifyMultiSequential_NoSideEffect() throws Exception {
             StringCB scb = new StringCB(zk);
             scb.verifyCreate();
             String path = scb.path + "-";
@@ -813,7 +803,7 @@ public class AsyncOps {
             Assert.assertNotNull(zk.exists(path + "0000000001", false));
 
             List<Op> ops = Arrays.asList(
-                    Op.create(path , new byte[0],
+                    Op.create(path, new byte[0],
                             Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT_SEQUENTIAL),
                     Op.delete("/nonexist", -1));
             zk.multi(ops, this, null);

@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,19 +18,8 @@
 
 package org.apache.zookeeper.test;
 
-import static org.junit.Assert.assertEquals;
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.List;
-
 import org.apache.log4j.Logger;
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.PortAssignment;
-import org.apache.zookeeper.WatchedEvent;
-import org.apache.zookeeper.Watcher;
-import org.apache.zookeeper.ZKTestCase;
-import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.*;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.server.ServerCnxnFactory;
 import org.apache.zookeeper.server.SyncRequestProcessor;
@@ -39,20 +28,27 @@ import org.apache.zookeeper.server.persistence.FileTxnSnapLog;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.List;
+
+import static org.junit.Assert.assertEquals;
+
 /** If snapshots are corrupted to the empty file or deleted, Zookeeper should 
  *  not proceed to read its transaction log files
  *  Test that zxid == -1 in the presence of emptied/deleted snapshots
  */
-public class EmptiedSnapshotRecoveryTest extends ZKTestCase implements  Watcher {
+public class EmptiedSnapshotRecoveryTest extends ZKTestCase implements Watcher {
     private static final Logger LOG = Logger.getLogger(RestoreCommittedLogTest.class);
-    private static String HOSTPORT = "127.0.0.1:" + PortAssignment.unique();
     private static final int CONNECTION_TIMEOUT = 3000;
     private static final int N_TRANSACTIONS = 150;
     private static final int SNAP_COUNT = 100;
+    private static String HOSTPORT = "127.0.0.1:" + PortAssignment.unique();
 
     public void runTest(boolean leaveEmptyFile, boolean trustEmptySnap) throws Exception {
         File tmpSnapDir = ClientBase.createTmpDir();
-        File tmpLogDir  = ClientBase.createTmpDir();
+        File tmpLogDir = ClientBase.createTmpDir();
         ClientBase.setupTestEnv();
         ZooKeeperServer zks = new ZooKeeperServer(tmpSnapDir, tmpLogDir, 3000);
         SyncRequestProcessor.setSnapCount(SNAP_COUNT);
@@ -60,10 +56,10 @@ public class EmptiedSnapshotRecoveryTest extends ZKTestCase implements  Watcher 
         ServerCnxnFactory f = ServerCnxnFactory.createFactory(PORT, -1);
         f.startup(zks);
         Assert.assertTrue("waiting for server being up ",
-                ClientBase.waitForServerUp(HOSTPORT,CONNECTION_TIMEOUT));
+                ClientBase.waitForServerUp(HOSTPORT, CONNECTION_TIMEOUT));
         ZooKeeper zk = new ZooKeeper(HOSTPORT, CONNECTION_TIMEOUT, this);
         try {
-            for (int i = 0; i< N_TRANSACTIONS; i++) {
+            for (int i = 0; i < N_TRANSACTIONS; i++) {
                 zk.create("/node-" + i, new byte[0], Ids.OPEN_ACL_UNSAFE,
                         CreateMode.PERSISTENT);
             }
@@ -87,16 +83,16 @@ public class EmptiedSnapshotRecoveryTest extends ZKTestCase implements  Watcher 
         FileTxnSnapLog txnLogFactory = zks.getTxnLogFactory();
         List<File> snapshots = txnLogFactory.findNRecentSnapshots(10);
         Assert.assertTrue("We have a snapshot to corrupt", snapshots.size() > 0);
-        for (File file: snapshots) {
+        for (File file : snapshots) {
             if (leaveEmptyFile) {
-                new PrintWriter(file).close ();
+                new PrintWriter(file).close();
             } else {
                 file.delete();
             }
         }
 
         if (trustEmptySnap) {
-          System.setProperty(FileTxnSnapLog.ZOOKEEPER_SNAPSHOT_TRUST_EMPTY, "true");
+            System.setProperty(FileTxnSnapLog.ZOOKEEPER_SNAPSHOT_TRUST_EMPTY, "true");
         }
 
         // start server again with corrupted database
@@ -115,7 +111,7 @@ public class EmptiedSnapshotRecoveryTest extends ZKTestCase implements  Watcher 
             }
         } finally {
             if (trustEmptySnap) {
-              System.clearProperty(FileTxnSnapLog.ZOOKEEPER_SNAPSHOT_TRUST_EMPTY);
+                System.clearProperty(FileTxnSnapLog.ZOOKEEPER_SNAPSHOT_TRUST_EMPTY);
             }
         }
 

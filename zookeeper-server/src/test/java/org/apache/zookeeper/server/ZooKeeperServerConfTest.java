@@ -16,18 +16,24 @@
  */
 package org.apache.zookeeper.server;
 
-import java.util.Map;
 import org.apache.zookeeper.ZKTestCase;
 import org.junit.Before;
 import org.junit.Test;
-import static org.junit.Assert.*;
+
+import java.util.Map;
+
+import static org.junit.Assert.assertEquals;
 
 public class ZooKeeperServerConfTest extends ZKTestCase {
     private ZooKeeperServerConf c;
-    @Before public void setUp() {
+
+    @Before
+    public void setUp() {
         c = new ZooKeeperServerConf(1, "a", "b", 2, 3, 4, 5, 6L);
     }
-    @Test public void testGetters() {
+
+    @Test
+    public void testGetters() {
         assertEquals(1, c.getClientPort());
         assertEquals("a", c.getDataDir());
         assertEquals("b", c.getDataLogDir());
@@ -37,7 +43,9 @@ public class ZooKeeperServerConfTest extends ZKTestCase {
         assertEquals(5, c.getMaxSessionTimeout());
         assertEquals(6L, c.getServerId());
     }
-    @Test public void testToMap() {
+
+    @Test
+    public void testToMap() {
         Map<String, Object> m = c.toMap();
         assertEquals(8, m.size());
         assertEquals(Integer.valueOf(1), m.get(ZooKeeperServerConf.KEY_CLIENT_PORT));

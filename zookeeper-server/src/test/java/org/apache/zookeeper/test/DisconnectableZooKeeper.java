@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,22 +18,20 @@
 
 package org.apache.zookeeper.test;
 
-import java.io.IOException;
-
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
 
+import java.io.IOException;
+
 public class DisconnectableZooKeeper extends ZooKeeper {
     public DisconnectableZooKeeper(String host, int sessionTimeout, Watcher watcher)
-        throws IOException
-    {
+            throws IOException {
         super(host, sessionTimeout, watcher);
     }
-    
+
     public DisconnectableZooKeeper(String host, int sessionTimeout, Watcher watcher,
-        long sessionId, byte[] sessionPasswd)
-        throws IOException
-    {
+                                   long sessionId, byte[] sessionPasswd)
+            throws IOException {
         super(host, sessionTimeout, watcher, sessionId, sessionPasswd);
     }
 

@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,17 +18,12 @@
 
 package org.apache.zookeeper.client;
 
-import static org.apache.zookeeper.client.ZKClientConfig.DISABLE_AUTO_WATCH_RESET;
-import static org.apache.zookeeper.client.ZKClientConfig.ENABLE_CLIENT_SASL_KEY;
-import static org.apache.zookeeper.client.ZKClientConfig.LOGIN_CONTEXT_NAME_KEY;
-import static org.apache.zookeeper.client.ZKClientConfig.SECURE_CLIENT;
-import static org.apache.zookeeper.client.ZKClientConfig.ZK_SASL_CLIENT_USERNAME;
-import static org.apache.zookeeper.client.ZKClientConfig.ZOOKEEPER_CLIENT_CNXN_SOCKET;
-import static org.apache.zookeeper.client.ZKClientConfig.ZOOKEEPER_SERVER_REALM;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import org.apache.zookeeper.common.ZKConfig;
+import org.apache.zookeeper.server.quorum.QuorumPeerConfig.ConfigException;
+import org.junit.BeforeClass;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.Timeout;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -39,15 +34,12 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.zookeeper.common.ZKConfig;
-import org.apache.zookeeper.server.quorum.QuorumPeerConfig.ConfigException;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import static org.apache.zookeeper.client.ZKClientConfig.*;
+import static org.junit.Assert.*;
 
 public class ZKClientConfigTest {
-    private static final File testData = new File(System.getProperty("test.data.dir", "src/test/resources/data"));
+    private static final File testData =
+            new File(System.getProperty("test.data.dir", "src/test/resources/data"));
     @Rule
     public Timeout timeout = new Timeout(10, TimeUnit.SECONDS);
 

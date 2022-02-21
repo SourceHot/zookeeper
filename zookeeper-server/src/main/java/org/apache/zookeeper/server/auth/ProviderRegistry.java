@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,23 +18,20 @@
 
 package org.apache.zookeeper.server.auth;
 
+import org.apache.zookeeper.server.ZooKeeperServer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.apache.zookeeper.server.ZooKeeperServer;
-
 public class ProviderRegistry {
-    private static final Logger LOG = LoggerFactory.getLogger(ProviderRegistry.class);
-
     public static final String AUTHPROVIDER_PROPERTY_PREFIX = "zookeeper.authProvider.";
-
+    private static final Logger LOG = LoggerFactory.getLogger(ProviderRegistry.class);
+    private static final Map<String, AuthenticationProvider> authenticationProviders =
+            new HashMap<>();
     private static boolean initialized = false;
-    private static final Map<String, AuthenticationProvider> authenticationProviders = new HashMap<>();
-
 
     public static void initialize() {
         synchronized (ProviderRegistry.class) {
@@ -52,11 +49,12 @@ public class ProviderRegistry {
                     try {
                         Class<?> c = ZooKeeperServer.class.getClassLoader()
                                 .loadClass(className);
-                        AuthenticationProvider ap = (AuthenticationProvider) c.getDeclaredConstructor()
-                                .newInstance();
+                        AuthenticationProvider ap =
+                                (AuthenticationProvider) c.getDeclaredConstructor()
+                                        .newInstance();
                         authenticationProviders.put(ap.getScheme(), ap);
                     } catch (Exception e) {
-                        LOG.warn("Problems loading " + className,e);
+                        LOG.warn("Problems loading " + className, e);
                     }
                 }
             }
@@ -65,14 +63,14 @@ public class ProviderRegistry {
     }
 
     public static AuthenticationProvider getProvider(String scheme) {
-        if(!initialized)
+        if (!initialized)
             initialize();
         return authenticationProviders.get(scheme);
     }
 
     public static String listProviders() {
         StringBuilder sb = new StringBuilder();
-        for(String s: authenticationProviders.keySet()) {
+        for (String s : authenticationProviders.keySet()) {
             sb.append(s + " ");
         }
         return sb.toString();

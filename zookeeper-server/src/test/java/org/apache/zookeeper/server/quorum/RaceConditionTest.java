@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,23 +17,10 @@
  */
 package org.apache.zookeeper.server.quorum;
 
-import static org.apache.zookeeper.test.ClientBase.CONNECTION_TIMEOUT;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
-import java.io.IOException;
-import java.net.SocketException;
-import java.nio.ByteBuffer;
-
 import org.apache.zookeeper.PortAssignment;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.common.X509Exception;
-import org.apache.zookeeper.server.FinalRequestProcessor;
-import org.apache.zookeeper.server.PrepRequestProcessor;
-import org.apache.zookeeper.server.Request;
-import org.apache.zookeeper.server.RequestProcessor;
-import org.apache.zookeeper.server.SyncRequestProcessor;
-import org.apache.zookeeper.server.ZooKeeperServer;
+import org.apache.zookeeper.server.*;
 import org.apache.zookeeper.server.persistence.FileTxnSnapLog;
 import org.apache.zookeeper.server.quorum.QuorumPeer.ServerState;
 import org.apache.zookeeper.test.ClientBase;
@@ -44,6 +31,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.security.sasl.SaslException;
+import java.io.IOException;
+import java.net.SocketException;
+import java.nio.ByteBuffer;
+
+import static org.apache.zookeeper.test.ClientBase.CONNECTION_TIMEOUT;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * This test class contains test cases related to race condition in complete
@@ -111,7 +105,8 @@ public class RaceConditionTest extends QuorumPeerTestBase {
 
         for (int i = 0; i < SERVER_COUNT; i++) {
             clientPorts[i] = PortAssignment.unique();
-            server = "server." + i + "=127.0.0.1:" + PortAssignment.unique() + ":" + PortAssignment.unique()
+            server = "server." + i + "=127.0.0.1:" + PortAssignment.unique() + ":"
+                    + PortAssignment.unique()
                     + ":participant;127.0.0.1:" + clientPorts[i];
             sb.append(server + "\n");
         }
@@ -169,12 +164,14 @@ public class RaceConditionTest extends QuorumPeerTestBase {
         @Override
         protected Follower makeFollower(FileTxnSnapLog logFactory) throws IOException {
 
-            return new Follower(this, new FollowerZooKeeperServer(logFactory, this, this.getZkDb())) {
+            return new Follower(this,
+                    new FollowerZooKeeperServer(logFactory, this, this.getZkDb())) {
                 @Override
                 protected void processPacket(QuorumPacket qp) throws Exception {
                     if (stopPing && qp.getType() == Leader.PING) {
                         LOG.info("Follower skipped ping");
-                        throw new SocketException("Socket time out while sending the ping response");
+                        throw new SocketException(
+                                "Socket time out while sending the ping response");
                     } else {
                         super.processPacket(qp);
                     }
@@ -192,13 +189,17 @@ public class RaceConditionTest extends QuorumPeerTestBase {
                      * MockSyncRequestProcessor
                      */
                     RequestProcessor finalProcessor = new FinalRequestProcessor(this);
-                    RequestProcessor toBeAppliedProcessor = new Leader.ToBeAppliedRequestProcessor(finalProcessor,
-                            getLeader());
-                    commitProcessor = new CommitProcessor(toBeAppliedProcessor, Long.toString(getServerId()), false,
-                            getZooKeeperServerListener());
+                    RequestProcessor toBeAppliedProcessor =
+                            new Leader.ToBeAppliedRequestProcessor(finalProcessor,
+                                    getLeader());
+                    commitProcessor =
+                            new CommitProcessor(toBeAppliedProcessor, Long.toString(getServerId()),
+                                    false,
+                                    getZooKeeperServerListener());
                     commitProcessor.start();
-                    ProposalRequestProcessor proposalProcessor = new MockProposalRequestProcessor(this,
-                            commitProcessor);
+                    ProposalRequestProcessor proposalProcessor =
+                            new MockProposalRequestProcessor(this,
+                                    commitProcessor);
                     proposalProcessor.initialize();
                     prepRequestProcessor = new PrepRequestProcessor(this, proposalProcessor);
                     prepRequestProcessor.start();
@@ -209,6 +210,7 @@ public class RaceConditionTest extends QuorumPeerTestBase {
             return new Leader(this, zk);
         }
     }
+
 
     private static class MockSyncRequestProcessor extends SyncRequestProcessor {
 
@@ -229,8 +231,10 @@ public class RaceConditionTest extends QuorumPeerTestBase {
         }
     }
 
+
     private static class MockProposalRequestProcessor extends ProposalRequestProcessor {
-        public MockProposalRequestProcessor(LeaderZooKeeperServer zks, RequestProcessor nextProcessor) {
+        public MockProposalRequestProcessor(LeaderZooKeeperServer zks,
+                                            RequestProcessor nextProcessor) {
             super(zks, nextProcessor);
 
             /**
@@ -241,6 +245,7 @@ public class RaceConditionTest extends QuorumPeerTestBase {
             syncProcessor = new MockSyncRequestProcessor(zks, ackProcessor);
         }
     }
+
 
     private static class MockTestQPMain extends TestQPMain {
 

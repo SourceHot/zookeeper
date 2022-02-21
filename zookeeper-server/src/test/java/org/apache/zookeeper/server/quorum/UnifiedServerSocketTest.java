@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,14 +17,21 @@
  */
 package org.apache.zookeeper.server.quorum;
 
+import org.apache.zookeeper.PortAssignment;
+import org.apache.zookeeper.common.*;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+
+import javax.net.ssl.HandshakeCompletedEvent;
+import javax.net.ssl.HandshakeCompletedListener;
+import javax.net.ssl.SSLSocket;
 import java.io.BufferedInputStream;
 import java.io.IOException;
-import java.net.ConnectException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.SocketException;
+import java.net.*;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -33,27 +40,36 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import javax.net.ssl.HandshakeCompletedEvent;
-import javax.net.ssl.HandshakeCompletedListener;
-import javax.net.ssl.SSLSocket;
-
-import org.apache.zookeeper.PortAssignment;
-import org.apache.zookeeper.common.BaseX509ParameterizedTestCase;
-import org.apache.zookeeper.common.ClientX509Util;
-import org.apache.zookeeper.common.KeyStoreFileType;
-import org.apache.zookeeper.common.X509Exception;
-import org.apache.zookeeper.common.X509KeyType;
-import org.apache.zookeeper.common.X509TestContext;
-import org.apache.zookeeper.common.X509Util;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
 @RunWith(Parameterized.class)
 public class UnifiedServerSocketTest extends BaseX509ParameterizedTestCase {
+
+    private static final int MAX_RETRIES = 5;
+    private static final int TIMEOUT = 1000;
+    private static final byte[] DATA_TO_CLIENT = "hello client".getBytes();
+    private static final byte[] DATA_FROM_CLIENT = "hello server".getBytes();
+    private final Object handshakeCompletedLock = new Object();
+    private X509Util x509Util;
+    private InetSocketAddress localServerAddress;
+    // access only inside synchronized(handshakeCompletedLock) { ... } blocks
+    private boolean handshakeCompleted = false;
+    public UnifiedServerSocketTest(
+            final X509KeyType caKeyType,
+            final X509KeyType certKeyType,
+            final Boolean hostnameVerification,
+            final Integer paramIndex) {
+        super(paramIndex, () -> {
+            try {
+                return X509TestContext.newBuilder()
+                        .setTempDir(tempDir)
+                        .setKeyStoreKeyType(certKeyType)
+                        .setTrustStoreKeyType(caKeyType)
+                        .setHostnameVerification(hostnameVerification)
+                        .build();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
 
     @Parameterized.Parameters
     public static Collection<Object[]> params() {
@@ -61,8 +77,8 @@ public class UnifiedServerSocketTest extends BaseX509ParameterizedTestCase {
         int paramIndex = 0;
         for (X509KeyType caKeyType : X509KeyType.values()) {
             for (X509KeyType certKeyType : X509KeyType.values()) {
-                for (Boolean hostnameVerification : new Boolean[] { true, false  }) {
-                    result.add(new Object[]{
+                for (Boolean hostnameVerification : new Boolean[] {true, false}) {
+                    result.add(new Object[] {
                             caKeyType,
                             certKeyType,
                             hostnameVerification,
@@ -72,49 +88,6 @@ public class UnifiedServerSocketTest extends BaseX509ParameterizedTestCase {
             }
         }
         return result;
-    }
-
-    private static final int MAX_RETRIES = 5;
-    private static final int TIMEOUT = 1000;
-    private static final byte[] DATA_TO_CLIENT = "hello client".getBytes();
-    private static final byte[] DATA_FROM_CLIENT = "hello server".getBytes();
-
-    private X509Util x509Util;
-    private InetSocketAddress localServerAddress;
-    private final Object handshakeCompletedLock = new Object();
-    // access only inside synchronized(handshakeCompletedLock) { ... } blocks
-    private boolean handshakeCompleted = false;
-
-    public UnifiedServerSocketTest(
-            final X509KeyType caKeyType,
-            final X509KeyType certKeyType,
-            final Boolean hostnameVerification,
-            final Integer paramIndex) {
-        super(paramIndex, () -> {
-            try {
-                return X509TestContext.newBuilder()
-                    .setTempDir(tempDir)
-                    .setKeyStoreKeyType(certKeyType)
-                    .setTrustStoreKeyType(caKeyType)
-                    .setHostnameVerification(hostnameVerification)
-                    .build();
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        });
-    }
-
-    @Before
-    public void setUp() throws Exception {
-        localServerAddress = new InetSocketAddress(InetAddress.getLoopbackAddress(), PortAssignment.unique());
-        x509Util = new ClientX509Util();
-        x509TestContext.setSystemProperties(x509Util, KeyStoreFileType.JKS, KeyStoreFileType.JKS);
-    }
-
-    @After
-    public void tearDown() throws Exception {
-        x509TestContext.clearSystemProperties(x509Util);
-        x509Util.close();
     }
 
     private static void forceClose(Socket s) {
@@ -137,85 +110,18 @@ public class UnifiedServerSocketTest extends BaseX509ParameterizedTestCase {
         }
     }
 
-    private static final class UnifiedServerThread extends Thread {
-        private final byte[] dataToClient;
-        private List<byte[]> dataFromClients;
-        private ExecutorService workerPool;
-        private UnifiedServerSocket serverSocket;
+    @Before
+    public void setUp() throws Exception {
+        localServerAddress =
+                new InetSocketAddress(InetAddress.getLoopbackAddress(), PortAssignment.unique());
+        x509Util = new ClientX509Util();
+        x509TestContext.setSystemProperties(x509Util, KeyStoreFileType.JKS, KeyStoreFileType.JKS);
+    }
 
-        UnifiedServerThread(X509Util x509Util,
-                            InetSocketAddress bindAddress,
-                            boolean allowInsecureConnection,
-                            byte[] dataToClient) throws IOException {
-            this.dataToClient = dataToClient;
-            dataFromClients = new ArrayList<>();
-            workerPool = Executors.newCachedThreadPool();
-            serverSocket = new UnifiedServerSocket(x509Util, allowInsecureConnection);
-            serverSocket.bind(bindAddress);
-        }
-
-        @Override
-        public void run() {
-            try {
-                Random rnd = new Random();
-                while (true) {
-                    final Socket unifiedSocket = serverSocket.accept();
-                    final boolean tcpNoDelay = rnd.nextBoolean();
-                    unifiedSocket.setTcpNoDelay(tcpNoDelay);
-                    unifiedSocket.setSoTimeout(TIMEOUT);
-                    final boolean keepAlive = rnd.nextBoolean();
-                    unifiedSocket.setKeepAlive(keepAlive);
-                    // Note: getting the input stream should not block the thread or trigger mode detection.
-                    BufferedInputStream bis = new BufferedInputStream(unifiedSocket.getInputStream());
-                    workerPool.submit(new Runnable() {
-                        @Override
-                        public void run() {
-                            try {
-                                byte[] buf = new byte[1024];
-                                int bytesRead = unifiedSocket.getInputStream().read(buf, 0, 1024);
-                                // Make sure the settings applied above before the socket was potentially upgraded to
-                                // TLS still apply.
-                                Assert.assertEquals(tcpNoDelay, unifiedSocket.getTcpNoDelay());
-                                Assert.assertEquals(TIMEOUT, unifiedSocket.getSoTimeout());
-                                Assert.assertEquals(keepAlive, unifiedSocket.getKeepAlive());
-                                if (bytesRead > 0) {
-                                    byte[] dataFromClient = new byte[bytesRead];
-                                    System.arraycopy(buf, 0, dataFromClient, 0, bytesRead);
-                                    synchronized (dataFromClients) {
-                                        dataFromClients.add(dataFromClient);
-                                    }
-                                }
-                                unifiedSocket.getOutputStream().write(dataToClient);
-                                unifiedSocket.getOutputStream().flush();
-                            } catch (IOException e) {
-                                throw new RuntimeException(e);
-                            } finally {
-                                forceClose(unifiedSocket);
-                            }
-                        }
-                    });
-                }
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            } finally {
-                forceClose(serverSocket);
-                workerPool.shutdown();
-            }
-        }
-
-        public void shutdown(long millis) throws InterruptedException {
-            forceClose(serverSocket); // this should break the run() loop
-            workerPool.awaitTermination(millis, TimeUnit.MILLISECONDS);
-            this.join(millis);
-        }
-
-        synchronized byte[] getDataFromClient(int index) {
-            return dataFromClients.get(index);
-        }
-
-        synchronized boolean receivedAnyDataFromClient() {
-            return !dataFromClients.isEmpty();
-        }
+    @After
+    public void tearDown() throws Exception {
+        x509TestContext.clearSystemProperties(x509Util);
+        x509Util.close();
     }
 
     private SSLSocket connectWithSSL() throws IOException, X509Exception, InterruptedException {
@@ -270,11 +176,6 @@ public class UnifiedServerSocketTest extends BaseX509ParameterizedTestCase {
         return socket;
     }
 
-    // In the tests below, a "Strict" server means a UnifiedServerSocket that
-    // does not allow plaintext connections (in other words, it's SSL-only).
-    // A "Non Strict" server means a UnifiedServerSocket that allows both
-    // plaintext and SSL incoming connections.
-
     /**
      * Attempting to connect to a SSL-or-plaintext server with SSL should work.
      */
@@ -305,6 +206,11 @@ public class UnifiedServerSocketTest extends BaseX509ParameterizedTestCase {
             serverThread.shutdown(TIMEOUT);
         }
     }
+
+    // In the tests below, a "Strict" server means a UnifiedServerSocket that
+    // does not allow plaintext connections (in other words, it's SSL-only).
+    // A "Non Strict" server means a UnifiedServerSocket that allows both
+    // plaintext and SSL incoming connections.
 
     /**
      * Attempting to connect to a SSL-only server with SSL should work.
@@ -410,7 +316,7 @@ public class UnifiedServerSocketTest extends BaseX509ParameterizedTestCase {
         byte[] buf = new byte[DATA_TO_CLIENT.length];
         try {
             int bytesRead = socket.getInputStream().read(buf, 0, buf.length);
-            if(bytesRead == -1) {
+            if (bytesRead == -1) {
                 // Using the NioSocketImpl after JDK 13, the expected behaviour on the client side
                 // is to reach the end of the stream (bytesRead == -1), without a socket exception.
                 return;
@@ -425,9 +331,10 @@ public class UnifiedServerSocketTest extends BaseX509ParameterizedTestCase {
             // independently of the client socket implementation details, we always make sure the
             // server didn't receive any data during the test
             Assert.assertFalse("The strict server accepted connection without SSL.",
-                               serverThread.receivedAnyDataFromClient());
+                    serverThread.receivedAnyDataFromClient());
         }
-        Assert.fail("Expected server to hang up the connection. Read from server succeeded unexpectedly.");
+        Assert.fail(
+                "Expected server to hang up the connection. Read from server succeeded unexpectedly.");
     }
 
     /**
@@ -610,6 +517,89 @@ public class UnifiedServerSocketTest extends BaseX509ParameterizedTestCase {
         } finally {
             forceClose(secureClientSocket);
             serverThread.shutdown(TIMEOUT);
+        }
+    }
+
+
+    private static final class UnifiedServerThread extends Thread {
+        private final byte[] dataToClient;
+        private List<byte[]> dataFromClients;
+        private ExecutorService workerPool;
+        private UnifiedServerSocket serverSocket;
+
+        UnifiedServerThread(X509Util x509Util,
+                            InetSocketAddress bindAddress,
+                            boolean allowInsecureConnection,
+                            byte[] dataToClient) throws IOException {
+            this.dataToClient = dataToClient;
+            dataFromClients = new ArrayList<>();
+            workerPool = Executors.newCachedThreadPool();
+            serverSocket = new UnifiedServerSocket(x509Util, allowInsecureConnection);
+            serverSocket.bind(bindAddress);
+        }
+
+        @Override
+        public void run() {
+            try {
+                Random rnd = new Random();
+                while (true) {
+                    final Socket unifiedSocket = serverSocket.accept();
+                    final boolean tcpNoDelay = rnd.nextBoolean();
+                    unifiedSocket.setTcpNoDelay(tcpNoDelay);
+                    unifiedSocket.setSoTimeout(TIMEOUT);
+                    final boolean keepAlive = rnd.nextBoolean();
+                    unifiedSocket.setKeepAlive(keepAlive);
+                    // Note: getting the input stream should not block the thread or trigger mode detection.
+                    BufferedInputStream bis =
+                            new BufferedInputStream(unifiedSocket.getInputStream());
+                    workerPool.submit(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                byte[] buf = new byte[1024];
+                                int bytesRead = unifiedSocket.getInputStream().read(buf, 0, 1024);
+                                // Make sure the settings applied above before the socket was potentially upgraded to
+                                // TLS still apply.
+                                Assert.assertEquals(tcpNoDelay, unifiedSocket.getTcpNoDelay());
+                                Assert.assertEquals(TIMEOUT, unifiedSocket.getSoTimeout());
+                                Assert.assertEquals(keepAlive, unifiedSocket.getKeepAlive());
+                                if (bytesRead > 0) {
+                                    byte[] dataFromClient = new byte[bytesRead];
+                                    System.arraycopy(buf, 0, dataFromClient, 0, bytesRead);
+                                    synchronized (dataFromClients) {
+                                        dataFromClients.add(dataFromClient);
+                                    }
+                                }
+                                unifiedSocket.getOutputStream().write(dataToClient);
+                                unifiedSocket.getOutputStream().flush();
+                            } catch (IOException e) {
+                                throw new RuntimeException(e);
+                            } finally {
+                                forceClose(unifiedSocket);
+                            }
+                        }
+                    });
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            } finally {
+                forceClose(serverSocket);
+                workerPool.shutdown();
+            }
+        }
+
+        public void shutdown(long millis) throws InterruptedException {
+            forceClose(serverSocket); // this should break the run() loop
+            workerPool.awaitTermination(millis, TimeUnit.MILLISECONDS);
+            this.join(millis);
+        }
+
+        synchronized byte[] getDataFromClient(int index) {
+            return dataFromClients.get(index);
+        }
+
+        synchronized boolean receivedAnyDataFromClient() {
+            return !dataFromClients.isEmpty();
         }
     }
 }

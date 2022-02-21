@@ -20,7 +20,7 @@ package org.apache.zookeeper.server;
 
 /**
  * See https://issues.apache.org/jira/browse/ZOOKEEPER-2901
- *
+ * <p>
  * version 3.5.3 introduced bugs associated with how TTL nodes were implemented. version 3.5.4
  * fixes the problems but makes TTL nodes created in 3.5.3 invalid. EphemeralTypeEmulate353 is a copy
  * of the old - bad - implementation that is provided as a workaround. {@link EphemeralType#TTL_3_5_3_EMULATION_PROPERTY}
@@ -60,7 +60,8 @@ public enum EphemeralTypeEmulate353 {
 
     public static long ttlToEphemeralOwner(long ttl) {
         if ((ttl > MAX_TTL) || (ttl <= 0)) {
-            throw new IllegalArgumentException("ttl must be positive and cannot be larger than: " + MAX_TTL);
+            throw new IllegalArgumentException(
+                    "ttl must be positive and cannot be larger than: " + MAX_TTL);
         }
         return TTL_MASK | ttl;
     }

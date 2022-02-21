@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,13 +17,6 @@
  */
 
 package org.apache.zookeeper.server.auth;
-
-import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
-
-import javax.net.ssl.X509KeyManager;
-import javax.net.ssl.X509TrustManager;
-import javax.security.auth.x500.X500Principal;
 
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.common.ClientX509Util;
@@ -36,6 +29,12 @@ import org.apache.zookeeper.data.Id;
 import org.apache.zookeeper.server.ServerCnxn;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.net.ssl.X509KeyManager;
+import javax.net.ssl.X509TrustManager;
+import javax.security.auth.x500.X500Principal;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 
 /**
  * An AuthenticationProvider backed by an X509TrustManager and an X509KeyManager
@@ -69,12 +68,16 @@ public class X509AuthenticationProvider implements AuthenticationProvider {
     public X509AuthenticationProvider() throws X509Exception {
         ZKConfig config = new ZKConfig();
         try (X509Util x509Util = new ClientX509Util()) {
-            String keyStoreLocation = config.getProperty(x509Util.getSslKeystoreLocationProperty(), "");
-            String keyStorePassword = config.getProperty(x509Util.getSslKeystorePasswdProperty(), "");
+            String keyStoreLocation =
+                    config.getProperty(x509Util.getSslKeystoreLocationProperty(), "");
+            String keyStorePassword =
+                    config.getProperty(x509Util.getSslKeystorePasswdProperty(), "");
             String keyStoreTypeProp = config.getProperty(x509Util.getSslKeystoreTypeProperty());
 
-            boolean crlEnabled = Boolean.parseBoolean(config.getProperty(x509Util.getSslCrlEnabledProperty()));
-            boolean ocspEnabled = Boolean.parseBoolean(config.getProperty(x509Util.getSslOcspEnabledProperty()));
+            boolean crlEnabled =
+                    Boolean.parseBoolean(config.getProperty(x509Util.getSslCrlEnabledProperty()));
+            boolean ocspEnabled =
+                    Boolean.parseBoolean(config.getProperty(x509Util.getSslOcspEnabledProperty()));
             boolean hostnameVerificationEnabled = Boolean.parseBoolean(
                     config.getProperty(x509Util.getSslHostnameVerificationEnabledProperty()));
 
@@ -84,14 +87,17 @@ public class X509AuthenticationProvider implements AuthenticationProvider {
                 LOG.warn("keystore not specified for client connection");
             } else {
                 try {
-                    km = X509Util.createKeyManager(keyStoreLocation, keyStorePassword, keyStoreTypeProp);
+                    km = X509Util.createKeyManager(keyStoreLocation, keyStorePassword,
+                            keyStoreTypeProp);
                 } catch (KeyManagerException e) {
                     LOG.error("Failed to create key manager", e);
                 }
             }
 
-            String trustStoreLocation = config.getProperty(x509Util.getSslTruststoreLocationProperty(), "");
-            String trustStorePassword = config.getProperty(x509Util.getSslTruststorePasswdProperty(), "");
+            String trustStoreLocation =
+                    config.getProperty(x509Util.getSslTruststoreLocationProperty(), "");
+            String trustStorePassword =
+                    config.getProperty(x509Util.getSslTruststorePasswdProperty(), "");
             String trustStoreTypeProp = config.getProperty(x509Util.getSslTruststoreTypeProperty());
 
             if (trustStoreLocation.isEmpty()) {
@@ -99,7 +105,8 @@ public class X509AuthenticationProvider implements AuthenticationProvider {
             } else {
                 try {
                     tm = X509Util.createTrustManager(
-                            trustStoreLocation, trustStorePassword, trustStoreTypeProp, crlEnabled, ocspEnabled,
+                            trustStoreLocation, trustStorePassword, trustStoreTypeProp, crlEnabled,
+                            ocspEnabled,
                             hostnameVerificationEnabled, false);
                 } catch (TrustManagerException e) {
                     LOG.error("Failed to create trust manager", e);

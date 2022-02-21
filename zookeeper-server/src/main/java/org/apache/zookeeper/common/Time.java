@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -27,7 +27,7 @@ public class Time {
      * The difference is that if somebody changes the system clock,
      * Time.currentElapsedTime will change but nanoTime won't. On the other hand,
      * all of ZK assumes that time is measured in milliseconds.
-     * @return  The time in milliseconds from some arbitrary point in time.
+     * @return The time in milliseconds from some arbitrary point in time.
      */
     public static long currentElapsedTime() {
         return System.nanoTime() / 1000000;

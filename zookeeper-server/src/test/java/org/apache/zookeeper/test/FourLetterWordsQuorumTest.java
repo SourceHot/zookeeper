@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,21 +18,20 @@
 
 package org.apache.zookeeper.test;
 
-import java.io.IOException;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.zookeeper.TestableZooKeeper;
 import org.apache.zookeeper.common.X509Exception.SSLContextException;
+import org.junit.Assert;
+import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
 
 import static org.apache.zookeeper.client.FourLetterWordMain.send4LetterWord;
 
-import org.junit.Assert;
-import org.junit.Test;
-
 public class FourLetterWordsQuorumTest extends QuorumBase {
     protected static final Logger LOG =
-        LoggerFactory.getLogger(FourLetterWordsQuorumTest.class);
+            LoggerFactory.getLogger(FourLetterWordsQuorumTest.class);
 
     /** Test the various four letter words */
     @Test
@@ -103,9 +102,8 @@ public class FourLetterWordsQuorumTest extends QuorumBase {
     }
 
     private void verify(String hp, String cmd, String expected)
-        throws IOException, SSLContextException
-    {
-        for(HostPort hpobj: parseHostPortList(hp)) {
+            throws IOException, SSLContextException {
+        for (HostPort hpobj : parseHostPortList(hp)) {
             String resp = send4LetterWord(hpobj.host, hpobj.port, cmd);
             LOG.info("cmd " + cmd + " expected " + expected + " got " + resp);
             if (cmd.equals("dump")) {

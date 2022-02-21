@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -41,9 +41,8 @@ import java.io.File;
 import java.io.IOException;
 
 public class LoadFromLogTest extends ClientBase {
-    private static final int NUM_MESSAGES = 300;
     protected static final Logger LOG = LoggerFactory.getLogger(LoadFromLogTest.class);
-
+    private static final int NUM_MESSAGES = 300;
     // setting up the quorum has a transaction overhead for creating and closing the session
     private static final int TRANSACTION_OVERHEAD = 2;
     private static final int TOTAL_TRANSACTIONS = NUM_MESSAGES + TRANSACTION_OVERHEAD;
@@ -63,7 +62,7 @@ public class LoadFromLogTest extends ClientBase {
         // generate some transactions that will get logged
         ZooKeeper zk = createZKClient(hostPort);
         try {
-            for (int i = 0; i< NUM_MESSAGES; i++) {
+            for (int i = 0; i < NUM_MESSAGES; i++) {
                 zk.create("/invalidsnap-" + i, new byte[0], Ids.OPEN_ACL_UNSAFE,
                         CreateMode.PERSISTENT);
             }
@@ -76,26 +75,32 @@ public class LoadFromLogTest extends ClientBase {
         File logDir = new File(tmpDir, FileTxnSnapLog.version + FileTxnSnapLog.VERSION);
         FileTxnLog txnLog = new FileTxnLog(logDir);
         TxnIterator itr = txnLog.read(0);
-        
+
         // Check that storage space return some value
         FileTxnIterator fileItr = (FileTxnIterator) itr;
         long storageSize = fileItr.getStorageSize();
         LOG.info("Txnlog size: " + storageSize + " bytes");
         Assert.assertTrue("Storage size is greater than zero ",
                 (storageSize > 0));
-        
+
         long expectedZxid = 0;
         long lastZxid = 0;
         TxnHeader hdr;
         do {
             hdr = itr.getHeader();
             expectedZxid++;
-            Assert.assertTrue("not the same transaction. lastZxid=" + lastZxid + ", zxid=" + hdr.getZxid(), lastZxid != hdr.getZxid());
-            Assert.assertTrue("excepting next transaction. expected=" + expectedZxid + ", retreived=" + hdr.getZxid(), (hdr.getZxid() == expectedZxid));
+            Assert.assertTrue(
+                    "not the same transaction. lastZxid=" + lastZxid + ", zxid=" + hdr.getZxid(),
+                    lastZxid != hdr.getZxid());
+            Assert.assertTrue(
+                    "excepting next transaction. expected=" + expectedZxid + ", retreived="
+                            + hdr.getZxid(), (hdr.getZxid() == expectedZxid));
             lastZxid = hdr.getZxid();
-        }while(itr.next());
+        } while (itr.next());
 
-        Assert.assertTrue("processed all transactions. " + expectedZxid + " == " + TOTAL_TRANSACTIONS, (expectedZxid == TOTAL_TRANSACTIONS));
+        Assert.assertTrue(
+                "processed all transactions. " + expectedZxid + " == " + TOTAL_TRANSACTIONS,
+                (expectedZxid == TOTAL_TRANSACTIONS));
     }
 
     /**
@@ -108,7 +113,7 @@ public class LoadFromLogTest extends ClientBase {
         // generate some transactions that will get logged
         ZooKeeper zk = createZKClient(hostPort);
         try {
-            for (int i = 0; i< NUM_MESSAGES; i++) {
+            for (int i = 0; i < NUM_MESSAGES; i++) {
                 zk.create("/data-", new byte[0], Ids.OPEN_ACL_UNSAFE,
                         CreateMode.PERSISTENT_SEQUENTIAL);
             }
@@ -234,7 +239,7 @@ public class LoadFromLogTest extends ClientBase {
                 try {
                     zk.create("/invaliddir/test-", new byte[0],
                             Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT_SEQUENTIAL);
-                } catch(NoNodeException e) {
+                } catch (NoNodeException e) {
                     //Expected
                 }
             }
@@ -275,7 +280,7 @@ public class LoadFromLogTest extends ClientBase {
             LOG.info("Server failed to start - correct behavior " + e);
         } finally {
             System.setProperty(FileTxnSnapLog.ZOOKEEPER_DATADIR_AUTOCREATE,
-                FileTxnSnapLog.ZOOKEEPER_DATADIR_AUTOCREATE_DEFAULT);
+                    FileTxnSnapLog.ZOOKEEPER_DATADIR_AUTOCREATE_DEFAULT);
         }
     }
 

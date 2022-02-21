@@ -18,48 +18,35 @@
 
 package org.apache.zookeeper.test;
 
-import static org.apache.zookeeper.client.ZKClientConfig.ENABLE_CLIENT_SASL_KEY;
-import static org.apache.zookeeper.client.ZKClientConfig.LOGIN_CONTEXT_NAME_KEY;
-import static org.apache.zookeeper.client.ZKClientConfig.ZK_SASL_CLIENT_USERNAME;
-import static org.apache.zookeeper.client.ZKClientConfig.ZOOKEEPER_SERVER_PRINCIPAL;
-import static org.apache.zookeeper.client.ZKClientConfig.ZOOKEEPER_SERVER_REALM;
-import static org.junit.Assert.fail;
+import org.apache.commons.io.FileUtils;
+import org.apache.zookeeper.*;
+import org.apache.zookeeper.ZooDefs.Ids;
+import org.apache.zookeeper.client.ZKClientConfig;
+import org.apache.zookeeper.common.ClientX509Util;
+import org.apache.zookeeper.server.ServerCnxnFactory;
+import org.apache.zookeeper.server.quorum.auth.KerberosTestUtils;
+import org.apache.zookeeper.server.quorum.auth.MiniKdc;
+import org.junit.*;
+
+import javax.security.auth.login.Configuration;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.util.Properties;
-import javax.security.auth.login.Configuration;
-import org.apache.commons.io.FileUtils;
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.Environment;
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.PortAssignment;
-import org.apache.zookeeper.ZooDefs.Ids;
-import org.apache.zookeeper.ZooKeeper;
-import org.apache.zookeeper.client.ZKClientConfig;
-import org.apache.zookeeper.common.ClientX509Util;
-import org.apache.zookeeper.server.ServerCnxnFactory;
-import org.apache.zookeeper.server.quorum.auth.KerberosTestUtils;
-import org.apache.zookeeper.server.quorum.auth.MiniKdc;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+
+import static org.apache.zookeeper.client.ZKClientConfig.*;
+import static org.junit.Assert.fail;
 
 public class SaslKerberosAuthOverSSLTest extends ClientBase {
-
-    private ClientX509Util clientX509Util;
-    private File keytabFileForKerberosPrincipals;
-    private File saslConfFile;
 
     private static MiniKdc kdc;
     private static File kdcWorkDir;
     private static Properties conf;
-
-
+    private ClientX509Util clientX509Util;
+    private File keytabFileForKerberosPrincipals;
+    private File saslConfFile;
 
     @BeforeClass
     public static void setupKdc() {
@@ -72,7 +59,25 @@ public class SaslKerberosAuthOverSSLTest extends ClientBase {
         FileUtils.deleteQuietly(kdcWorkDir);
     }
 
+    public static void startMiniKdc() {
+        try {
+            kdcWorkDir = createEmptyTestDir();
+            conf = MiniKdc.createConf();
+            conf.setProperty("debug", "true");
 
+            kdc = new MiniKdc(conf, kdcWorkDir);
+            kdc.start();
+        } catch (Exception e) {
+            throw new RuntimeException("failed to start MiniKdc", e);
+        }
+
+    }
+
+    public static void stopMiniKdc() {
+        if (kdc != null) {
+            kdc.stop();
+        }
+    }
 
     @Before
     @Override
@@ -90,7 +95,6 @@ public class SaslKerberosAuthOverSSLTest extends ClientBase {
         super.setUp();
     }
 
-
     @After
     @Override
     public void tearDown() throws Exception {
@@ -98,7 +102,6 @@ public class SaslKerberosAuthOverSSLTest extends ClientBase {
         clearSslSetting(clientX509Util);
         clearSaslConfig();
     }
-
 
     @Test
     public void testAuth() throws Exception {
@@ -112,7 +115,6 @@ public class SaslKerberosAuthOverSSLTest extends ClientBase {
             zk.close();
         }
     }
-
 
     public void initSaslConfig() throws Exception {
 
@@ -131,7 +133,8 @@ public class SaslKerberosAuthOverSSLTest extends ClientBase {
         System.setProperty(LOGIN_CONTEXT_NAME_KEY, "ClientUsingKerberos");
 
         // server side SASL config
-        System.setProperty("zookeeper.authProvider.1", "org.apache.zookeeper.server.auth.SASLAuthenticationProvider");
+        System.setProperty("zookeeper.authProvider.1",
+                "org.apache.zookeeper.server.auth.SASLAuthenticationProvider");
 
         // generating the SASL config to use (contains sections both for the client and the server)
         // note: we use "refreshKrb5Config=true" to refresh the kerberos config in the JVM,
@@ -149,7 +152,8 @@ public class SaslKerberosAuthOverSSLTest extends ClientBase {
             saslConf.println("  doNotPrompt=\"true\"");
             saslConf.println("  debug=\"true\"");
             saslConf.println("  refreshKrb5Config=\"true\"");
-            saslConf.println("  keyTab=\"" + keytabFileForKerberosPrincipals.getAbsolutePath() + "\"");
+            saslConf.println(
+                    "  keyTab=\"" + keytabFileForKerberosPrincipals.getAbsolutePath() + "\"");
             saslConf.println("  principal=\"" + KerberosTestUtils.getServerPrincipal() + "\";");
             saslConf.println("};");
             saslConf.println("ClientUsingKerberos {");
@@ -160,14 +164,16 @@ public class SaslKerberosAuthOverSSLTest extends ClientBase {
             saslConf.println("  doNotPrompt=\"true\"");
             saslConf.println("  debug=\"true\"");
             saslConf.println("  refreshKrb5Config=\"true\"");
-            saslConf.println("  keyTab=\"" + keytabFileForKerberosPrincipals.getAbsolutePath() + "\"");
+            saslConf.println(
+                    "  keyTab=\"" + keytabFileForKerberosPrincipals.getAbsolutePath() + "\"");
             saslConf.println("  principal=\"" + KerberosTestUtils.getClientPrincipal() + "\";");
             saslConf.println("};");
             saslConf.close();
             System.setProperty(Environment.JAAS_CONF_KEY, saslConfFile.getAbsolutePath());
 
         } catch (IOException e) {
-            LOG.error("could not create tmp directory to hold JAAS conf file, test will fail...", e);
+            LOG.error("could not create tmp directory to hold JAAS conf file, test will fail...",
+                    e);
         }
 
         // refresh the SASL configuration in this JVM (making sure that we use the latest config
@@ -190,16 +196,20 @@ public class SaslKerberosAuthOverSSLTest extends ClientBase {
 
     public ClientX509Util setUpSSLWithNoAuth() {
         String testDataPath = System.getProperty("test.data.dir", "src/test/resources/data");
-        System.setProperty(ServerCnxnFactory.ZOOKEEPER_SERVER_CNXN_FACTORY, "org.apache.zookeeper.server.NettyServerCnxnFactory");
-        System.setProperty(ZKClientConfig.ZOOKEEPER_CLIENT_CNXN_SOCKET, "org.apache.zookeeper.ClientCnxnSocketNetty");
+        System.setProperty(ServerCnxnFactory.ZOOKEEPER_SERVER_CNXN_FACTORY,
+                "org.apache.zookeeper.server.NettyServerCnxnFactory");
+        System.setProperty(ZKClientConfig.ZOOKEEPER_CLIENT_CNXN_SOCKET,
+                "org.apache.zookeeper.ClientCnxnSocketNetty");
         System.setProperty(ZKClientConfig.SECURE_CLIENT, "true");
         System.setProperty("zookeeper.ssl.clientAuth", "none");
         System.setProperty("zookeeper.ssl.quorum.clientAuth", "none");
 
         ClientX509Util x509Util = new ClientX509Util();
-        System.setProperty(x509Util.getSslTruststoreLocationProperty(), testDataPath + "/ssl/testTrustStore.jks");
+        System.setProperty(x509Util.getSslTruststoreLocationProperty(),
+                testDataPath + "/ssl/testTrustStore.jks");
         System.setProperty(x509Util.getSslTruststorePasswdProperty(), "testpass");
-        System.setProperty(x509Util.getSslKeystoreLocationProperty(), testDataPath + "/ssl/testKeyStore.jks");
+        System.setProperty(x509Util.getSslKeystoreLocationProperty(),
+                testDataPath + "/ssl/testKeyStore.jks");
         System.setProperty(x509Util.getSslKeystorePasswdProperty(), "testpass");
 
         return x509Util;
@@ -217,28 +227,6 @@ public class SaslKerberosAuthOverSSLTest extends ClientBase {
         System.clearProperty("zookeeper.ssl.clientAuth");
         System.clearProperty("zookeeper.ssl.quorum.clientAuth");
         clientX509Util.close();
-    }
-
-
-
-    public static void startMiniKdc() {
-        try {
-            kdcWorkDir = createEmptyTestDir();
-            conf = MiniKdc.createConf();
-            conf.setProperty("debug", "true");
-
-            kdc = new MiniKdc(conf, kdcWorkDir);
-            kdc.start();
-        } catch (Exception e) {
-            throw new RuntimeException("failed to start MiniKdc", e);
-        }
-
-    }
-
-    public static void stopMiniKdc() {
-        if (kdc != null) {
-            kdc.stop();
-        }
     }
 
 }

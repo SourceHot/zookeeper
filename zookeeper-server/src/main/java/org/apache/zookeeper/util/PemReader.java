@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,16 +18,17 @@
 
 package org.apache.zookeeper.util;
 
+import javax.crypto.Cipher;
+import javax.crypto.EncryptedPrivateKeyInfo;
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
+import javax.security.auth.x500.X500Principal;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.security.GeneralSecurityException;
-import java.security.KeyFactory;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.PrivateKey;
-import java.security.PublicKey;
+import java.security.*;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
@@ -40,13 +41,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import javax.crypto.Cipher;
-import javax.crypto.EncryptedPrivateKeyInfo;
-import javax.crypto.SecretKey;
-import javax.crypto.SecretKeyFactory;
-import javax.crypto.spec.PBEKeySpec;
-import javax.security.auth.x500.X500Principal;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.Base64.getMimeDecoder;
@@ -66,8 +60,7 @@ import static javax.crypto.Cipher.DECRYPT_MODE;
  * <li>A dependency on <code>java.nio.file.Files</code> has been added.</li>
  * </ul>
  */
-public final class PemReader
-{
+public final class PemReader {
     private static final Pattern CERT_PATTERN = Pattern.compile(
             "-+BEGIN\\s+.*CERTIFICATE[^-]*-+(?:\\s|\\r|\\n)+" + // Header
                     "([a-z0-9+/=\\r\\n]+)" +                    // Base64 text
@@ -86,11 +79,11 @@ public final class PemReader
                     "-+END\\s+.*PUBLIC\\s+KEY[^-]*-+",            // Footer
             CASE_INSENSITIVE);
 
-    private PemReader() {}
+    private PemReader() {
+    }
 
     public static KeyStore loadTrustStore(File certificateChainFile)
-            throws IOException, GeneralSecurityException
-    {
+            throws IOException, GeneralSecurityException {
         KeyStore keyStore = KeyStore.getInstance("JKS");
         keyStore.load(null, null);
 
@@ -102,32 +95,33 @@ public final class PemReader
         return keyStore;
     }
 
-    public static KeyStore loadKeyStore(File certificateChainFile, File privateKeyFile, Optional<String> keyPassword)
-            throws IOException, GeneralSecurityException
-    {
+    public static KeyStore loadKeyStore(File certificateChainFile,
+                                        File privateKeyFile,
+                                        Optional<String> keyPassword)
+            throws IOException, GeneralSecurityException {
         PrivateKey key = loadPrivateKey(privateKeyFile, keyPassword);
 
         List<X509Certificate> certificateChain = readCertificateChain(certificateChainFile);
         if (certificateChain.isEmpty()) {
-            throw new CertificateException("Certificate file does not contain any certificates: " + certificateChainFile);
+            throw new CertificateException(
+                    "Certificate file does not contain any certificates: " + certificateChainFile);
         }
 
         KeyStore keyStore = KeyStore.getInstance("JKS");
         keyStore.load(null, null);
-        keyStore.setKeyEntry("key", key, keyPassword.orElse("").toCharArray(), certificateChain.toArray(new Certificate[0]));
+        keyStore.setKeyEntry("key", key, keyPassword.orElse("").toCharArray(),
+                certificateChain.toArray(new Certificate[0]));
         return keyStore;
     }
 
     public static List<X509Certificate> readCertificateChain(File certificateChainFile)
-            throws IOException, GeneralSecurityException
-    {
+            throws IOException, GeneralSecurityException {
         String contents = new String(Files.readAllBytes(certificateChainFile.toPath()), US_ASCII);
         return readCertificateChain(contents);
     }
 
     public static List<X509Certificate> readCertificateChain(String certificateChain)
-            throws CertificateException
-    {
+            throws CertificateException {
         Matcher matcher = CERT_PATTERN.matcher(certificateChain);
         CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
         List<X509Certificate> certificates = new ArrayList<>();
@@ -135,7 +129,8 @@ public final class PemReader
         int start = 0;
         while (matcher.find(start)) {
             byte[] buffer = base64Decode(matcher.group(1));
-            certificates.add((X509Certificate) certificateFactory.generateCertificate(new ByteArrayInputStream(buffer)));
+            certificates.add((X509Certificate) certificateFactory.generateCertificate(
+                    new ByteArrayInputStream(buffer)));
             start = matcher.end();
         }
 
@@ -143,15 +138,13 @@ public final class PemReader
     }
 
     public static PrivateKey loadPrivateKey(File privateKeyFile, Optional<String> keyPassword)
-            throws IOException, GeneralSecurityException
-    {
+            throws IOException, GeneralSecurityException {
         String privateKey = new String(Files.readAllBytes(privateKeyFile.toPath()), US_ASCII);
         return loadPrivateKey(privateKey, keyPassword);
     }
 
     public static PrivateKey loadPrivateKey(String privateKey, Optional<String> keyPassword)
-            throws IOException, GeneralSecurityException
-    {
+            throws IOException, GeneralSecurityException {
         Matcher matcher = PRIVATE_KEY_PATTERN.matcher(privateKey);
         if (!matcher.find()) {
             throw new KeyStoreException("did not find a private key");
@@ -160,16 +153,18 @@ public final class PemReader
 
         PKCS8EncodedKeySpec encodedKeySpec;
         if (keyPassword.isPresent()) {
-            EncryptedPrivateKeyInfo encryptedPrivateKeyInfo = new EncryptedPrivateKeyInfo(encodedKey);
-            SecretKeyFactory keyFactory = SecretKeyFactory.getInstance(encryptedPrivateKeyInfo.getAlgName());
-            SecretKey secretKey = keyFactory.generateSecret(new PBEKeySpec(keyPassword.get().toCharArray()));
+            EncryptedPrivateKeyInfo encryptedPrivateKeyInfo =
+                    new EncryptedPrivateKeyInfo(encodedKey);
+            SecretKeyFactory keyFactory =
+                    SecretKeyFactory.getInstance(encryptedPrivateKeyInfo.getAlgName());
+            SecretKey secretKey =
+                    keyFactory.generateSecret(new PBEKeySpec(keyPassword.get().toCharArray()));
 
             Cipher cipher = Cipher.getInstance(encryptedPrivateKeyInfo.getAlgName());
             cipher.init(DECRYPT_MODE, secretKey, encryptedPrivateKeyInfo.getAlgParameters());
 
             encodedKeySpec = encryptedPrivateKeyInfo.getKeySpec(cipher);
-        }
-        else {
+        } else {
             encodedKeySpec = new PKCS8EncodedKeySpec(encodedKey);
         }
 
@@ -178,15 +173,13 @@ public final class PemReader
         try {
             KeyFactory keyFactory = KeyFactory.getInstance("RSA");
             return keyFactory.generatePrivate(encodedKeySpec);
-        }
-        catch (InvalidKeySpecException ignore) {
+        } catch (InvalidKeySpecException ignore) {
         }
 
         try {
             KeyFactory keyFactory = KeyFactory.getInstance("EC");
             return keyFactory.generatePrivate(encodedKeySpec);
-        }
-        catch (InvalidKeySpecException ignore) {
+        } catch (InvalidKeySpecException ignore) {
         }
 
         KeyFactory keyFactory = KeyFactory.getInstance("DSA");
@@ -194,15 +187,13 @@ public final class PemReader
     }
 
     public static PublicKey loadPublicKey(File publicKeyFile)
-            throws IOException, GeneralSecurityException
-    {
+            throws IOException, GeneralSecurityException {
         String publicKey = new String(Files.readAllBytes(publicKeyFile.toPath()), US_ASCII);
         return loadPublicKey(publicKey);
     }
 
     public static PublicKey loadPublicKey(String publicKey)
-            throws GeneralSecurityException
-    {
+            throws GeneralSecurityException {
         Matcher matcher = PUBLIC_KEY_PATTERN.matcher(publicKey);
         if (!matcher.find()) {
             throw new KeyStoreException("did not find a public key");
@@ -214,23 +205,20 @@ public final class PemReader
         try {
             KeyFactory keyFactory = KeyFactory.getInstance("RSA");
             return keyFactory.generatePublic(encodedKeySpec);
-        }
-        catch (InvalidKeySpecException ignore) {
+        } catch (InvalidKeySpecException ignore) {
         }
 
         try {
             KeyFactory keyFactory = KeyFactory.getInstance("EC");
             return keyFactory.generatePublic(encodedKeySpec);
-        }
-        catch (InvalidKeySpecException ignore) {
+        } catch (InvalidKeySpecException ignore) {
         }
 
         KeyFactory keyFactory = KeyFactory.getInstance("DSA");
         return keyFactory.generatePublic(encodedKeySpec);
     }
 
-    private static byte[] base64Decode(String base64)
-    {
+    private static byte[] base64Decode(String base64) {
         return getMimeDecoder().decode(base64.getBytes(US_ASCII));
     }
 }

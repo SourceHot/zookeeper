@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,6 +17,12 @@
  */
 
 package org.apache.zookeeper.common;
+
+import org.apache.commons.io.FileUtils;
+import org.bouncycastle.asn1.x500.X500NameBuilder;
+import org.bouncycastle.asn1.x500.style.BCStyle;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.operator.OperatorCreationException;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -28,12 +34,6 @@ import java.security.KeyPair;
 import java.security.Security;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
-
-import org.apache.commons.io.FileUtils;
-import org.bouncycastle.asn1.x500.X500NameBuilder;
-import org.bouncycastle.asn1.x500.style.BCStyle;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.bouncycastle.operator.OperatorCreationException;
 
 import static java.util.Objects.requireNonNull;
 
@@ -51,20 +51,18 @@ public class X509TestContext {
     private final long trustStoreCertExpirationMillis;
     private final X509Certificate trustStoreCertificate;
     private final String trustStorePassword;
-    private File trustStoreJksFile;
-    private File trustStorePemFile;
-    private File trustStorePkcs12File;
-
     private final X509KeyType keyStoreKeyType;
     private final KeyPair keyStoreKeyPair;
     private final long keyStoreCertExpirationMillis;
     private final X509Certificate keyStoreCertificate;
     private final String keyStorePassword;
+    private final Boolean hostnameVerification;
+    private File trustStoreJksFile;
+    private File trustStorePemFile;
+    private File trustStorePkcs12File;
     private File keyStoreJksFile;
     private File keyStorePemFile;
     private File keyStorePkcs12File;
-
-    private final Boolean hostnameVerification;
 
     /**
      * Constructor is intentionally private, use the Builder class instead.
@@ -86,7 +84,8 @@ public class X509TestContext {
                             KeyPair keyStoreKeyPair,
                             long keyStoreCertExpirationMillis,
                             String keyStorePassword,
-                            Boolean hostnameVerification) throws IOException, GeneralSecurityException, OperatorCreationException {
+                            Boolean hostnameVerification)
+            throws IOException, GeneralSecurityException, OperatorCreationException {
         if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
             throw new IllegalStateException("BC Security provider was not found");
         }
@@ -104,14 +103,16 @@ public class X509TestContext {
         this.keyStorePassword = requireNonNull(keyStorePassword);
 
         X500NameBuilder caNameBuilder = new X500NameBuilder(BCStyle.INSTANCE);
-        caNameBuilder.addRDN(BCStyle.CN, MethodHandles.lookup().lookupClass().getCanonicalName() + " Root CA");
+        caNameBuilder.addRDN(BCStyle.CN,
+                MethodHandles.lookup().lookupClass().getCanonicalName() + " Root CA");
         trustStoreCertificate = X509TestHelpers.newSelfSignedCACert(
                 caNameBuilder.build(),
                 trustStoreKeyPair,
                 trustStoreCertExpirationMillis);
 
         X500NameBuilder nameBuilder = new X500NameBuilder(BCStyle.INSTANCE);
-        nameBuilder.addRDN(BCStyle.CN, MethodHandles.lookup().lookupClass().getCanonicalName() + " Zookeeper Test");
+        nameBuilder.addRDN(BCStyle.CN,
+                MethodHandles.lookup().lookupClass().getCanonicalName() + " Zookeeper Test");
         keyStoreCertificate = X509TestHelpers.newCert(
                 trustStoreCertificate,
                 trustStoreKeyPair,
@@ -122,6 +123,14 @@ public class X509TestContext {
         keyStorePkcs12File = keyStorePemFile = keyStoreJksFile = null;
 
         this.hostnameVerification = hostnameVerification;
+    }
+
+    /**
+     * Returns a new default-constructed Builder.
+     * @return a new Builder.
+     */
+    public static Builder newBuilder() {
+        return new Builder();
     }
 
     /**
@@ -177,18 +186,21 @@ public class X509TestContext {
             case PKCS12:
                 return getTrustStorePkcs12File();
             default:
-                throw new IllegalArgumentException("Invalid trust store type: " + storeFileType + ", must be one of: " +
-                        Arrays.toString(KeyStoreFileType.values()));
+                throw new IllegalArgumentException(
+                        "Invalid trust store type: " + storeFileType + ", must be one of: " +
+                                Arrays.toString(KeyStoreFileType.values()));
         }
     }
 
     private File getTrustStoreJksFile() throws IOException {
         if (trustStoreJksFile == null) {
             File trustStoreJksFile = File.createTempFile(
-                TRUST_STORE_PREFIX, KeyStoreFileType.JKS.getDefaultFileExtension(), tempDir);
+                    TRUST_STORE_PREFIX, KeyStoreFileType.JKS.getDefaultFileExtension(), tempDir);
             trustStoreJksFile.deleteOnExit();
-            try (final FileOutputStream trustStoreOutputStream = new FileOutputStream(trustStoreJksFile)) {
-                byte[] bytes = X509TestHelpers.certToJavaTrustStoreBytes(trustStoreCertificate, trustStorePassword);
+            try (final FileOutputStream trustStoreOutputStream = new FileOutputStream(
+                    trustStoreJksFile)) {
+                byte[] bytes = X509TestHelpers.certToJavaTrustStoreBytes(trustStoreCertificate,
+                        trustStorePassword);
                 trustStoreOutputStream.write(bytes);
                 trustStoreOutputStream.flush();
             } catch (GeneralSecurityException e) {
@@ -217,10 +229,12 @@ public class X509TestContext {
     private File getTrustStorePkcs12File() throws IOException {
         if (trustStorePkcs12File == null) {
             File trustStorePkcs12File = File.createTempFile(
-                TRUST_STORE_PREFIX, KeyStoreFileType.PKCS12.getDefaultFileExtension(), tempDir);
+                    TRUST_STORE_PREFIX, KeyStoreFileType.PKCS12.getDefaultFileExtension(), tempDir);
             trustStorePkcs12File.deleteOnExit();
-            try (final FileOutputStream trustStoreOutputStream = new FileOutputStream(trustStorePkcs12File)) {
-                byte[] bytes = X509TestHelpers.certToPKCS12TrustStoreBytes(trustStoreCertificate, trustStorePassword);
+            try (final FileOutputStream trustStoreOutputStream = new FileOutputStream(
+                    trustStorePkcs12File)) {
+                byte[] bytes = X509TestHelpers.certToPKCS12TrustStoreBytes(trustStoreCertificate,
+                        trustStorePassword);
                 trustStoreOutputStream.write(bytes);
                 trustStoreOutputStream.flush();
             } catch (GeneralSecurityException e) {
@@ -271,19 +285,21 @@ public class X509TestContext {
             case PKCS12:
                 return getKeyStorePkcs12File();
             default:
-                throw new IllegalArgumentException("Invalid key store type: " + storeFileType + ", must be one of: " +
-                        Arrays.toString(KeyStoreFileType.values()));
+                throw new IllegalArgumentException(
+                        "Invalid key store type: " + storeFileType + ", must be one of: " +
+                                Arrays.toString(KeyStoreFileType.values()));
         }
     }
 
     private File getKeyStoreJksFile() throws IOException {
         if (keyStoreJksFile == null) {
             File keyStoreJksFile = File.createTempFile(
-                KEY_STORE_PREFIX, KeyStoreFileType.JKS.getDefaultFileExtension(), tempDir);
+                    KEY_STORE_PREFIX, KeyStoreFileType.JKS.getDefaultFileExtension(), tempDir);
             keyStoreJksFile.deleteOnExit();
-            try (final FileOutputStream keyStoreOutputStream = new FileOutputStream(keyStoreJksFile)) {
+            try (final FileOutputStream keyStoreOutputStream = new FileOutputStream(
+                    keyStoreJksFile)) {
                 byte[] bytes = X509TestHelpers.certAndPrivateKeyToJavaKeyStoreBytes(
-                    keyStoreCertificate, keyStoreKeyPair.getPrivate(), keyStorePassword);
+                        keyStoreCertificate, keyStoreKeyPair.getPrivate(), keyStorePassword);
                 keyStoreOutputStream.write(bytes);
                 keyStoreOutputStream.flush();
             } catch (GeneralSecurityException e) {
@@ -303,7 +319,8 @@ public class X509TestContext {
                 FileUtils.writeStringToFile(
                         keyStorePemFile,
                         X509TestHelpers.pemEncodeCertAndPrivateKey(
-                                keyStoreCertificate, keyStoreKeyPair.getPrivate(), keyStorePassword),
+                                keyStoreCertificate, keyStoreKeyPair.getPrivate(),
+                                keyStorePassword),
                         StandardCharsets.US_ASCII,
                         false);
                 this.keyStorePemFile = keyStorePemFile;
@@ -317,11 +334,12 @@ public class X509TestContext {
     private File getKeyStorePkcs12File() throws IOException {
         if (keyStorePkcs12File == null) {
             File keyStorePkcs12File = File.createTempFile(
-                KEY_STORE_PREFIX, KeyStoreFileType.PKCS12.getDefaultFileExtension(), tempDir);
+                    KEY_STORE_PREFIX, KeyStoreFileType.PKCS12.getDefaultFileExtension(), tempDir);
             keyStorePkcs12File.deleteOnExit();
-            try (final FileOutputStream keyStoreOutputStream = new FileOutputStream(keyStorePkcs12File)) {
+            try (final FileOutputStream keyStoreOutputStream = new FileOutputStream(
+                    keyStorePkcs12File)) {
                 byte[] bytes = X509TestHelpers.certAndPrivateKeyToPKCS12Bytes(
-                    keyStoreCertificate, keyStoreKeyPair.getPrivate(), keyStorePassword);
+                        keyStoreCertificate, keyStoreKeyPair.getPrivate(), keyStorePassword);
                 keyStoreOutputStream.write(bytes);
                 keyStoreOutputStream.flush();
             } catch (GeneralSecurityException e) {
@@ -354,14 +372,17 @@ public class X509TestContext {
                 x509Util.getSslKeystoreLocationProperty(),
                 this.getKeyStoreFile(keyStoreFileType).getAbsolutePath());
         System.setProperty(x509Util.getSslKeystorePasswdProperty(), this.getKeyStorePassword());
-        System.setProperty(x509Util.getSslKeystoreTypeProperty(), keyStoreFileType.getPropertyValue());
+        System.setProperty(x509Util.getSslKeystoreTypeProperty(),
+                keyStoreFileType.getPropertyValue());
         System.setProperty(
                 x509Util.getSslTruststoreLocationProperty(),
                 this.getTrustStoreFile(trustStoreFileType).getAbsolutePath());
         System.setProperty(x509Util.getSslTruststorePasswdProperty(), this.getTrustStorePassword());
-        System.setProperty(x509Util.getSslTruststoreTypeProperty(), trustStoreFileType.getPropertyValue());
+        System.setProperty(x509Util.getSslTruststoreTypeProperty(),
+                trustStoreFileType.getPropertyValue());
         if (hostnameVerification != null) {
-            System.setProperty(x509Util.getSslHostnameVerificationEnabledProperty(), hostnameVerification.toString());
+            System.setProperty(x509Util.getSslHostnameVerificationEnabledProperty(),
+                    hostnameVerification.toString());
         } else {
             System.clearProperty(x509Util.getSslHostnameVerificationEnabledProperty());
         }
@@ -381,6 +402,7 @@ public class X509TestContext {
         System.clearProperty(x509Util.getSslTruststoreTypeProperty());
         System.clearProperty(x509Util.getSslHostnameVerificationEnabledProperty());
     }
+
 
     /**
      * Builder class, used for creating new instances of X509TestContext.
@@ -416,7 +438,8 @@ public class X509TestContext {
          * @throws GeneralSecurityException
          * @throws OperatorCreationException
          */
-        public X509TestContext build() throws IOException, GeneralSecurityException, OperatorCreationException {
+        public X509TestContext build()
+                throws IOException, GeneralSecurityException, OperatorCreationException {
             KeyPair trustStoreKeyPair = X509TestHelpers.generateKeyPair(trustStoreKeyType);
             KeyPair keyStoreKeyPair = X509TestHelpers.generateKeyPair(keyStoreKeyType);
             return new X509TestContext(
@@ -512,13 +535,5 @@ public class X509TestContext {
             this.hostnameVerification = hostnameVerification;
             return this;
         }
-    }
-
-    /**
-     * Returns a new default-constructed Builder.
-     * @return a new Builder.
-     */
-    public static Builder newBuilder() {
-        return new Builder();
     }
 }

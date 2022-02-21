@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,11 +17,12 @@
  */
 package org.apache.zookeeper;
 
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import org.apache.zookeeper.client.ZKClientConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 
 /**
  * Computes the Server Principal for a SASL client.
@@ -46,29 +47,33 @@ public class SaslServerPrincipal {
      * @return the name of the principal.
      */
     static String getServerPrincipal(WrapperInetSocketAddress addr, ZKClientConfig clientConfig) {
-        String configuredServerPrincipal = clientConfig.getProperty(ZKClientConfig.ZOOKEEPER_SERVER_PRINCIPAL);
+        String configuredServerPrincipal =
+                clientConfig.getProperty(ZKClientConfig.ZOOKEEPER_SERVER_PRINCIPAL);
         if (configuredServerPrincipal != null) {
             // If server principal is already configured then return it
             return configuredServerPrincipal;
         }
         String principalUserName = clientConfig.getProperty(ZKClientConfig.ZK_SASL_CLIENT_USERNAME,
-            ZKClientConfig.ZK_SASL_CLIENT_USERNAME_DEFAULT);
+                ZKClientConfig.ZK_SASL_CLIENT_USERNAME_DEFAULT);
         String hostName = addr.getHostName();
 
         boolean canonicalize = true;
-        String canonicalizeText = clientConfig.getProperty(ZKClientConfig.ZK_SASL_CLIENT_CANONICALIZE_HOSTNAME,
-            ZKClientConfig.ZK_SASL_CLIENT_CANONICALIZE_HOSTNAME_DEFAULT);
+        String canonicalizeText =
+                clientConfig.getProperty(ZKClientConfig.ZK_SASL_CLIENT_CANONICALIZE_HOSTNAME,
+                        ZKClientConfig.ZK_SASL_CLIENT_CANONICALIZE_HOSTNAME_DEFAULT);
         try {
             canonicalize = Boolean.parseBoolean(canonicalizeText);
         } catch (IllegalArgumentException ea) {
-            LOG.warn("Could not parse config {} \"{}\" into a boolean using default {}", ZKClientConfig
-                .ZK_SASL_CLIENT_CANONICALIZE_HOSTNAME, canonicalizeText, canonicalize);
+            LOG.warn("Could not parse config {} \"{}\" into a boolean using default {}",
+                    ZKClientConfig
+                            .ZK_SASL_CLIENT_CANONICALIZE_HOSTNAME, canonicalizeText, canonicalize);
         }
 
         if (canonicalize) {
             WrapperInetAddress ia = addr.getAddress();
             if (ia == null) {
-                throw new IllegalArgumentException("Unable to canonicalize address " + addr + " because it's not resolvable");
+                throw new IllegalArgumentException(
+                        "Unable to canonicalize address " + addr + " because it's not resolvable");
             }
 
             String canonicalHostName = ia.getCanonicalHostName();
@@ -109,6 +114,7 @@ public class SaslServerPrincipal {
             return addr.toString();
         }
     }
+
 
     /**
      * This is here to provide a way to unit test the core logic as the methods for

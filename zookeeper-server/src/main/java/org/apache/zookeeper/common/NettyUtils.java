@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,15 +17,6 @@
  */
 
 package org.apache.zookeeper.common;
-
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.HashSet;
-import java.util.Set;
 
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.epoll.Epoll;
@@ -39,6 +30,11 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
+import java.util.*;
 
 /**
  * Helper methods for netty code.
@@ -127,9 +123,11 @@ public class NettyUtils {
     public static int getClientReachableLocalInetAddressCount() {
         try {
             Set<InetAddress> validInetAddresses = new HashSet<>();
-            Enumeration<NetworkInterface> allNetworkInterfaces = NetworkInterface.getNetworkInterfaces();
+            Enumeration<NetworkInterface> allNetworkInterfaces =
+                    NetworkInterface.getNetworkInterfaces();
             for (NetworkInterface networkInterface : Collections.list(allNetworkInterfaces)) {
-                for (InetAddress inetAddress : Collections.list(networkInterface.getInetAddresses())) {
+                for (InetAddress inetAddress : Collections.list(
+                        networkInterface.getInetAddresses())) {
                     if (inetAddress.isLinkLocalAddress()) {
                         if (LOG.isDebugEnabled()) {
                             LOG.debug("Ignoring link-local InetAddress {}", inetAddress);
@@ -153,9 +151,12 @@ public class NettyUtils {
             }
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Detected {} local network addresses", validInetAddresses.size());
-                LOG.debug("Resolved local addresses are: {}", Arrays.toString(validInetAddresses.toArray()));
+                LOG.debug("Resolved local addresses are: {}",
+                        Arrays.toString(validInetAddresses.toArray()));
             }
-            return validInetAddresses.size() > 0 ? validInetAddresses.size() : DEFAULT_INET_ADDRESS_COUNT;
+            return validInetAddresses.size() > 0 ?
+                    validInetAddresses.size() :
+                    DEFAULT_INET_ADDRESS_COUNT;
         } catch (SocketException ex) {
             LOG.warn("Failed to list all network interfaces, assuming 1", ex);
             return DEFAULT_INET_ADDRESS_COUNT;

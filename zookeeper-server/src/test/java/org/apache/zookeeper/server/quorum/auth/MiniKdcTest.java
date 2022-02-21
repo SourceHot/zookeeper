@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -30,12 +30,7 @@ import javax.security.auth.login.Configuration;
 import javax.security.auth.login.LoginContext;
 import java.io.File;
 import java.security.Principal;
-import java.util.List;
-import java.util.Set;
-import java.util.Map;
-import java.util.HashSet;
-import java.util.HashMap;
-import java.util.Arrays;
+import java.util.*;
 
 /*
  * This code is originally from HDFS, see the file name TestMiniKdc there
@@ -65,70 +60,12 @@ public class MiniKdcTest extends KerberosSecurityTestcase {
 
         Set<String> principals = new HashSet<String>();
         for (PrincipalName principalName : principalNameList) {
-          principals.add(principalName.getName());
+            principals.add(principalName.getName());
         }
 
         Assert.assertEquals(new HashSet<String>(Arrays.asList(
-                "foo/bar@" + kdc.getRealm(), "bar/foo@" + kdc.getRealm())),
+                        "foo/bar@" + kdc.getRealm(), "bar/foo@" + kdc.getRealm())),
                 principals);
-      }
-
-    private static class KerberosConfiguration extends Configuration {
-        private String principal;
-        private String keytab;
-        private boolean isInitiator;
-
-        private KerberosConfiguration(String principal, File keytab,
-                boolean client) {
-            this.principal = principal;
-            this.keytab = keytab.getAbsolutePath();
-            this.isInitiator = client;
-        }
-
-        public static Configuration createClientConfig(String principal,
-                File keytab) {
-            return new KerberosConfiguration(principal, keytab, true);
-        }
-
-        public static Configuration createServerConfig(String principal,
-                File keytab) {
-            return new KerberosConfiguration(principal, keytab, false);
-        }
-
-        private static String getKrb5LoginModuleName() {
-            return System.getProperty("java.vendor").contains("IBM")
-                    ? "com.ibm.security.auth.module.Krb5LoginModule"
-                    : "com.sun.security.auth.module.Krb5LoginModule";
-        }
-
-        @Override
-        public AppConfigurationEntry[] getAppConfigurationEntry(String name) {
-            Map<String, String> options = new HashMap<String, String>();
-            options.put("principal", principal);
-            options.put("refreshKrb5Config", "true");
-            if (IBM_JAVA) {
-                options.put("useKeytab", keytab);
-                options.put("credsType", "both");
-            } else {
-                options.put("keyTab", keytab);
-                options.put("useKeyTab", "true");
-                options.put("storeKey", "true");
-                options.put("doNotPrompt", "true");
-                options.put("useTicketCache", "true");
-                options.put("renewTGT", "true");
-                options.put("isInitiator", Boolean.toString(isInitiator));
-            }
-            String ticketCache = System.getenv("KRB5CCNAME");
-            if (ticketCache != null) {
-                options.put("ticketCache", ticketCache);
-            }
-            options.put("debug", "true");
-
-            return new AppConfigurationEntry[] {
-                    new AppConfigurationEntry(getKrb5LoginModuleName(),
-                            AppConfigurationEntry.LoginModuleControlFlag.REQUIRED,
-                            options) };
-        }
     }
 
     @Test(timeout = 60000)
@@ -179,6 +116,65 @@ public class MiniKdcTest extends KerberosSecurityTestcase {
                     && !loginContext.getSubject().getPrincipals().isEmpty()) {
                 loginContext.logout();
             }
+        }
+    }
+
+
+    private static class KerberosConfiguration extends Configuration {
+        private String principal;
+        private String keytab;
+        private boolean isInitiator;
+
+        private KerberosConfiguration(String principal, File keytab,
+                                      boolean client) {
+            this.principal = principal;
+            this.keytab = keytab.getAbsolutePath();
+            this.isInitiator = client;
+        }
+
+        public static Configuration createClientConfig(String principal,
+                                                       File keytab) {
+            return new KerberosConfiguration(principal, keytab, true);
+        }
+
+        public static Configuration createServerConfig(String principal,
+                                                       File keytab) {
+            return new KerberosConfiguration(principal, keytab, false);
+        }
+
+        private static String getKrb5LoginModuleName() {
+            return System.getProperty("java.vendor").contains("IBM")
+                    ? "com.ibm.security.auth.module.Krb5LoginModule"
+                    : "com.sun.security.auth.module.Krb5LoginModule";
+        }
+
+        @Override
+        public AppConfigurationEntry[] getAppConfigurationEntry(String name) {
+            Map<String, String> options = new HashMap<String, String>();
+            options.put("principal", principal);
+            options.put("refreshKrb5Config", "true");
+            if (IBM_JAVA) {
+                options.put("useKeytab", keytab);
+                options.put("credsType", "both");
+            } else {
+                options.put("keyTab", keytab);
+                options.put("useKeyTab", "true");
+                options.put("storeKey", "true");
+                options.put("doNotPrompt", "true");
+                options.put("useTicketCache", "true");
+                options.put("renewTGT", "true");
+                options.put("isInitiator", Boolean.toString(isInitiator));
+            }
+            String ticketCache = System.getenv("KRB5CCNAME");
+            if (ticketCache != null) {
+                options.put("ticketCache", ticketCache);
+            }
+            options.put("debug", "true");
+
+            return new AppConfigurationEntry[] {
+                    new AppConfigurationEntry(getKrb5LoginModuleName(),
+                            AppConfigurationEntry.LoginModuleControlFlag.REQUIRED,
+                            options)};
         }
     }
 

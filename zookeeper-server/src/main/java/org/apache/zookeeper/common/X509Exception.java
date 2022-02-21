@@ -41,6 +41,7 @@ public class X509Exception extends Exception {
         }
     }
 
+
     public static class TrustManagerException extends X509Exception {
         public TrustManagerException(String message) {
             super(message);
@@ -50,6 +51,7 @@ public class X509Exception extends Exception {
             super(cause);
         }
     }
+
 
     public static class SSLContextException extends X509Exception {
         public SSLContextException(String message) {

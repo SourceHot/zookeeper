@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,6 +17,7 @@
  */
 
 package org.apache.zookeeper.server.quorum.auth;
+
 import org.apache.kerby.kerberos.kerb.KrbException;
 import org.apache.kerby.kerberos.kerb.server.KdcConfigKey;
 import org.apache.kerby.kerberos.kerb.server.SimpleKdcServer;
@@ -25,18 +26,9 @@ import org.apache.kerby.util.NetworkUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.IOException;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Mini KDC based on Apache Directory Server that can be embedded in testcases
@@ -81,6 +73,83 @@ public class MiniKdc {
             "java.security.krb5.conf";
     public static final String SUN_SECURITY_KRB5_DEBUG =
             "sun.security.krb5.debug";
+    public static final String ORG_NAME = "org.name";
+    public static final String ORG_DOMAIN = "org.domain";
+    public static final String KDC_BIND_ADDRESS = "kdc.bind.address";
+    public static final String KDC_PORT = "kdc.port";
+    public static final String INSTANCE = "instance";
+    public static final String MAX_TICKET_LIFETIME = "max.ticket.lifetime";
+    public static final String MAX_RENEWABLE_LIFETIME = "max.renewable.lifetime";
+    public static final String TRANSPORT = "transport";
+    public static final String DEBUG = "debug";
+    private static final Logger LOG = LoggerFactory.getLogger(MiniKdc.class);
+    private static final Set<String> PROPERTIES = new HashSet<String>();
+    private static final Properties DEFAULT_CONFIG = new Properties();
+
+    static {
+        PROPERTIES.add(ORG_NAME);
+        PROPERTIES.add(ORG_DOMAIN);
+        PROPERTIES.add(KDC_BIND_ADDRESS);
+        PROPERTIES.add(KDC_BIND_ADDRESS);
+        PROPERTIES.add(KDC_PORT);
+        PROPERTIES.add(INSTANCE);
+        PROPERTIES.add(TRANSPORT);
+        PROPERTIES.add(MAX_TICKET_LIFETIME);
+        PROPERTIES.add(MAX_RENEWABLE_LIFETIME);
+
+        DEFAULT_CONFIG.setProperty(KDC_BIND_ADDRESS, "localhost");
+        DEFAULT_CONFIG.setProperty(KDC_PORT, "0");
+        DEFAULT_CONFIG.setProperty(INSTANCE, "DefaultKrbServer");
+        DEFAULT_CONFIG.setProperty(ORG_NAME, "EXAMPLE");
+        DEFAULT_CONFIG.setProperty(ORG_DOMAIN, "COM");
+        DEFAULT_CONFIG.setProperty(TRANSPORT, "TCP");
+        DEFAULT_CONFIG.setProperty(MAX_TICKET_LIFETIME, "86400000");
+        DEFAULT_CONFIG.setProperty(MAX_RENEWABLE_LIFETIME, "604800000");
+        DEFAULT_CONFIG.setProperty(DEBUG, "false");
+    }
+
+    private Properties conf;
+    private SimpleKdcServer simpleKdc;
+    private int port;
+    private String realm;
+    private File workDir;
+    private File krb5conf;
+    private String transport;
+    private boolean krb5Debug;
+    /**
+     * Creates a MiniKdc.
+     *
+     * @param conf MiniKdc configuration.
+     * @param workDir working directory, it should be the build directory. Under
+     * this directory an ApacheDS working directory will be created, this
+     * directory will be deleted when the MiniKdc stops.
+     * @throws Exception thrown if the MiniKdc could not be created.
+     */
+    public MiniKdc(Properties conf, File workDir) throws Exception {
+        if (!conf.keySet().containsAll(PROPERTIES)) {
+            Set<String> missingProperties = new HashSet<String>(PROPERTIES);
+            missingProperties.removeAll(conf.keySet());
+            throw new IllegalArgumentException("Missing configuration properties: "
+                    + missingProperties);
+        }
+        this.workDir = new File(workDir, Long.toString(System.currentTimeMillis()));
+        if (!this.workDir.exists()
+                && !this.workDir.mkdirs()) {
+            throw new RuntimeException("Cannot create directory " + this.workDir);
+        }
+        LOG.info("Configuration:");
+        LOG.info("---------------------------------------------------------------");
+        for (Map.Entry<?, ?> entry : conf.entrySet()) {
+            LOG.info("  {}: {}", entry.getKey(), entry.getValue());
+        }
+        LOG.info("---------------------------------------------------------------");
+        this.conf = conf;
+        port = Integer.parseInt(conf.getProperty(KDC_PORT));
+        String orgName = conf.getProperty(ORG_NAME);
+        String orgDomain = conf.getProperty(ORG_DOMAIN);
+        realm = orgName.toUpperCase(Locale.ENGLISH) + "."
+                + orgDomain.toUpperCase(Locale.ENGLISH);
+    }
 
     public static void main(String[] args) throws Exception {
         if (args.length < 4) {
@@ -146,43 +215,6 @@ public class MiniKdc {
         }
     }
 
-    private static final Logger LOG = LoggerFactory.getLogger(MiniKdc.class);
-
-    public static final String ORG_NAME = "org.name";
-    public static final String ORG_DOMAIN = "org.domain";
-    public static final String KDC_BIND_ADDRESS = "kdc.bind.address";
-    public static final String KDC_PORT = "kdc.port";
-    public static final String INSTANCE = "instance";
-    public static final String MAX_TICKET_LIFETIME = "max.ticket.lifetime";
-    public static final String MAX_RENEWABLE_LIFETIME = "max.renewable.lifetime";
-    public static final String TRANSPORT = "transport";
-    public static final String DEBUG = "debug";
-
-    private static final Set<String> PROPERTIES = new HashSet<String>();
-    private static final Properties DEFAULT_CONFIG = new Properties();
-
-    static {
-        PROPERTIES.add(ORG_NAME);
-        PROPERTIES.add(ORG_DOMAIN);
-        PROPERTIES.add(KDC_BIND_ADDRESS);
-        PROPERTIES.add(KDC_BIND_ADDRESS);
-        PROPERTIES.add(KDC_PORT);
-        PROPERTIES.add(INSTANCE);
-        PROPERTIES.add(TRANSPORT);
-        PROPERTIES.add(MAX_TICKET_LIFETIME);
-        PROPERTIES.add(MAX_RENEWABLE_LIFETIME);
-
-        DEFAULT_CONFIG.setProperty(KDC_BIND_ADDRESS, "localhost");
-        DEFAULT_CONFIG.setProperty(KDC_PORT, "0");
-        DEFAULT_CONFIG.setProperty(INSTANCE, "DefaultKrbServer");
-        DEFAULT_CONFIG.setProperty(ORG_NAME, "EXAMPLE");
-        DEFAULT_CONFIG.setProperty(ORG_DOMAIN, "COM");
-        DEFAULT_CONFIG.setProperty(TRANSPORT, "TCP");
-        DEFAULT_CONFIG.setProperty(MAX_TICKET_LIFETIME, "86400000");
-        DEFAULT_CONFIG.setProperty(MAX_RENEWABLE_LIFETIME, "604800000");
-        DEFAULT_CONFIG.setProperty(DEBUG, "false");
-    }
-
     /**
      * Convenience method that returns MiniKdc default configuration.
      * <p>
@@ -194,51 +226,8 @@ public class MiniKdc {
         return (Properties) DEFAULT_CONFIG.clone();
     }
 
-    private Properties conf;
-    private SimpleKdcServer simpleKdc;
-    private int port;
-    private String realm;
-    private File workDir;
-    private File krb5conf;
-    private String transport;
-    private boolean krb5Debug;
-
     public void setTransport(String transport) {
         this.transport = transport;
-    }
-    /**
-     * Creates a MiniKdc.
-     *
-     * @param conf MiniKdc configuration.
-     * @param workDir working directory, it should be the build directory. Under
-     * this directory an ApacheDS working directory will be created, this
-     * directory will be deleted when the MiniKdc stops.
-     * @throws Exception thrown if the MiniKdc could not be created.
-     */
-    public MiniKdc(Properties conf, File workDir) throws Exception {
-        if (!conf.keySet().containsAll(PROPERTIES)) {
-            Set<String> missingProperties = new HashSet<String>(PROPERTIES);
-            missingProperties.removeAll(conf.keySet());
-            throw new IllegalArgumentException("Missing configuration properties: "
-                    + missingProperties);
-        }
-        this.workDir = new File(workDir, Long.toString(System.currentTimeMillis()));
-        if (!this.workDir.exists()
-                && !this.workDir.mkdirs()) {
-            throw new RuntimeException("Cannot create directory " + this.workDir);
-        }
-        LOG.info("Configuration:");
-        LOG.info("---------------------------------------------------------------");
-        for (Map.Entry<?, ?> entry : conf.entrySet()) {
-            LOG.info("  {}: {}", entry.getKey(), entry.getValue());
-        }
-        LOG.info("---------------------------------------------------------------");
-        this.conf = conf;
-        port = Integer.parseInt(conf.getProperty(KDC_PORT));
-        String orgName= conf.getProperty(ORG_NAME);
-        String orgDomain = conf.getProperty(ORG_DOMAIN);
-        realm = orgName.toUpperCase(Locale.ENGLISH) + "."
-                + orgDomain.toUpperCase(Locale.ENGLISH);
     }
 
     /**
@@ -340,7 +329,7 @@ public class MiniKdc {
             } catch (KrbException e) {
                 e.printStackTrace();
             } finally {
-                if(conf.getProperty(DEBUG) != null) {
+                if (conf.getProperty(DEBUG) != null) {
                     System.setProperty(SUN_SECURITY_KRB5_DEBUG,
                             Boolean.toString(krb5Debug));
                 }
@@ -358,14 +347,14 @@ public class MiniKdc {
 
     private void delete(File f) {
         if (f.isFile()) {
-            if (! f.delete()) {
+            if (!f.delete()) {
                 LOG.warn("WARNING: cannot delete file " + f.getAbsolutePath());
             }
         } else {
-            for (File c: f.listFiles()) {
+            for (File c : f.listFiles()) {
                 delete(c);
             }
-            if (! f.delete()) {
+            if (!f.delete()) {
                 LOG.warn("WARNING: cannot delete directory " + f.getAbsolutePath());
             }
         }
@@ -392,7 +381,7 @@ public class MiniKdc {
      * created.
      */
     public synchronized void createPrincipal(File keytabFile,
-                                             String ... principals)
+                                             String... principals)
             throws Exception {
         simpleKdc.createPrincipals(principals);
         if (keytabFile.exists() && !keytabFile.delete()) {

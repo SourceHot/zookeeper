@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,27 +18,21 @@
 
 package org.apache.zookeeper.test;
 
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
-
-import javax.management.MBeanServer;
-import javax.management.MBeanServerConnection;
-import javax.management.MalformedObjectNameException;
-import javax.management.ObjectName;
-import javax.management.remote.JMXConnector;
-import javax.management.remote.JMXConnectorFactory;
-import javax.management.remote.JMXConnectorServer;
-import javax.management.remote.JMXConnectorServerFactory;
-import javax.management.remote.JMXServiceURL;
-
-
 import org.apache.zookeeper.jmx.CommonNames;
 import org.apache.zookeeper.jmx.MBeanRegistry;
 import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.management.MBeanServer;
+import javax.management.MBeanServerConnection;
+import javax.management.MalformedObjectNameException;
+import javax.management.ObjectName;
+import javax.management.remote.*;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 public class JMXEnv {
     protected static final Logger LOG = LoggerFactory.getLogger(JMXEnv.class);
@@ -48,16 +42,16 @@ public class JMXEnv {
 
     public static void setUp() throws IOException {
         MBeanServer mbs = MBeanRegistry.getInstance().getPlatformMBeanServer();
-        
+
         JMXServiceURL url = new JMXServiceURL("service:jmx:rmi://127.0.0.1");
         cs = JMXConnectorServerFactory.newJMXConnectorServer(url, null, mbs);
         cs.start();
 
-       JMXServiceURL addr = cs.getAddress();
-        
-       cc = JMXConnectorFactory.connect(addr);
+        JMXServiceURL addr = cs.getAddress();
+
+        cc = JMXConnectorFactory.connect(addr);
     }
-    
+
     public static void tearDown() {
         try {
             if (cc != null) {
@@ -65,7 +59,7 @@ public class JMXEnv {
             }
         } catch (IOException e) {
             LOG.warn("Unexpected, ignoring", e);
-            
+
         }
         cc = null;
         try {
@@ -74,11 +68,11 @@ public class JMXEnv {
             }
         } catch (IOException e) {
             LOG.warn("Unexpected, ignoring", e);
-            
+
         }
         cs = null;
     }
-    
+
     public static MBeanServerConnection conn() throws IOException {
         return cc.getMBeanServerConnection();
     }
@@ -96,8 +90,7 @@ public class JMXEnv {
      * @throws MalformedObjectNameException
      */
     public static Set<ObjectName> ensureAll(String... expectedNames)
-        throws IOException, InterruptedException
-    {
+            throws IOException, InterruptedException {
         Set<ObjectName> beans;
         Set<ObjectName> found;
         int nTry = 0;
@@ -111,7 +104,7 @@ public class JMXEnv {
             } catch (MalformedObjectNameException e) {
                 throw new RuntimeException(e);
             }
-        
+
             found = new HashSet<ObjectName>();
             for (String name : expectedNames) {
                 LOG.info("expect:" + name);
@@ -141,8 +134,7 @@ public class JMXEnv {
      * @throws MalformedObjectNameException
      */
     public static Set<ObjectName> ensureOnly(String... expectedNames)
-        throws IOException, InterruptedException
-    {
+            throws IOException, InterruptedException {
         LOG.info("ensureOnly:" + Arrays.toString(expectedNames));
         Set<ObjectName> beans = ensureAll(expectedNames);
         for (ObjectName bean : beans) {
@@ -151,10 +143,9 @@ public class JMXEnv {
         Assert.assertEquals(0, beans.size());
         return beans;
     }
-    
+
     public static void ensureNone(String... expectedNames)
-        throws IOException, InterruptedException
-    {
+            throws IOException, InterruptedException {
         Set<ObjectName> beans;
         int nTry = 0;
         boolean foundUnexpected = false;
@@ -169,8 +160,8 @@ public class JMXEnv {
             } catch (MalformedObjectNameException e) {
                 throw new RuntimeException(e);
             }
-  
-            foundUnexpected = false; 
+
+            foundUnexpected = false;
             for (String name : expectedNames) {
                 for (ObjectName bean : beans) {
                     if (bean.toString().contains(name)) {
@@ -213,13 +204,13 @@ public class JMXEnv {
      * are components of the name. It waits in a loop up to 60 seconds before
      * failing if there is a mismatch. This will return the beans which are not
      * matched.
-     * 
+     *
      * {@link https://issues.apache.org/jira/browse/ZOOKEEPER-1858}
-     * 
+     *
      * @param expectedNames
      *            - expected beans
      * @return the beans which are not matched with the given expected names
-     * 
+     *
      * @throws IOException
      * @throws InterruptedException
      */
@@ -274,10 +265,10 @@ public class JMXEnv {
      * @throws Exception
      */
     public static Object ensureBeanAttribute(String expectedName,
-            String expectedAttribute) throws Exception {
+                                             String expectedAttribute) throws Exception {
         String value = "";
-        LOG.info("ensure bean:{}, attribute:{}", new Object[] { expectedName,
-                expectedAttribute });
+        LOG.info("ensure bean:{}, attribute:{}", new Object[] {expectedName,
+                expectedAttribute});
 
         Set<ObjectName> beans;
         int nTry = 0;
@@ -295,7 +286,7 @@ public class JMXEnv {
             for (ObjectName bean : beans) {
                 // check the existence of name in bean
                 if (bean.toString().equals(expectedName)) {
-                    LOG.info("found:{} {}", new Object[] { expectedName, bean });
+                    LOG.info("found:{} {}", new Object[] {expectedName, bean});
                     return conn().getAttribute(bean, expectedAttribute);
                 }
             }
@@ -308,7 +299,7 @@ public class JMXEnv {
     /**
      * Comparing that the given name exists in the bean. For component beans,
      * the component name will be present at the end of the bean name
-     * 
+     *
      * For example 'StandaloneServer' will present in the bean name like
      * 'org.apache.ZooKeeperService:name0=StandaloneServer_port-1'
      */

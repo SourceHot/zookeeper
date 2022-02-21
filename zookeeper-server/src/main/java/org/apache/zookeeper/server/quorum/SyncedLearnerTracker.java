@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,15 +18,15 @@
 
 package org.apache.zookeeper.server.quorum;
 
+import org.apache.zookeeper.server.quorum.flexible.QuorumVerifier;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 
-import org.apache.zookeeper.server.quorum.flexible.QuorumVerifier;
-
 public class SyncedLearnerTracker {
 
-    protected ArrayList<QuorumVerifierAcksetPair> qvAcksetPairs = 
-                new ArrayList<QuorumVerifierAcksetPair>();
+    protected ArrayList<QuorumVerifierAcksetPair> qvAcksetPairs =
+            new ArrayList<QuorumVerifierAcksetPair>();
 
     public void addQuorumVerifier(QuorumVerifier qv) {
         qvAcksetPairs.add(new QuorumVerifierAcksetPair(qv,
@@ -51,22 +51,22 @@ public class SyncedLearnerTracker {
         }
         return true;
     }
-        
-    public String ackSetsToString(){
+
+    public String ackSetsToString() {
         StringBuilder sb = new StringBuilder();
-            
+
         for (QuorumVerifierAcksetPair qvAckset : qvAcksetPairs) {
             sb.append(qvAckset.getAckset().toString()).append(",");
         }
-            
-        return sb.substring(0, sb.length()-1);
+
+        return sb.substring(0, sb.length() - 1);
     }
 
     public static class QuorumVerifierAcksetPair {
         private final QuorumVerifier qv;
         private final HashSet<Long> ackset;
 
-        public QuorumVerifierAcksetPair(QuorumVerifier qv, HashSet<Long> ackset) {                
+        public QuorumVerifierAcksetPair(QuorumVerifier qv, HashSet<Long> ackset) {
             this.qv = qv;
             this.ackset = ackset;
         }

@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,11 +24,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.PrintStream;
+import java.io.*;
 import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -78,14 +74,16 @@ public class TxnLogToolkitTest {
     }
 
     @Test(expected = TxnLogToolkit.TxnLogToolkitException.class)
-    public void testInitMissingFile() throws FileNotFoundException, TxnLogToolkit.TxnLogToolkitException {
+    public void testInitMissingFile()
+            throws FileNotFoundException, TxnLogToolkit.TxnLogToolkitException {
         // Arrange & Act
         File logfile = new File("this_file_should_not_exists");
         TxnLogToolkit lt = new TxnLogToolkit(false, false, logfile.toString(), true);
     }
 
     @Test(expected = TxnLogToolkit.TxnLogToolkitException.class)
-    public void testInitWithRecoveryFileExists() throws IOException, TxnLogToolkit.TxnLogToolkitException {
+    public void testInitWithRecoveryFileExists()
+            throws IOException, TxnLogToolkit.TxnLogToolkitException {
         // Arrange & Act
         File logfile = new File(new File(mySnapDir, "version-2"), "log.274");
         File recoveryFile = new File(new File(mySnapDir, "version-2"), "log.274.fixed");
@@ -104,9 +102,12 @@ public class TxnLogToolkitTest {
 
         // Assert
         String output = outContent.toString();
-        Pattern p = Pattern.compile("^CRC ERROR.*session 0x8061fac5ddeb0000 cxid 0x0 zxid 0x8800000002 createSession 30000$", Pattern.MULTILINE);
+        Pattern p = Pattern.compile(
+                "^CRC ERROR.*session 0x8061fac5ddeb0000 cxid 0x0 zxid 0x8800000002 createSession 30000$",
+                Pattern.MULTILINE);
         Matcher m = p.matcher(output);
-        assertTrue("Output doesn't indicate CRC error for the broken session id: " + output, m.find());
+        assertTrue("Output doesn't indicate CRC error for the broken session id: " + output,
+                m.find());
     }
 
     @Test

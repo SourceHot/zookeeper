@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,14 +18,13 @@
 
 package org.apache.zookeeper.jmx;
 
-import java.util.Enumeration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.management.JMException;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.Enumeration;
 
 /**
  * Shared utilities
@@ -67,9 +66,12 @@ public class ManagedUtil {
             try {
                 // Create and Register the top level Log4J MBean
                 // org.apache.log4j.jmx.HierarchyDynamicMBean hdm = new org.apache.log4j.jmx.HierarchyDynamicMBean();
-                Object hdm = Class.forName("org.apache.log4j.jmx.HierarchyDynamicMBean").getConstructor().newInstance();
+                Object hdm =
+                        Class.forName("org.apache.log4j.jmx.HierarchyDynamicMBean").getConstructor()
+                                .newInstance();
 
-                String mbean = System.getProperty("zookeeper.jmx.log4j.mbean", "log4j:hierarchy=default");
+                String mbean =
+                        System.getProperty("zookeeper.jmx.log4j.mbean", "log4j:hierarchy=default");
                 ObjectName mbo = new ObjectName(mbean);
                 mbs.registerMBean(hdm, mbo);
 

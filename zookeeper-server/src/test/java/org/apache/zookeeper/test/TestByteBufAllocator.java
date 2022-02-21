@@ -18,39 +18,46 @@
 
 package org.apache.zookeeper.test;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.concurrent.atomic.AtomicReference;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.util.ResourceLeakDetector;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
+
 /**
  * This is a custom ByteBufAllocator that tracks outstanding allocations and
  * crashes the program if any of them are leaked.
- *
+ * <p>
  * Never use this class in production, it will cause your server to run out
  * of memory! This is because it holds strong references to all allocated
  * buffers and doesn't release them until checkForLeaks() is called at the
  * end of a unit test.
- *
+ * <p>
  * Note: the original code was copied from https://github.com/airlift/drift,
  * with the permission and encouragement of airlift's author (dain). Airlift
  * uses the same apache 2.0 license as Zookeeper so this should be ok.
- *
+ * <p>
  * However, the code was modified to take advantage of Netty's built-in
  * leak tracking and make a best effort to print details about buffer leaks.
- *
  */
 public class TestByteBufAllocator extends PooledByteBufAllocator {
     private static AtomicReference<TestByteBufAllocator> INSTANCE =
             new AtomicReference<>(null);
+    private final List<ByteBuf> trackedBuffers = new ArrayList<>();
+    private final ResourceLeakDetector.Level oldLevel;
+
+    private TestByteBufAllocator(ResourceLeakDetector.Level oldLevel) {
+        super(false);
+        this.oldLevel = oldLevel;
+    }
 
     /**
      * Get the singleton testing allocator.
+     *
      * @return the singleton allocator, creating it if one does not exist.
      */
     public static TestByteBufAllocator getInstance() {
@@ -71,7 +78,7 @@ public class TestByteBufAllocator extends PooledByteBufAllocator {
      * Note that this might not always work, since it only triggers when a buffer
      * is garbage-collected and calling System.gc() does not guarantee that a buffer
      * will actually be GC'ed.
-     *
+     * <p>
      * This should be called at the end of a unit test's tearDown() method.
      */
     public static void checkForLeaks() {
@@ -81,53 +88,37 @@ public class TestByteBufAllocator extends PooledByteBufAllocator {
         }
     }
 
-    private final List<ByteBuf> trackedBuffers = new ArrayList<>();
-    private final ResourceLeakDetector.Level oldLevel;
-
-    private TestByteBufAllocator(ResourceLeakDetector.Level oldLevel)
-    {
-        super(false);
-        this.oldLevel = oldLevel;
-    }
-
     @Override
-    protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity)
-    {
+    protected ByteBuf newHeapBuffer(int initialCapacity, int maxCapacity) {
         return track(super.newHeapBuffer(initialCapacity, maxCapacity));
     }
 
     @Override
-    protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity)
-    {
+    protected ByteBuf newDirectBuffer(int initialCapacity, int maxCapacity) {
         return track(super.newDirectBuffer(initialCapacity, maxCapacity));
     }
 
     @Override
-    public CompositeByteBuf compositeHeapBuffer(int maxNumComponents)
-    {
+    public CompositeByteBuf compositeHeapBuffer(int maxNumComponents) {
         return track(super.compositeHeapBuffer(maxNumComponents));
     }
 
     @Override
-    public CompositeByteBuf compositeDirectBuffer(int maxNumComponents)
-    {
+    public CompositeByteBuf compositeDirectBuffer(int maxNumComponents) {
         return track(super.compositeDirectBuffer(maxNumComponents));
     }
 
-    private synchronized CompositeByteBuf track(CompositeByteBuf byteBuf)
-    {
+    private synchronized CompositeByteBuf track(CompositeByteBuf byteBuf) {
         trackedBuffers.add(Objects.requireNonNull(byteBuf));
         return byteBuf;
     }
 
-    private synchronized ByteBuf track(ByteBuf byteBuf)
-    {
+    private synchronized ByteBuf track(ByteBuf byteBuf) {
         trackedBuffers.add(Objects.requireNonNull(byteBuf));
         return byteBuf;
     }
 
-    private void checkInstanceForLeaks()
-    {
+    private void checkInstanceForLeaks() {
         try {
             long referencedBuffersCount = 0;
             synchronized (this) {

@@ -18,23 +18,24 @@
 
 package org.apache.zookeeper.server.persistence;
 
-import java.io.IOException;
-
 import org.apache.jute.Record;
 import org.apache.zookeeper.server.ServerStats;
 import org.apache.zookeeper.txn.TxnHeader;
 
+import java.io.IOException;
+
 /**
  * Interface for reading transaction logs.
- *
+ * <p>
  * 事务日志接口
  */
 public interface TxnLog {
 
     /**
      * Setter for ServerStats to monitor fsync threshold exceed
-     *
+     * <p>
      * 设置ServerStats
+     *
      * @param serverStats used to update fsyncThresholdExceedCount
      */
     void setServerStats(ServerStats serverStats);
@@ -42,8 +43,9 @@ public interface TxnLog {
     /**
      * roll the current
      * log being appended to
-     *
+     * <p>
      * 日志滚动
+     *
      * @throws IOException
      */
     void rollLog() throws IOException;
@@ -51,9 +53,10 @@ public interface TxnLog {
     /**
      * Append a request to the transaction log
      * 追加日志
+     *
      * @param hdr the transaction header
-     * @param r the transaction itself
-     * returns true iff something appended, otw false 
+     * @param r   the transaction itself
+     *            returns true iff something appended, otw false
      * @throws IOException
      */
     boolean append(TxnHeader hdr, Record r) throws IOException;
@@ -61,10 +64,11 @@ public interface TxnLog {
     /**
      * Start reading the transaction logs
      * from a given zxid
-     *
+     * <p>
      * 根据zxid读取TxnIterator
+     *
      * @param zxid
-     * @return returns an iterator to read the 
+     * @return returns an iterator to read the
      * next transaction in the logs.
      * @throws IOException
      */
@@ -73,16 +77,18 @@ public interface TxnLog {
     /**
      * the last zxid of the logged transactions.
      * 获取最后一个zxid
+     *
      * @return the last zxid of the logged transactions.
      * @throws IOException
      */
     long getLastLoggedZxid() throws IOException;
 
     /**
-     * truncate the log to get in sync with the 
+     * truncate the log to get in sync with the
      * leader.
-     *
+     * <p>
      * 截断日志
+     *
      * @param zxid the zxid to truncate at.
      * @throws IOException
      */
@@ -91,6 +97,7 @@ public interface TxnLog {
     /**
      * the dbid for this transaction log.
      * 获取当前事务日志所在的数据库id
+     *
      * @return the dbid for this transaction log.
      * @throws IOException
      */
@@ -100,12 +107,14 @@ public interface TxnLog {
      * commit the transaction and make sure
      * they are persisted
      * 提交事务日志
+     *
      * @throws IOException
      */
     void commit() throws IOException;
 
     /**
      * 获取事务同步经过的时间,单位毫秒
+     *
      * @return transaction log's elapsed sync time in milliseconds
      */
     long getTxnLogSyncElapsedTime();
@@ -117,21 +126,23 @@ public interface TxnLog {
     void close() throws IOException;
 
     /**
-     * an iterating interface for reading 
-     * transaction logs. 
+     * an iterating interface for reading
+     * transaction logs.
      */
     interface TxnIterator {
         /**
          * return the transaction header.
          * 获取TxnHeader
+         *
          * @return return the transaction header.
          */
         TxnHeader getHeader();
 
         /**
          * return the transaction record.
-         *
+         * <p>
          * 获取Record
+         *
          * @return return the transaction record.
          */
         Record getTxn();
@@ -139,14 +150,16 @@ public interface TxnLog {
         /**
          * go to the next transaction record.
          * 判断是否存在下一个Record
+         *
          * @throws IOException
          */
         boolean next() throws IOException;
 
         /**
-         * close files and release the 
+         * close files and release the
          * resources
          * 关闭
+         *
          * @throws IOException
          */
         void close() throws IOException;
@@ -154,8 +167,9 @@ public interface TxnLog {
         /**
          * Get an estimated storage space used to store transaction records
          * that will return by this iterator
-         *
+         * <p>
          * 获取存储空间大小
+         *
          * @throws IOException
          */
         long getStorageSize() throws IOException;

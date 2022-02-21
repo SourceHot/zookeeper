@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,13 +18,13 @@
 
 package org.apache.zookeeper;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /** Assign ports to tests */
 public final class PortAssignment {
@@ -44,6 +44,12 @@ public final class PortAssignment {
 
     private static PortRange portRange = null;
     private static int nextPort;
+
+    /**
+     * There is no reason to instantiate this class.
+     */
+    private PortAssignment() {
+    }
 
     /**
      * Assign a new, unique port to the test.  This method works by assigning
@@ -66,11 +72,11 @@ public final class PortAssignment {
             Integer threadId = Integer.getInteger("zookeeper.junit.threadid");
             portRange = setupPortRange(System.getProperty("test.junit.threads"),
                     threadId != null ? "threadid=" + threadId :
-                    System.getProperty("sun.java.command"));
+                            System.getProperty("sun.java.command"));
             nextPort = portRange.getMinimum();
         }
         int candidatePort = nextPort;
-        for (;;) {
+        for (; ; ) {
             ++candidatePort;
             if (candidatePort > portRange.getMaximum()) {
                 candidatePort = portRange.getMinimum();
@@ -78,7 +84,7 @@ public final class PortAssignment {
             if (candidatePort == nextPort) {
                 throw new IllegalStateException(String.format(
                         "Could not assign port from range %s.  The entire " +
-                        "range has been exhausted.", portRange));
+                                "range has been exhausted.", portRange));
             }
             try {
                 ServerSocket s = new ServerSocket(candidatePort);
@@ -121,7 +127,7 @@ public final class PortAssignment {
                 processCount = Integer.valueOf(strProcessCount);
             } catch (NumberFormatException e) {
                 LOG.warn("Error parsing test.junit.threads = {}.",
-                         strProcessCount, e);
+                        strProcessCount, e);
             }
         }
 
@@ -161,6 +167,7 @@ public final class PortAssignment {
 
         return newPortRange;
     }
+
 
     /**
      * Contains the minimum and maximum (both inclusive) in a range of ports.
@@ -202,11 +209,5 @@ public final class PortAssignment {
         public String toString() {
             return String.format("%d - %d", minimum, maximum);
         }
-    }
-
-    /**
-     * There is no reason to instantiate this class.
-     */
-    private PortAssignment() {
     }
 }

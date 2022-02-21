@@ -5,9 +5,9 @@
  * licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
@@ -16,13 +16,14 @@
  */
 package org.apache.zookeeper.cli;
 
-import java.util.Collections;
-import java.util.List;
 import org.apache.commons.cli.*;
 import org.apache.zookeeper.AsyncCallback.StringCallback;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZKUtil;
 import org.apache.zookeeper.data.Stat;
+
+import java.util.Collections;
+import java.util.List;
 
 /**
  * ls command for cli
@@ -30,8 +31,6 @@ import org.apache.zookeeper.data.Stat;
 public class LsCommand extends CliCommand {
 
     private static Options options = new Options();
-    private String args[];
-    private CommandLine cl;
 
     static {
         options.addOption("?", false, "help");
@@ -39,6 +38,9 @@ public class LsCommand extends CliCommand {
         options.addOption("w", false, "watch");
         options.addOption("R", false, "recurse");
     }
+
+    private String args[];
+    private CommandLine cl;
 
     public LsCommand() {
         super("ls", "[-s] [-w] [-R] path");
@@ -110,7 +112,7 @@ public class LsCommand extends CliCommand {
             }
         } catch (IllegalArgumentException ex) {
             throw new MalformedPathException(ex.getMessage());
-        } catch (KeeperException|InterruptedException ex) {
+        } catch (KeeperException | InterruptedException ex) {
             throw new CliWrapperException(ex);
         }
         return watch;

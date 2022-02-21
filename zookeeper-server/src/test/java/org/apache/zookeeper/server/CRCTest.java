@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,20 +17,6 @@
  */
 
 package org.apache.zookeeper.server;
-
-import static org.apache.zookeeper.test.ClientBase.CONNECTION_TIMEOUT;
-
-import java.io.BufferedInputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.RandomAccessFile;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.zip.Adler32;
-import java.util.zip.CheckedInputStream;
 
 import org.apache.jute.BinaryInputArchive;
 import org.apache.jute.InputArchive;
@@ -48,11 +34,21 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class CRCTest extends ZKTestCase{
+import java.io.*;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.zip.Adler32;
+import java.util.zip.CheckedInputStream;
+
+import static org.apache.zookeeper.test.ClientBase.CONNECTION_TIMEOUT;
+
+public class CRCTest extends ZKTestCase {
     private static final Logger LOG = LoggerFactory.getLogger(CRCTest.class);
 
     private static final String HOSTPORT =
-        "127.0.0.1:" + PortAssignment.unique();
+            "127.0.0.1:" + PortAssignment.unique();
+
     /**
      * corrupt a file by writing m at 500 b
      * offset
@@ -61,7 +57,7 @@ public class CRCTest extends ZKTestCase{
      */
     private void corruptFile(File file) throws IOException {
         // corrupt the logfile
-        RandomAccessFile raf  = new RandomAccessFile(file, "rw");
+        RandomAccessFile raf = new RandomAccessFile(file, "rw");
         byte[] b = "mahadev".getBytes();
         long writeLen = 500L;
         raf.seek(writeLen);
@@ -114,11 +110,11 @@ public class CRCTest extends ZKTestCase{
         f.startup(zks);
         LOG.info("starting up the zookeeper server .. waiting");
         Assert.assertTrue("waiting for server being up",
-                ClientBase.waitForServerUp(HOSTPORT,CONNECTION_TIMEOUT));
+                ClientBase.waitForServerUp(HOSTPORT, CONNECTION_TIMEOUT));
         ZooKeeper zk = ClientBase.createZKClient(HOSTPORT);
         try {
-            for (int i =0; i < 2000; i++) {
-                zk.create("/crctest- " + i , ("/crctest- " + i).getBytes(),
+            for (int i = 0; i < 2000; i++) {
+                zk.create("/crctest- " + i, ("/crctest- " + i).getBytes(),
                         Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
             }
         } finally {
@@ -127,8 +123,8 @@ public class CRCTest extends ZKTestCase{
         f.shutdown();
         zks.shutdown();
         Assert.assertTrue("waiting for server down",
-                   ClientBase.waitForServerDown(HOSTPORT,
-                           ClientBase.CONNECTION_TIMEOUT));
+                ClientBase.waitForServerDown(HOSTPORT,
+                        ClientBase.CONNECTION_TIMEOUT));
 
         File versionDir = new File(tmpDir, "version-2");
         File[] list = versionDir.listFiles();
@@ -136,7 +132,7 @@ public class CRCTest extends ZKTestCase{
         // one the snapshot and the other logFile
         File snapFile = null;
         File logFile = null;
-        for (File file: list) {
+        for (File file : list) {
             LOG.info("file is " + file);
             if (file.getName().startsWith("log")) {
                 logFile = file;
@@ -150,7 +146,7 @@ public class CRCTest extends ZKTestCase{
             while (itr.next()) {
             }
             Assert.assertTrue(false);
-        } catch(IOException ie) {
+        } catch (IOException ie) {
             LOG.info("crc corruption", ie);
         }
         itr.close();
@@ -162,7 +158,7 @@ public class CRCTest extends ZKTestCase{
         boolean cfile = false;
         try {
             cfile = getCheckSum(snap, snapFile);
-        } catch(IOException ie) {
+        } catch (IOException ie) {
             //the last snapshot seems incompelte
             // corrupt the last but one
             // and use that
@@ -171,5 +167,5 @@ public class CRCTest extends ZKTestCase{
             cfile = getCheckSum(snap, snapFile);
         }
         Assert.assertTrue(cfile);
-   }
+    }
 }

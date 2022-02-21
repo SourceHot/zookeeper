@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,34 +18,13 @@
 
 package org.apache.zookeeper.server.quorum;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.StringReader;
-import java.io.Writer;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Map.Entry;
-
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.zookeeper.common.ClientX509Util;
-import org.apache.zookeeper.common.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.slf4j.MDC;
 import org.apache.zookeeper.common.AtomicFileWritingIdiom;
 import org.apache.zookeeper.common.AtomicFileWritingIdiom.OutputStreamStatement;
 import org.apache.zookeeper.common.AtomicFileWritingIdiom.WriterStatement;
+import org.apache.zookeeper.common.ClientX509Util;
 import org.apache.zookeeper.common.PathUtils;
+import org.apache.zookeeper.common.StringUtils;
 import org.apache.zookeeper.server.ZooKeeperServer;
 import org.apache.zookeeper.server.auth.ProviderRegistry;
 import org.apache.zookeeper.server.quorum.QuorumPeer.LearnerType;
@@ -55,18 +34,30 @@ import org.apache.zookeeper.server.quorum.flexible.QuorumHierarchical;
 import org.apache.zookeeper.server.quorum.flexible.QuorumMaj;
 import org.apache.zookeeper.server.quorum.flexible.QuorumVerifier;
 import org.apache.zookeeper.server.util.VerifyingFileFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
+
+import java.io.*;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.util.*;
+import java.util.Map.Entry;
 
 import static org.apache.zookeeper.common.NetUtils.formatInetAddr;
 
 @InterfaceAudience.Public
 public class QuorumPeerConfig {
+    public static final String nextDynamicConfigFileSuffix = ".dynamic.next";
     private static final Logger LOG = LoggerFactory.getLogger(QuorumPeerConfig.class);
     private static final int UNSET_SERVERID = -1;
-    public static final String nextDynamicConfigFileSuffix = ".dynamic.next";
-
     private static boolean standaloneEnabled = true;
     private static boolean reconfigEnabled = false;
-
+    /**
+     * Minimum snapshot retain count.
+     * @see org.apache.zookeeper.server.PurgeTxnLog#purge(File, File, int)
+     */
+    private final int MIN_SNAP_RETAIN_COUNT = 3;
     protected InetSocketAddress clientPortAddress;
     protected InetSocketAddress secureClientPortAddress;
     protected boolean sslQuorum = false;
@@ -84,47 +75,285 @@ public class QuorumPeerConfig {
     protected int maxSessionTimeout = -1;
     protected boolean localSessionsEnabled = false;
     protected boolean localSessionsUpgradingEnabled = false;
-
     protected int initLimit;
     protected int syncLimit;
     protected int electionAlg = 3;
     protected int electionPort = 2182;
     protected boolean quorumListenOnAllIPs = false;
-
     protected long serverId = UNSET_SERVERID;
-
     protected QuorumVerifier quorumVerifier = null, lastSeenQuorumVerifier = null;
     protected int snapRetainCount = 3;
     protected int purgeInterval = 0;
     protected boolean syncEnabled = true;
-
     protected LearnerType peerType = LearnerType.PARTICIPANT;
-
     /**
      * Configurations for the quorumpeer-to-quorumpeer sasl authentication
      */
     protected boolean quorumServerRequireSasl = false;
     protected boolean quorumLearnerRequireSasl = false;
     protected boolean quorumEnableSasl = false;
-    protected String quorumServicePrincipal = QuorumAuth.QUORUM_KERBEROS_SERVICE_PRINCIPAL_DEFAULT_VALUE;
-    protected String quorumLearnerLoginContext = QuorumAuth.QUORUM_LEARNER_SASL_LOGIN_CONTEXT_DFAULT_VALUE;
-    protected String quorumServerLoginContext = QuorumAuth.QUORUM_SERVER_SASL_LOGIN_CONTEXT_DFAULT_VALUE;
+    protected String quorumServicePrincipal =
+            QuorumAuth.QUORUM_KERBEROS_SERVICE_PRINCIPAL_DEFAULT_VALUE;
+    protected String quorumLearnerLoginContext =
+            QuorumAuth.QUORUM_LEARNER_SASL_LOGIN_CONTEXT_DFAULT_VALUE;
+    protected String quorumServerLoginContext =
+            QuorumAuth.QUORUM_SERVER_SASL_LOGIN_CONTEXT_DFAULT_VALUE;
     protected int quorumCnxnThreadsSize;
 
-    /**
-     * Minimum snapshot retain count.
-     * @see org.apache.zookeeper.server.PurgeTxnLog#purge(File, File, int)
-     */
-    private final int MIN_SNAP_RETAIN_COUNT = 3;
+    // This method gets the version from the end of dynamic file name.
+    // For example, "zoo.cfg.dynamic.0" returns initial version "0".
+    // "zoo.cfg.dynamic.1001" returns version of hex number "0x1001".
+    // If a dynamic file name doesn't have any version at the end of file,
+    // e.g. "zoo.cfg.dynamic", it returns null.
+    public static String getVersionFromFilename(String filename) {
+        int i = filename.lastIndexOf('.');
+        if (i < 0 || i >= filename.length())
+            return null;
 
-    @SuppressWarnings("serial")
-    public static class ConfigException extends Exception {
-        public ConfigException(String msg) {
-            super(msg);
+        String hexVersion = filename.substring(i + 1);
+        try {
+            long version = Long.parseLong(hexVersion, 16);
+            return Long.toHexString(version);
+        } catch (NumberFormatException e) {
+            return null;
         }
-        public ConfigException(String msg, Exception e) {
-            super(msg, e);
+    }
+
+    /**
+     * Configure SSL authentication only if it is not configured.
+     *
+     * @throws ConfigException
+     *             If authentication scheme is configured but authentication
+     *             provider is not configured.
+     */
+    public static void configureSSLAuth() throws ConfigException {
+        try (ClientX509Util clientX509Util = new ClientX509Util()) {
+            String sslAuthProp = ProviderRegistry.AUTHPROVIDER_PROPERTY_PREFIX
+                    + System.getProperty(clientX509Util.getSslAuthProviderProperty(), "x509");
+            if (System.getProperty(sslAuthProp) == null) {
+                if ((ProviderRegistry.AUTHPROVIDER_PROPERTY_PREFIX + "x509").equals(sslAuthProp)) {
+                    System.setProperty(ProviderRegistry.AUTHPROVIDER_PROPERTY_PREFIX + "x509",
+                            "org.apache.zookeeper.server.auth.X509AuthenticationProvider");
+                } else {
+                    throw new ConfigException(
+                            "No auth provider configured for the SSL authentication scheme '"
+                                    + System.getProperty(
+                                    clientX509Util.getSslAuthProviderProperty()) + "'.");
+                }
+            }
         }
+    }
+
+    /**
+     * Writes dynamic configuration file
+     */
+    public static void writeDynamicConfig(final String dynamicConfigFilename,
+                                          final QuorumVerifier qv,
+                                          final boolean needKeepVersion)
+            throws IOException {
+
+        new AtomicFileWritingIdiom(new File(dynamicConfigFilename), new WriterStatement() {
+            @Override
+            public void write(Writer out) throws IOException {
+                Properties cfg = new Properties();
+                cfg.load(new StringReader(
+                        qv.toString()));
+
+                List<String> servers = new ArrayList<String>();
+                for (Entry<Object, Object> entry : cfg.entrySet()) {
+                    String key = entry.getKey().toString().trim();
+                    if (!needKeepVersion && key.startsWith("version"))
+                        continue;
+
+                    String value = entry.getValue().toString().trim();
+                    servers.add(key
+                            .concat("=")
+                            .concat(value));
+                }
+
+                Collections.sort(servers);
+                out.write(StringUtils.joinStrings(servers, "\n"));
+            }
+        });
+    }
+
+    /**
+     * Edit static config file.
+     * If there are quorum information in static file, e.g. "server.X", "group",
+     * it will remove them.
+     * If it needs to erase client port information left by the old config,
+     * "eraseClientPortAddress" should be set true.
+     * It should also updates dynamic file pointer on reconfig.
+     */
+    public static void editStaticConfig(final String configFileStr,
+                                        final String dynamicFileStr,
+                                        final boolean eraseClientPortAddress)
+            throws IOException {
+        // Some tests may not have a static config file.
+        if (configFileStr == null)
+            return;
+
+        File configFile = (new VerifyingFileFactory.Builder(LOG)
+                .warnForRelativePath()
+                .failForNonExistingPath()
+                .build()).create(configFileStr);
+
+        final File dynamicFile = (new VerifyingFileFactory.Builder(LOG)
+                .warnForRelativePath()
+                .failForNonExistingPath()
+                .build()).create(dynamicFileStr);
+
+        final Properties cfg = new Properties();
+        FileInputStream in = new FileInputStream(configFile);
+        try {
+            cfg.load(in);
+        } finally {
+            in.close();
+        }
+
+        new AtomicFileWritingIdiom(new File(configFileStr), new WriterStatement() {
+            @Override
+            public void write(Writer out) throws IOException {
+                for (Entry<Object, Object> entry : cfg.entrySet()) {
+                    String key = entry.getKey().toString().trim();
+
+                    if (key.startsWith("server.")
+                            || key.startsWith("group")
+                            || key.startsWith("weight")
+                            || key.startsWith("dynamicConfigFile")
+                            || (eraseClientPortAddress
+                            && (key.startsWith("clientPort")
+                            || key.startsWith("clientPortAddress")))) {
+                        // not writing them back to static file
+                        continue;
+                    }
+
+                    String value = entry.getValue().toString().trim();
+                    out.write(key.concat("=").concat(value).concat("\n"));
+                }
+
+                // updates the dynamic file pointer
+                String dynamicConfigFilePath =
+                        PathUtils.normalizeFileSystemPath(dynamicFile.getCanonicalPath());
+                out.write("dynamicConfigFile="
+                        .concat(dynamicConfigFilePath)
+                        .concat("\n"));
+            }
+        });
+    }
+
+    public static void deleteFile(String filename) {
+        if (filename == null)
+            return;
+        File f = new File(filename);
+        if (f.exists()) {
+            try {
+                f.delete();
+            } catch (Exception e) {
+                LOG.warn("deleting " + filename + " failed");
+            }
+        }
+    }
+
+    private static QuorumVerifier createQuorumVerifier(Properties dynamicConfigProp,
+                                                       boolean isHierarchical)
+            throws ConfigException {
+        if (isHierarchical) {
+            return new QuorumHierarchical(dynamicConfigProp);
+        } else {
+            /*
+             * The default QuorumVerifier is QuorumMaj
+             */
+            //LOG.info("Defaulting to majority quorums");
+            return new QuorumMaj(dynamicConfigProp);
+        }
+    }
+
+    /**
+     * Parse dynamic configuration file and return
+     * quorumVerifier for new configuration.
+     * @param dynamicConfigProp Properties to parse from.
+     * @throws IOException
+     * @throws ConfigException
+     */
+    public static QuorumVerifier parseDynamicConfig(Properties dynamicConfigProp,
+                                                    int eAlg,
+                                                    boolean warnings,
+                                                    boolean configBackwardCompatibilityMode)
+            throws IOException, ConfigException {
+        boolean isHierarchical = false;
+        for (Entry<Object, Object> entry : dynamicConfigProp.entrySet()) {
+            String key = entry.getKey().toString().trim();
+            if (key.startsWith("group") || key.startsWith("weight")) {
+                isHierarchical = true;
+            } else if (!configBackwardCompatibilityMode && !key.startsWith("server.")
+                    && !key.equals("version")) {
+                LOG.info(dynamicConfigProp.toString());
+                throw new ConfigException("Unrecognised parameter: " + key);
+            }
+        }
+
+        QuorumVerifier qv = createQuorumVerifier(dynamicConfigProp, isHierarchical);
+
+        int numParticipators = qv.getVotingMembers().size();
+        int numObservers = qv.getObservingMembers().size();
+        if (numParticipators == 0) {
+            if (!standaloneEnabled) {
+                throw new IllegalArgumentException("standaloneEnabled = false then " +
+                        "number of participants should be >0");
+            }
+            if (numObservers > 0) {
+                throw new IllegalArgumentException(
+                        "Observers w/o participants is an invalid configuration");
+            }
+        } else if (numParticipators == 1 && standaloneEnabled) {
+            // HBase currently adds a single server line to the config, for
+            // b/w compatibility reasons we need to keep this here. If standaloneEnabled
+            // is true, the QuorumPeerMain script will create a standalone server instead
+            // of a quorum configuration
+            LOG.error("Invalid configuration, only one server specified (ignoring)");
+            if (numObservers > 0) {
+                throw new IllegalArgumentException(
+                        "Observers w/o quorum is an invalid configuration");
+            }
+        } else {
+            if (warnings) {
+                if (numParticipators <= 2) {
+                    LOG.warn("No server failure will be tolerated. " +
+                            "You need at least 3 servers.");
+                } else if (numParticipators % 2 == 0) {
+                    LOG.warn("Non-optimial configuration, consider an odd number of servers.");
+                }
+            }
+            /*
+             * If using FLE, then every server requires a separate election
+             * port.
+             */
+            if (eAlg != 0) {
+                for (QuorumServer s : qv.getVotingMembers().values()) {
+                    if (s.electionAddr == null)
+                        throw new IllegalArgumentException(
+                                "Missing election port for server: " + s.id);
+                }
+            }
+        }
+        return qv;
+    }
+
+    public static boolean isStandaloneEnabled() {
+        return standaloneEnabled;
+    }
+
+    public static void setStandaloneEnabled(boolean enabled) {
+        standaloneEnabled = enabled;
+    }
+
+    public static boolean isReconfigEnabled() {
+        return reconfigEnabled;
+    }
+
+    public static void setReconfigEnabled(boolean enabled) {
+        reconfigEnabled = enabled;
     }
 
     /**
@@ -138,9 +367,9 @@ public class QuorumPeerConfig {
         try {
             // 构建文件对象
             File configFile = (new VerifyingFileFactory.Builder(LOG)
-                .warnForRelativePath()
-                .failForNonExistingPath()
-                .build()).create(path);
+                    .warnForRelativePath()
+                    .failForNonExistingPath()
+                    .build()).create(path);
 
             // 创建Properties对象，将文件内容放入该对象
             Properties cfg = new Properties();
@@ -159,74 +388,56 @@ public class QuorumPeerConfig {
             throw new ConfigException("Error processing " + path, e);
         }
 
-        if (dynamicConfigFileStr!=null) {
-           try {
-               Properties dynamicCfg = new Properties();
-               FileInputStream inConfig = new FileInputStream(dynamicConfigFileStr);
-               try {
-                   dynamicCfg.load(inConfig);
-                   if (dynamicCfg.getProperty("version") != null) {
-                       throw new ConfigException("dynamic file shouldn't have version inside");
-                   }
+        if (dynamicConfigFileStr != null) {
+            try {
+                Properties dynamicCfg = new Properties();
+                FileInputStream inConfig = new FileInputStream(dynamicConfigFileStr);
+                try {
+                    dynamicCfg.load(inConfig);
+                    if (dynamicCfg.getProperty("version") != null) {
+                        throw new ConfigException("dynamic file shouldn't have version inside");
+                    }
 
-                   String version = getVersionFromFilename(dynamicConfigFileStr);
-                   // If there isn't any version associated with the filename,
-                   // the default version is 0.
-                   if (version != null) {
-                       dynamicCfg.setProperty("version", version);
-                   }
-               } finally {
-                   inConfig.close();
-               }
-               setupQuorumPeerConfig(dynamicCfg, false);
+                    String version = getVersionFromFilename(dynamicConfigFileStr);
+                    // If there isn't any version associated with the filename,
+                    // the default version is 0.
+                    if (version != null) {
+                        dynamicCfg.setProperty("version", version);
+                    }
+                } finally {
+                    inConfig.close();
+                }
+                setupQuorumPeerConfig(dynamicCfg, false);
 
-           } catch (IOException e) {
-               throw new ConfigException("Error processing " + dynamicConfigFileStr, e);
-           } catch (IllegalArgumentException e) {
-               throw new ConfigException("Error processing " + dynamicConfigFileStr, e);
-           }
-           File nextDynamicConfigFile = new File(configFileStr + nextDynamicConfigFileSuffix);
-           if (nextDynamicConfigFile.exists()) {
-               try {
-                   Properties dynamicConfigNextCfg = new Properties();
-                   FileInputStream inConfigNext = new FileInputStream(nextDynamicConfigFile);
-                   try {
-                       dynamicConfigNextCfg.load(inConfigNext);
-                   } finally {
-                       inConfigNext.close();
-                   }
-                   boolean isHierarchical = false;
-                   for (Entry<Object, Object> entry : dynamicConfigNextCfg.entrySet()) {
-                       String key = entry.getKey().toString().trim();
-                       if (key.startsWith("group") || key.startsWith("weight")) {
-                           isHierarchical = true;
-                           break;
-                       }
-                   }
-                   lastSeenQuorumVerifier = createQuorumVerifier(dynamicConfigNextCfg, isHierarchical);
-               } catch (IOException e) {
-                   LOG.warn("NextQuorumVerifier is initiated to null");
-               }
-           }
-        }
-    }
-
-    // This method gets the version from the end of dynamic file name.
-    // For example, "zoo.cfg.dynamic.0" returns initial version "0".
-    // "zoo.cfg.dynamic.1001" returns version of hex number "0x1001".
-    // If a dynamic file name doesn't have any version at the end of file,
-    // e.g. "zoo.cfg.dynamic", it returns null.
-    public static String getVersionFromFilename(String filename) {
-        int i = filename.lastIndexOf('.');
-        if(i < 0 || i >= filename.length())
-            return null;
-
-        String hexVersion = filename.substring(i + 1);
-        try {
-            long version = Long.parseLong(hexVersion, 16);
-            return Long.toHexString(version);
-        } catch (NumberFormatException e) {
-            return null;
+            } catch (IOException e) {
+                throw new ConfigException("Error processing " + dynamicConfigFileStr, e);
+            } catch (IllegalArgumentException e) {
+                throw new ConfigException("Error processing " + dynamicConfigFileStr, e);
+            }
+            File nextDynamicConfigFile = new File(configFileStr + nextDynamicConfigFileSuffix);
+            if (nextDynamicConfigFile.exists()) {
+                try {
+                    Properties dynamicConfigNextCfg = new Properties();
+                    FileInputStream inConfigNext = new FileInputStream(nextDynamicConfigFile);
+                    try {
+                        dynamicConfigNextCfg.load(inConfigNext);
+                    } finally {
+                        inConfigNext.close();
+                    }
+                    boolean isHierarchical = false;
+                    for (Entry<Object, Object> entry : dynamicConfigNextCfg.entrySet()) {
+                        String key = entry.getKey().toString().trim();
+                        if (key.startsWith("group") || key.startsWith("weight")) {
+                            isHierarchical = true;
+                            break;
+                        }
+                    }
+                    lastSeenQuorumVerifier =
+                            createQuorumVerifier(dynamicConfigNextCfg, isHierarchical);
+                } catch (IOException e) {
+                    LOG.warn("NextQuorumVerifier is initiated to null");
+                }
+            }
         }
     }
 
@@ -238,12 +449,13 @@ public class QuorumPeerConfig {
      * @throws ConfigException
      */
     public void parseProperties(Properties zkProp)
-    throws IOException, ConfigException {
+            throws IOException, ConfigException {
         int clientPort = 0;
         int secureClientPort = 0;
         String clientPortAddress = null;
         String secureClientPortAddress = null;
-        VerifyingFileFactory vff = new VerifyingFileFactory.Builder(LOG).warnForRelativePath().build();
+        VerifyingFileFactory vff =
+                new VerifyingFileFactory.Builder(LOG).warnForRelativePath().build();
         for (Entry<Object, Object> entry : zkProp.entrySet()) {
             String key = entry.getKey().toString().trim();
             String value = entry.getValue().toString().trim();
@@ -261,7 +473,7 @@ public class QuorumPeerConfig {
                 clientPortAddress = value.trim();
             } else if (key.equals("secureClientPort")) {
                 secureClientPort = Integer.parseInt(value);
-            } else if (key.equals("secureClientPortAddress")){
+            } else if (key.equals("secureClientPortAddress")) {
                 secureClientPortAddress = value.trim();
             } else if (key.equals("tickTime")) {
                 tickTime = Integer.parseInt(value);
@@ -284,13 +496,12 @@ public class QuorumPeerConfig {
                     peerType = LearnerType.OBSERVER;
                 } else if (value.toLowerCase().equals("participant")) {
                     peerType = LearnerType.PARTICIPANT;
-                } else
-                {
+                } else {
                     throw new ConfigException("Unrecognised peertype: " + value);
                 }
-            } else if (key.equals( "syncEnabled" )) {
+            } else if (key.equals("syncEnabled")) {
                 syncEnabled = Boolean.parseBoolean(value);
-            } else if (key.equals("dynamicConfigFile")){
+            } else if (key.equals("dynamicConfigFile")) {
                 dynamicConfigFileStr = value;
             } else if (key.equals("autopurge.snapRetainCount")) {
                 snapRetainCount = Integer.parseInt(value);
@@ -302,7 +513,8 @@ public class QuorumPeerConfig {
                 } else if (value.toLowerCase().equals("false")) {
                     setStandaloneEnabled(false);
                 } else {
-                    throw new ConfigException("Invalid option " + value + " for standalone mode. Choose 'true' or 'false.'");
+                    throw new ConfigException("Invalid option " + value
+                            + " for standalone mode. Choose 'true' or 'false.'");
                 }
             } else if (key.equals("reconfigEnabled")) {
                 if (value.toLowerCase().equals("true")) {
@@ -310,16 +522,19 @@ public class QuorumPeerConfig {
                 } else if (value.toLowerCase().equals("false")) {
                     setReconfigEnabled(false);
                 } else {
-                    throw new ConfigException("Invalid option " + value + " for reconfigEnabled flag. Choose 'true' or 'false.'");
+                    throw new ConfigException("Invalid option " + value
+                            + " for reconfigEnabled flag. Choose 'true' or 'false.'");
                 }
-            } else if (key.equals("sslQuorum")){
+            } else if (key.equals("sslQuorum")) {
                 sslQuorum = Boolean.parseBoolean(value);
-            } else if (key.equals("portUnification")){
+            } else if (key.equals("portUnification")) {
                 shouldUsePortUnification = Boolean.parseBoolean(value);
             } else if (key.equals("sslQuorumReloadCertFiles")) {
                 sslQuorumReloadCertFiles = Boolean.parseBoolean(value);
-            } else if ((key.startsWith("server.") || key.startsWith("group") || key.startsWith("weight")) && zkProp.containsKey("dynamicConfigFile")) {
-                throw new ConfigException("parameter: " + key + " must be in a separate dynamic config file");
+            } else if ((key.startsWith("server.") || key.startsWith("group") || key.startsWith(
+                    "weight")) && zkProp.containsKey("dynamicConfigFile")) {
+                throw new ConfigException(
+                        "parameter: " + key + " must be in a separate dynamic config file");
             } else if (key.equals(QuorumAuth.QUORUM_SASL_AUTH_ENABLED)) {
                 quorumEnableSasl = Boolean.parseBoolean(value);
             } else if (key.equals(QuorumAuth.QUORUM_SERVER_SASL_AUTH_REQUIRED)) {
@@ -380,7 +595,8 @@ public class QuorumPeerConfig {
         if (clientPort == 0) {
             LOG.info("clientPort is not set");
             if (clientPortAddress != null) {
-                throw new IllegalArgumentException("clientPortAddress is set but clientPort is not set");
+                throw new IllegalArgumentException(
+                        "clientPortAddress is set but clientPort is not set");
             }
         } else if (clientPortAddress != null) {
             this.clientPortAddress = new InetSocketAddress(
@@ -394,7 +610,8 @@ public class QuorumPeerConfig {
         if (secureClientPort == 0) {
             LOG.info("secureClientPort is not set");
             if (secureClientPortAddress != null) {
-                throw new IllegalArgumentException("secureClientPortAddress is set but secureClientPort is not set");
+                throw new IllegalArgumentException(
+                        "secureClientPortAddress is set but secureClientPort is not set");
             }
         } else if (secureClientPortAddress != null) {
             this.secureClientPortAddress = new InetSocketAddress(
@@ -433,29 +650,6 @@ public class QuorumPeerConfig {
     }
 
     /**
-     * Configure SSL authentication only if it is not configured.
-     *
-     * @throws ConfigException
-     *             If authentication scheme is configured but authentication
-     *             provider is not configured.
-     */
-    public static void configureSSLAuth() throws ConfigException {
-        try (ClientX509Util clientX509Util = new ClientX509Util()) {
-            String sslAuthProp = ProviderRegistry.AUTHPROVIDER_PROPERTY_PREFIX
-                                 + System.getProperty(clientX509Util.getSslAuthProviderProperty(), "x509");
-            if (System.getProperty(sslAuthProp) == null) {
-                if ((ProviderRegistry.AUTHPROVIDER_PROPERTY_PREFIX + "x509").equals(sslAuthProp)) {
-                    System.setProperty(ProviderRegistry.AUTHPROVIDER_PROPERTY_PREFIX + "x509",
-                        "org.apache.zookeeper.server.auth.X509AuthenticationProvider");
-                } else {
-                    throw new ConfigException("No auth provider configured for the SSL authentication scheme '"
-                            + System.getProperty(clientX509Util.getSslAuthProviderProperty()) + "'.");
-                }
-            }
-        }
-    }
-
-    /**
      * Backward compatibility -- It would backup static config file on bootup
      * if users write dynamic configuration in "zoo.cfg".
      */
@@ -472,7 +666,7 @@ public class QuorumPeerConfig {
                         output.write(buf, 0, bytesRead);
                     }
                 } finally {
-                    if( input != null) {
+                    if (input != null) {
                         input.close();
                     }
                 }
@@ -480,201 +674,14 @@ public class QuorumPeerConfig {
         });
     }
 
-    /**
-     * Writes dynamic configuration file
-     */
-    public static void writeDynamicConfig(final String dynamicConfigFilename,
-                                          final QuorumVerifier qv,
-                                          final boolean needKeepVersion)
-            throws IOException {
-
-        new AtomicFileWritingIdiom(new File(dynamicConfigFilename), new WriterStatement() {
-            @Override
-            public void write(Writer out) throws IOException {
-                Properties cfg = new Properties();
-                cfg.load( new StringReader(
-                        qv.toString()));
-
-                List<String> servers = new ArrayList<String>();
-                for (Entry<Object, Object> entry : cfg.entrySet()) {
-                    String key = entry.getKey().toString().trim();
-                    if ( !needKeepVersion && key.startsWith("version"))
-                        continue;
-
-                    String value = entry.getValue().toString().trim();
-                    servers.add(key
-                            .concat("=")
-                            .concat(value));
-                }
-
-                Collections.sort(servers);
-                out.write(StringUtils.joinStrings(servers, "\n"));
-            }
-        });
-    }
-
-    /**
-     * Edit static config file.
-     * If there are quorum information in static file, e.g. "server.X", "group",
-     * it will remove them.
-     * If it needs to erase client port information left by the old config,
-     * "eraseClientPortAddress" should be set true.
-     * It should also updates dynamic file pointer on reconfig.
-     */
-    public static void editStaticConfig(final String configFileStr,
-                                        final String dynamicFileStr,
-                                        final boolean eraseClientPortAddress)
-            throws IOException {
-        // Some tests may not have a static config file.
-        if (configFileStr == null)
-            return;
-
-        File configFile = (new VerifyingFileFactory.Builder(LOG)
-                .warnForRelativePath()
-                .failForNonExistingPath()
-                .build()).create(configFileStr);
-
-        final File dynamicFile = (new VerifyingFileFactory.Builder(LOG)
-                .warnForRelativePath()
-                .failForNonExistingPath()
-                .build()).create(dynamicFileStr);
-
-        final Properties cfg = new Properties();
-        FileInputStream in = new FileInputStream(configFile);
-        try {
-            cfg.load(in);
-        } finally {
-            in.close();
-        }
-
-        new AtomicFileWritingIdiom(new File(configFileStr), new WriterStatement() {
-            @Override
-            public void write(Writer out) throws IOException {
-                for (Entry<Object, Object> entry : cfg.entrySet()) {
-                    String key = entry.getKey().toString().trim();
-
-                    if (key.startsWith("server.")
-                        || key.startsWith("group")
-                        || key.startsWith("weight")
-                        || key.startsWith("dynamicConfigFile")
-                        || (eraseClientPortAddress
-                            && (key.startsWith("clientPort")
-                                || key.startsWith("clientPortAddress")))) {
-                        // not writing them back to static file
-                        continue;
-                    }
-
-                    String value = entry.getValue().toString().trim();
-                    out.write(key.concat("=").concat(value).concat("\n"));
-                }
-
-                // updates the dynamic file pointer
-                String dynamicConfigFilePath = PathUtils.normalizeFileSystemPath(dynamicFile.getCanonicalPath());
-                out.write("dynamicConfigFile="
-                         .concat(dynamicConfigFilePath)
-                         .concat("\n"));
-            }
-        });
-    }
-
-
-    public static void deleteFile(String filename){
-       if (filename == null) return;
-       File f = new File(filename);
-       if (f.exists()) {
-           try{
-               f.delete();
-           } catch (Exception e) {
-               LOG.warn("deleting " + filename + " failed");
-           }
-       }
-    }
-
-
-    private static QuorumVerifier createQuorumVerifier(Properties dynamicConfigProp, boolean isHierarchical) throws ConfigException{
-       if(isHierarchical){
-            return new QuorumHierarchical(dynamicConfigProp);
-        } else {
-           /*
-             * The default QuorumVerifier is QuorumMaj
-             */
-            //LOG.info("Defaulting to majority quorums");
-            return new QuorumMaj(dynamicConfigProp);
-        }
-    }
-
     void setupQuorumPeerConfig(Properties prop, boolean configBackwardCompatibilityMode)
             throws IOException, ConfigException {
-        quorumVerifier = parseDynamicConfig(prop, electionAlg, true, configBackwardCompatibilityMode);
+        quorumVerifier =
+                parseDynamicConfig(prop, electionAlg, true, configBackwardCompatibilityMode);
         setupMyId();
         setupClientPort();
         setupPeerType();
         checkValidity();
-    }
-
-    /**
-     * Parse dynamic configuration file and return
-     * quorumVerifier for new configuration.
-     * @param dynamicConfigProp Properties to parse from.
-     * @throws IOException
-     * @throws ConfigException
-     */
-    public static QuorumVerifier parseDynamicConfig(Properties dynamicConfigProp, int eAlg, boolean warnings,
-	   boolean configBackwardCompatibilityMode) throws IOException, ConfigException {
-       boolean isHierarchical = false;
-        for (Entry<Object, Object> entry : dynamicConfigProp.entrySet()) {
-            String key = entry.getKey().toString().trim();
-            if (key.startsWith("group") || key.startsWith("weight")) {
-               isHierarchical = true;
-            } else if (!configBackwardCompatibilityMode && !key.startsWith("server.") && !key.equals("version")){
-               LOG.info(dynamicConfigProp.toString());
-               throw new ConfigException("Unrecognised parameter: " + key);
-            }
-        }
-
-        QuorumVerifier qv = createQuorumVerifier(dynamicConfigProp, isHierarchical);
-
-        int numParticipators = qv.getVotingMembers().size();
-        int numObservers = qv.getObservingMembers().size();
-        if (numParticipators == 0) {
-            if (!standaloneEnabled) {
-                throw new IllegalArgumentException("standaloneEnabled = false then " +
-                        "number of participants should be >0");
-            }
-            if (numObservers > 0) {
-                throw new IllegalArgumentException("Observers w/o participants is an invalid configuration");
-            }
-        } else if (numParticipators == 1 && standaloneEnabled) {
-            // HBase currently adds a single server line to the config, for
-            // b/w compatibility reasons we need to keep this here. If standaloneEnabled
-            // is true, the QuorumPeerMain script will create a standalone server instead
-            // of a quorum configuration
-            LOG.error("Invalid configuration, only one server specified (ignoring)");
-            if (numObservers > 0) {
-                throw new IllegalArgumentException("Observers w/o quorum is an invalid configuration");
-            }
-        } else {
-            if (warnings) {
-                if (numParticipators <= 2) {
-                    LOG.warn("No server failure will be tolerated. " +
-                        "You need at least 3 servers.");
-                } else if (numParticipators % 2 == 0) {
-                    LOG.warn("Non-optimial configuration, consider an odd number of servers.");
-                }
-            }
-            /*
-             * If using FLE, then every server requires a separate election
-             * port.
-             */
-           if (eAlg != 0) {
-               for (QuorumServer s : qv.getVotingMembers().values()) {
-                   if (s.electionAddr == null)
-                       throw new IllegalArgumentException(
-                               "Missing election port for server: " + s.id);
-               }
-           }
-        }
-        return qv;
     }
 
     private void setupMyId() throws IOException {
@@ -711,15 +718,18 @@ public class QuorumPeerConfig {
                             && clientPortAddress.getPort() != qs.clientAddr.getPort()))
                 throw new ConfigException("client address for this server (id = " + serverId +
                         ") in static config file is " + clientPortAddress +
-                        " is different from client address found in dynamic file: " + qs.clientAddr);
+                        " is different from client address found in dynamic file: "
+                        + qs.clientAddr);
         }
-        if (qs != null && qs.clientAddr != null) clientPortAddress = qs.clientAddr;
+        if (qs != null && qs.clientAddr != null)
+            clientPortAddress = qs.clientAddr;
     }
 
     private void setupPeerType() {
         // Warn about inconsistent peer type
-        LearnerType roleByServersList = quorumVerifier.getObservingMembers().containsKey(serverId) ? LearnerType.OBSERVER
-                : LearnerType.PARTICIPANT;
+        LearnerType roleByServersList =
+                quorumVerifier.getObservingMembers().containsKey(serverId) ? LearnerType.OBSERVER
+                        : LearnerType.PARTICIPANT;
         if (roleByServersList != peerType) {
             LOG.warn("Peer type from servers list (" + roleByServersList
                     + ") doesn't match peerType (" + peerType
@@ -729,7 +739,7 @@ public class QuorumPeerConfig {
         }
     }
 
-    public void checkValidity() throws IOException, ConfigException{
+    public void checkValidity() throws IOException, ConfigException {
         if (isDistributed()) {
             if (initLimit == 0) {
                 throw new IllegalArgumentException("initLimit is not set");
@@ -740,21 +750,49 @@ public class QuorumPeerConfig {
             if (serverId == UNSET_SERVERID) {
                 throw new IllegalArgumentException("myid file is missing");
             }
-       }
+        }
     }
 
-    public InetSocketAddress getClientPortAddress() { return clientPortAddress; }
-    public InetSocketAddress getSecureClientPortAddress() { return secureClientPortAddress; }
-    public File getDataDir() { return dataDir; }
-    public File getDataLogDir() { return dataLogDir; }
-    public int getTickTime() { return tickTime; }
-    public int getMaxClientCnxns() { return maxClientCnxns; }
-    public int getMinSessionTimeout() { return minSessionTimeout; }
-    public int getMaxSessionTimeout() { return maxSessionTimeout; }
-    public boolean areLocalSessionsEnabled() { return localSessionsEnabled; }
+    public InetSocketAddress getClientPortAddress() {
+        return clientPortAddress;
+    }
+
+    public InetSocketAddress getSecureClientPortAddress() {
+        return secureClientPortAddress;
+    }
+
+    public File getDataDir() {
+        return dataDir;
+    }
+
+    public File getDataLogDir() {
+        return dataLogDir;
+    }
+
+    public int getTickTime() {
+        return tickTime;
+    }
+
+    public int getMaxClientCnxns() {
+        return maxClientCnxns;
+    }
+
+    public int getMinSessionTimeout() {
+        return minSessionTimeout;
+    }
+
+    public int getMaxSessionTimeout() {
+        return maxSessionTimeout;
+    }
+
+    public boolean areLocalSessionsEnabled() {
+        return localSessionsEnabled;
+    }
+
     public boolean isLocalSessionsUpgradingEnabled() {
         return localSessionsUpgradingEnabled;
     }
+
     public boolean isSslQuorum() {
         return sslQuorum;
     }
@@ -763,10 +801,21 @@ public class QuorumPeerConfig {
         return shouldUsePortUnification;
     }
 
-    public int getInitLimit() { return initLimit; }
-    public int getSyncLimit() { return syncLimit; }
-    public int getElectionAlg() { return electionAlg; }
-    public int getElectionPort() { return electionPort; }
+    public int getInitLimit() {
+        return initLimit;
+    }
+
+    public int getSyncLimit() {
+        return syncLimit;
+    }
+
+    public int getElectionAlg() {
+        return electionAlg;
+    }
+
+    public int getElectionPort() {
+        return electionPort;
+    }
 
     public int getSnapRetainCount() {
         return snapRetainCount;
@@ -788,22 +837,25 @@ public class QuorumPeerConfig {
         return lastSeenQuorumVerifier;
     }
 
-    public Map<Long,QuorumServer> getServers() {
+    public Map<Long, QuorumServer> getServers() {
         // returns all configuration servers -- participants and observers
         return Collections.unmodifiableMap(quorumVerifier.getAllMembers());
     }
 
-    public long getServerId() { return serverId; }
+    public long getServerId() {
+        return serverId;
+    }
 
     public boolean isDistributed() {
-        return quorumVerifier!=null && (!standaloneEnabled || quorumVerifier.getVotingMembers().size() > 1);
+        return quorumVerifier != null && (!standaloneEnabled
+                || quorumVerifier.getVotingMembers().size() > 1);
     }
 
     public LearnerType getPeerType() {
         return peerType;
     }
 
-    public String getConfigFilename(){
+    public String getConfigFilename() {
         return configFileStr;
     }
 
@@ -811,18 +863,16 @@ public class QuorumPeerConfig {
         return quorumListenOnAllIPs;
     }
 
-    public static boolean isStandaloneEnabled() {
-	return standaloneEnabled;
-    }
 
-    public static void setStandaloneEnabled(boolean enabled) {
-        standaloneEnabled = enabled;
-    }
+    @SuppressWarnings("serial")
+    public static class ConfigException extends Exception {
+        public ConfigException(String msg) {
+            super(msg);
+        }
 
-    public static boolean isReconfigEnabled() { return reconfigEnabled; }
-
-    public static void setReconfigEnabled(boolean enabled) {
-        reconfigEnabled = enabled;
+        public ConfigException(String msg, Exception e) {
+            super(msg, e);
+        }
     }
 
 }

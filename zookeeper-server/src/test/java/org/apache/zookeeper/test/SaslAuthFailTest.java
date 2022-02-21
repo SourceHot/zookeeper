@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -33,8 +33,9 @@ import java.util.concurrent.CountDownLatch;
 
 public class SaslAuthFailTest extends ClientBase {
     static {
-        System.setProperty("zookeeper.authProvider.1","org.apache.zookeeper.server.auth.SASLAuthenticationProvider");
-        System.setProperty("zookeeper.allowSaslFailedClients","true");
+        System.setProperty("zookeeper.authProvider.1",
+                "org.apache.zookeeper.server.auth.SASLAuthenticationProvider");
+        System.setProperty("zookeeper.allowSaslFailedClients", "true");
 
         try {
             File tmpDir = createTmpDir();
@@ -49,30 +50,18 @@ public class SaslAuthFailTest extends ClientBase {
                     "Client {\n" +
                     "       org.apache.zookeeper.server.auth.DigestLoginModule required\n" +
                     "       username=\"super\"\n" +
-                    "       password=\"test1\";\n" + // NOTE: wrong password ('test' != 'test1') : this is to test SASL authentication failure.
+                    "       password=\"test1\";\n" +
+                    // NOTE: wrong password ('test' != 'test1') : this is to test SASL authentication failure.
                     "};" + "\n");
             fwriter.close();
-            System.setProperty("java.security.auth.login.config",saslConfFile.getAbsolutePath());
-        }
-        catch (IOException e) {
+            System.setProperty("java.security.auth.login.config", saslConfFile.getAbsolutePath());
+        } catch (IOException e) {
             // could not create tmp directory to hold JAAS conf file.
         }
     }
 
     private CountDownLatch authFailed = new CountDownLatch(1);
 
-    private class MyWatcher extends CountdownWatcher {
-        @Override
-        public synchronized void process(WatchedEvent event) {
-            if (event.getState() == KeeperState.AuthFailed) {
-                authFailed.countDown();
-            }
-            else {
-                super.process(event);
-            }
-        }
-    }
-    
     @Test
     public void testAuthFail() {
         try (ZooKeeper zk = createClient()) {
@@ -89,6 +78,18 @@ public class SaslAuthFailTest extends ClientBase {
         try (ZooKeeper ignored = createClient(new MyWatcher(), hostPort)) {
             // wait for authFailed event from client's EventThread.
             authFailed.await();
+        }
+    }
+
+
+    private class MyWatcher extends CountdownWatcher {
+        @Override
+        public synchronized void process(WatchedEvent event) {
+            if (event.getState() == KeeperState.AuthFailed) {
+                authFailed.countDown();
+            } else {
+                super.process(event);
+            }
         }
     }
 }

@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,7 +18,13 @@
 package org.apache.zookeeper.common;
 
 
-import java.io.ByteArrayInputStream;
+import org.apache.zookeeper.common.X509Exception.KeyManagerException;
+import org.apache.zookeeper.common.X509Exception.SSLContextException;
+import org.apache.zookeeper.common.X509Exception.TrustManagerException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.net.ssl.*;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.Socket;
@@ -26,35 +32,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardWatchEventKinds;
 import java.nio.file.WatchEvent;
-import java.security.GeneralSecurityException;
-import java.security.KeyManagementException;
-import java.security.KeyStore;
-import java.security.NoSuchAlgorithmException;
-import java.security.Security;
+import java.security.*;
 import java.security.cert.PKIXBuilderParameters;
 import java.security.cert.X509CertSelector;
-import java.util.Arrays;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
-
-import javax.net.ssl.CertPathTrustManagerParameters;
-import javax.net.ssl.KeyManager;
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLParameters;
-import javax.net.ssl.SSLServerSocket;
-import javax.net.ssl.SSLSocket;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.TrustManagerFactory;
-import javax.net.ssl.X509ExtendedTrustManager;
-import javax.net.ssl.X509KeyManager;
-import javax.net.ssl.X509TrustManager;
-
-import org.apache.zookeeper.common.X509Exception.KeyManagerException;
-import org.apache.zookeeper.common.X509Exception.SSLContextException;
-import org.apache.zookeeper.common.X509Exception.TrustManagerException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Utility code for X509 handling
@@ -65,10 +47,19 @@ import org.slf4j.LoggerFactory;
  *   GCM and Java8 performs better with CBC, so these seem like reasonable defaults.
  */
 public abstract class X509Util implements Closeable, AutoCloseable {
+    public static final String DEFAULT_PROTOCOL = "TLSv1.2";
+    public static final int DEFAULT_HANDSHAKE_DETECTION_TIMEOUT_MILLIS = 5000;
     private static final Logger LOG = LoggerFactory.getLogger(X509Util.class);
-
     private static final String REJECT_CLIENT_RENEGOTIATION_PROPERTY =
             "jdk.tls.rejectClientInitiatedRenegotiation";
+    // On Java 8, prefer CBC ciphers since AES-NI support is lacking and GCM is slower than CBC.
+    private static final String[] DEFAULT_CIPHERS_JAVA8 =
+            concatArrays(getCBCCiphers(), getGCMCiphers());
+    // On Java 9 and later, prefer GCM ciphers due to improved AES-NI support.
+    // Note that this performance assumption might not hold true for architectures other than x86_64.
+    private static final String[] DEFAULT_CIPHERS_JAVA9 =
+            concatArrays(getGCMCiphers(), getCBCCiphers());
+
     static {
         // Client-initiated renegotiation in TLS is unsafe and
         // allows MITM attacks, so we should disable it unless
@@ -82,84 +73,6 @@ public abstract class X509Util implements Closeable, AutoCloseable {
         }
     }
 
-    public static final String DEFAULT_PROTOCOL = "TLSv1.2";
-    private static String[] getGCMCiphers() {
-        return new String[] {
-            "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
-            "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
-            "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
-            "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
-        };
-    }
-
-    private static String[] getCBCCiphers() {
-        return new String[] {
-            "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256",
-            "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256",
-            "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA",
-            "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA",
-            "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384",
-            "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384",
-            "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA",
-            "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
-        };
-    }
-
-    private static String[] concatArrays(String[] left, String[] right) {
-        String[] result = new String[left.length + right.length];
-        System.arraycopy(left, 0, result, 0, left.length);
-        System.arraycopy(right, 0, result, left.length, right.length);
-        return result;
-    }
-
-    // On Java 8, prefer CBC ciphers since AES-NI support is lacking and GCM is slower than CBC.
-    private static final String[] DEFAULT_CIPHERS_JAVA8 = concatArrays(getCBCCiphers(), getGCMCiphers());
-    // On Java 9 and later, prefer GCM ciphers due to improved AES-NI support.
-    // Note that this performance assumption might not hold true for architectures other than x86_64.
-    private static final String[] DEFAULT_CIPHERS_JAVA9 = concatArrays(getGCMCiphers(), getCBCCiphers());
-
-    public static final int DEFAULT_HANDSHAKE_DETECTION_TIMEOUT_MILLIS = 5000;
-
-    /**
-     * Enum specifying the client auth requirement of server-side TLS sockets created by this X509Util.
-     * <ul>
-     *     <li>NONE - do not request a client certificate.</li>
-     *     <li>WANT - request a client certificate, but allow anonymous clients to connect.</li>
-     *     <li>NEED - require a client certificate, disconnect anonymous clients.</li>
-     * </ul>
-     *
-     * If the config property is not set, the default value is NEED.
-     */
-    public enum ClientAuth {
-        NONE(io.netty.handler.ssl.ClientAuth.NONE),
-        WANT(io.netty.handler.ssl.ClientAuth.OPTIONAL),
-        NEED(io.netty.handler.ssl.ClientAuth.REQUIRE);
-
-        private final io.netty.handler.ssl.ClientAuth nettyAuth;
-
-        ClientAuth(io.netty.handler.ssl.ClientAuth nettyAuth) {
-            this.nettyAuth = nettyAuth;
-        }
-
-        /**
-         * Converts a property value to a ClientAuth enum. If the input string is empty or null, returns
-         * <code>ClientAuth.NEED</code>.
-         * @param prop the property string.
-         * @return the ClientAuth.
-         * @throws IllegalArgumentException if the property value is not "NONE", "WANT", "NEED", or empty/null.
-         */
-        public static ClientAuth fromPropertyValue(String prop) {
-            if (prop == null || prop.length() == 0) {
-                return NEED;
-            }
-            return ClientAuth.valueOf(prop.toUpperCase());
-        }
-
-        public io.netty.handler.ssl.ClientAuth toNettyClientAuth() {
-            return nettyAuth;
-        }
-    }
-
     private String sslProtocolProperty = getConfigPrefix() + "protocol";
     private String sslEnabledProtocolsProperty = getConfigPrefix() + "enabledProtocols";
     private String cipherSuitesProperty = getConfigPrefix() + "ciphersuites";
@@ -169,209 +82,54 @@ public abstract class X509Util implements Closeable, AutoCloseable {
     private String sslTruststoreLocationProperty = getConfigPrefix() + "trustStore.location";
     private String sslTruststorePasswdProperty = getConfigPrefix() + "trustStore.password";
     private String sslTruststoreTypeProperty = getConfigPrefix() + "trustStore.type";
-    private String sslHostnameVerificationEnabledProperty = getConfigPrefix() + "hostnameVerification";
+    private String sslHostnameVerificationEnabledProperty =
+            getConfigPrefix() + "hostnameVerification";
     private String sslCrlEnabledProperty = getConfigPrefix() + "crl";
     private String sslOcspEnabledProperty = getConfigPrefix() + "ocsp";
     private String sslClientAuthProperty = getConfigPrefix() + "clientAuth";
-    private String sslHandshakeDetectionTimeoutMillisProperty = getConfigPrefix() + "handshakeDetectionTimeoutMillis";
-
+    private String sslHandshakeDetectionTimeoutMillisProperty =
+            getConfigPrefix() + "handshakeDetectionTimeoutMillis";
     private ZKConfig zkConfig;
-    private AtomicReference<SSLContextAndOptions> defaultSSLContextAndOptions = new AtomicReference<>(null);
-
+    private AtomicReference<SSLContextAndOptions> defaultSSLContextAndOptions =
+            new AtomicReference<>(null);
     private FileChangeWatcher keyStoreFileWatcher;
     private FileChangeWatcher trustStoreFileWatcher;
 
     public X509Util() {
         this(null);
     }
-
     public X509Util(ZKConfig zkConfig) {
         this.zkConfig = zkConfig;
         keyStoreFileWatcher = trustStoreFileWatcher = null;
     }
 
-    protected abstract String getConfigPrefix();
-
-    protected abstract boolean shouldVerifyClientHostname();
-
-    public String getSslProtocolProperty() {
-        return sslProtocolProperty;
+    private static String[] getGCMCiphers() {
+        return new String[] {
+                "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+                "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+                "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
+                "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+        };
     }
 
-    public String getSslEnabledProtocolsProperty() {
-        return sslEnabledProtocolsProperty;
+    private static String[] getCBCCiphers() {
+        return new String[] {
+                "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256",
+                "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256",
+                "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA",
+                "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA",
+                "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384",
+                "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384",
+                "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA",
+                "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
+        };
     }
 
-    public String getCipherSuitesProperty() {
-        return cipherSuitesProperty;
-    }
-
-    public String getSslKeystoreLocationProperty() {
-        return sslKeystoreLocationProperty;
-    }
-
-    public String getSslCipherSuitesProperty() {
-        return cipherSuitesProperty;
-    }
-
-    public String getSslKeystorePasswdProperty() {
-        return sslKeystorePasswdProperty;
-    }
-
-    public String getSslKeystoreTypeProperty() {
-        return sslKeystoreTypeProperty;
-    }
-
-    public String getSslTruststoreLocationProperty() {
-        return sslTruststoreLocationProperty;
-    }
-
-    public String getSslTruststorePasswdProperty() {
-        return sslTruststorePasswdProperty;
-    }
-
-    public String getSslTruststoreTypeProperty() {
-        return sslTruststoreTypeProperty;
-    }
-
-    public String getSslHostnameVerificationEnabledProperty() {
-        return sslHostnameVerificationEnabledProperty;
-    }
-
-    public String getSslCrlEnabledProperty() {
-        return sslCrlEnabledProperty;
-    }
-
-    public String getSslOcspEnabledProperty() {
-        return sslOcspEnabledProperty;
-    }
-
-    public String getSslClientAuthProperty() {
-        return sslClientAuthProperty;
-    }
-
-    /**
-     * Returns the config property key that controls the amount of time, in milliseconds, that the first
-     * UnifiedServerSocket read operation will block for when trying to detect the client mode (TLS or PLAINTEXT).
-     *
-     * @return the config property key.
-     */
-    public String getSslHandshakeDetectionTimeoutMillisProperty() {
-        return sslHandshakeDetectionTimeoutMillisProperty;
-    }
-
-    public SSLContext getDefaultSSLContext() throws X509Exception.SSLContextException {
-        return getDefaultSSLContextAndOptions().getSSLContext();
-    }
-
-    public SSLContext createSSLContext(ZKConfig config) throws SSLContextException {
-        return createSSLContextAndOptions(config).getSSLContext();
-    }
-
-    public SSLContextAndOptions getDefaultSSLContextAndOptions() throws X509Exception.SSLContextException {
-        SSLContextAndOptions result = defaultSSLContextAndOptions.get();
-        if (result == null) {
-            result = createSSLContextAndOptions();
-            if (!defaultSSLContextAndOptions.compareAndSet(null, result)) {
-                // lost the race, another thread already set the value
-                result = defaultSSLContextAndOptions.get();
-            }
-        }
+    private static String[] concatArrays(String[] left, String[] right) {
+        String[] result = new String[left.length + right.length];
+        System.arraycopy(left, 0, result, 0, left.length);
+        System.arraycopy(right, 0, result, left.length, right.length);
         return result;
-    }
-
-    private void resetDefaultSSLContextAndOptions() throws X509Exception.SSLContextException {
-        SSLContextAndOptions newContext = createSSLContextAndOptions();
-        defaultSSLContextAndOptions.set(newContext);
-    }
-
-    private SSLContextAndOptions createSSLContextAndOptions() throws SSLContextException {
-        /*
-         * Since Configuration initializes the key store and trust store related
-         * configuration from system property. Reading property from
-         * configuration will be same reading from system property
-         */
-        return createSSLContextAndOptions(zkConfig == null ? new ZKConfig() : zkConfig);
-    }
-
-    /**
-     * Returns the max amount of time, in milliseconds, that the first UnifiedServerSocket read() operation should
-     * block for when trying to detect the client mode (TLS or PLAINTEXT).
-     * Defaults to {@link X509Util#DEFAULT_HANDSHAKE_DETECTION_TIMEOUT_MILLIS}.
-     *
-     * @return the handshake detection timeout, in milliseconds.
-     */
-    public int getSslHandshakeTimeoutMillis() {
-        try {
-            SSLContextAndOptions ctx = getDefaultSSLContextAndOptions();
-            return ctx.getHandshakeDetectionTimeoutMillis();
-        } catch (SSLContextException e) {
-            LOG.error("Error creating SSL context and options", e);
-            return DEFAULT_HANDSHAKE_DETECTION_TIMEOUT_MILLIS;
-        } catch (Exception e) {
-            LOG.error("Error parsing config property " + getSslHandshakeDetectionTimeoutMillisProperty(), e);
-            return DEFAULT_HANDSHAKE_DETECTION_TIMEOUT_MILLIS;
-        }
-    }
-
-    public SSLContextAndOptions createSSLContextAndOptions(ZKConfig config) throws SSLContextException {
-        KeyManager[] keyManagers = null;
-        TrustManager[] trustManagers = null;
-
-        String keyStoreLocationProp = config.getProperty(sslKeystoreLocationProperty, "");
-        String keyStorePasswordProp = config.getProperty(sslKeystorePasswdProperty, "");
-        String keyStoreTypeProp = config.getProperty(sslKeystoreTypeProperty);
-
-        // There are legal states in some use cases for null KeyManager or TrustManager.
-        // But if a user wanna specify one, location is required. Password defaults to empty string if it is not
-        // specified by the user.
-
-        if (keyStoreLocationProp.isEmpty()) {
-            LOG.warn(getSslKeystoreLocationProperty() + " not specified");
-        } else {
-            try {
-                keyManagers = new KeyManager[]{
-                        createKeyManager(keyStoreLocationProp, keyStorePasswordProp, keyStoreTypeProp)};
-            } catch (KeyManagerException keyManagerException) {
-                throw new SSLContextException("Failed to create KeyManager", keyManagerException);
-            } catch (IllegalArgumentException e) {
-                throw new SSLContextException("Bad value for " + sslKeystoreTypeProperty + ": " + keyStoreTypeProp, e);
-            }
-        }
-
-        String trustStoreLocationProp = config.getProperty(sslTruststoreLocationProperty, "");
-        String trustStorePasswordProp = config.getProperty(sslTruststorePasswdProperty, "");
-        String trustStoreTypeProp = config.getProperty(sslTruststoreTypeProperty);
-
-        boolean sslCrlEnabled = config.getBoolean(this.sslCrlEnabledProperty);
-        boolean sslOcspEnabled = config.getBoolean(this.sslOcspEnabledProperty);
-        boolean sslServerHostnameVerificationEnabled =
-                config.getBoolean(this.getSslHostnameVerificationEnabledProperty(), true);
-        boolean sslClientHostnameVerificationEnabled =
-                sslServerHostnameVerificationEnabled && shouldVerifyClientHostname();
-
-        if (trustStoreLocationProp.isEmpty()) {
-            LOG.warn(getSslTruststoreLocationProperty() + " not specified");
-        } else {
-            try {
-                trustManagers = new TrustManager[]{
-                        createTrustManager(trustStoreLocationProp, trustStorePasswordProp, trustStoreTypeProp, sslCrlEnabled, sslOcspEnabled,
-                                sslServerHostnameVerificationEnabled, sslClientHostnameVerificationEnabled)};
-            } catch (TrustManagerException trustManagerException) {
-                throw new SSLContextException("Failed to create TrustManager", trustManagerException);
-            } catch (IllegalArgumentException e) {
-                throw new SSLContextException("Bad value for " + sslTruststoreTypeProperty + ": " + trustStoreTypeProp, e);
-            }
-        }
-
-        String protocol = config.getProperty(sslProtocolProperty, DEFAULT_PROTOCOL);
-        try {
-            SSLContext sslContext = SSLContext.getInstance(protocol);
-            sslContext.init(keyManagers, trustManagers, null);
-            return new SSLContextAndOptions(this, config, sslContext);
-        } catch (NoSuchAlgorithmException | KeyManagementException sslContextInitException) {
-            throw new SSLContextException(sslContextInitException);
-        }
     }
 
     /**
@@ -493,24 +251,9 @@ public abstract class X509Util implements Closeable, AutoCloseable {
         }
     }
 
-    public SSLSocket createSSLSocket() throws X509Exception, IOException {
-        return getDefaultSSLContextAndOptions().createSSLSocket();
-    }
-
-    public SSLSocket createSSLSocket(Socket socket, byte[] pushbackBytes) throws X509Exception, IOException {
-        return getDefaultSSLContextAndOptions().createSSLSocket(socket, pushbackBytes);
-    }
-
-    public SSLServerSocket createSSLServerSocket() throws X509Exception, IOException {
-        return getDefaultSSLContextAndOptions().createSSLServerSocket();
-    }
-
-    public SSLServerSocket createSSLServerSocket(int port) throws X509Exception, IOException {
-        return getDefaultSSLContextAndOptions().createSSLServerSocket(port);
-    }
-
     static String[] getDefaultCipherSuites() {
-        return getDefaultCipherSuitesForJavaVersion(System.getProperty("java.specification.version"));
+        return getDefaultCipherSuitesForJavaVersion(
+                System.getProperty("java.specification.version"));
     }
 
     static String[] getDefaultCipherSuitesForJavaVersion(String javaVersion) {
@@ -528,6 +271,217 @@ public abstract class X509Util implements Closeable, AutoCloseable {
                     javaVersion);
             return DEFAULT_CIPHERS_JAVA8;
         }
+    }
+
+    protected abstract String getConfigPrefix();
+
+    protected abstract boolean shouldVerifyClientHostname();
+
+    public String getSslProtocolProperty() {
+        return sslProtocolProperty;
+    }
+
+    public String getSslEnabledProtocolsProperty() {
+        return sslEnabledProtocolsProperty;
+    }
+
+    public String getCipherSuitesProperty() {
+        return cipherSuitesProperty;
+    }
+
+    public String getSslKeystoreLocationProperty() {
+        return sslKeystoreLocationProperty;
+    }
+
+    public String getSslCipherSuitesProperty() {
+        return cipherSuitesProperty;
+    }
+
+    public String getSslKeystorePasswdProperty() {
+        return sslKeystorePasswdProperty;
+    }
+
+    public String getSslKeystoreTypeProperty() {
+        return sslKeystoreTypeProperty;
+    }
+
+    public String getSslTruststoreLocationProperty() {
+        return sslTruststoreLocationProperty;
+    }
+
+    public String getSslTruststorePasswdProperty() {
+        return sslTruststorePasswdProperty;
+    }
+
+    public String getSslTruststoreTypeProperty() {
+        return sslTruststoreTypeProperty;
+    }
+
+    public String getSslHostnameVerificationEnabledProperty() {
+        return sslHostnameVerificationEnabledProperty;
+    }
+
+    public String getSslCrlEnabledProperty() {
+        return sslCrlEnabledProperty;
+    }
+
+    public String getSslOcspEnabledProperty() {
+        return sslOcspEnabledProperty;
+    }
+
+    public String getSslClientAuthProperty() {
+        return sslClientAuthProperty;
+    }
+
+    /**
+     * Returns the config property key that controls the amount of time, in milliseconds, that the first
+     * UnifiedServerSocket read operation will block for when trying to detect the client mode (TLS or PLAINTEXT).
+     *
+     * @return the config property key.
+     */
+    public String getSslHandshakeDetectionTimeoutMillisProperty() {
+        return sslHandshakeDetectionTimeoutMillisProperty;
+    }
+
+    public SSLContext getDefaultSSLContext() throws X509Exception.SSLContextException {
+        return getDefaultSSLContextAndOptions().getSSLContext();
+    }
+
+    public SSLContext createSSLContext(ZKConfig config) throws SSLContextException {
+        return createSSLContextAndOptions(config).getSSLContext();
+    }
+
+    public SSLContextAndOptions getDefaultSSLContextAndOptions()
+            throws X509Exception.SSLContextException {
+        SSLContextAndOptions result = defaultSSLContextAndOptions.get();
+        if (result == null) {
+            result = createSSLContextAndOptions();
+            if (!defaultSSLContextAndOptions.compareAndSet(null, result)) {
+                // lost the race, another thread already set the value
+                result = defaultSSLContextAndOptions.get();
+            }
+        }
+        return result;
+    }
+
+    private void resetDefaultSSLContextAndOptions() throws X509Exception.SSLContextException {
+        SSLContextAndOptions newContext = createSSLContextAndOptions();
+        defaultSSLContextAndOptions.set(newContext);
+    }
+
+    private SSLContextAndOptions createSSLContextAndOptions() throws SSLContextException {
+        /*
+         * Since Configuration initializes the key store and trust store related
+         * configuration from system property. Reading property from
+         * configuration will be same reading from system property
+         */
+        return createSSLContextAndOptions(zkConfig == null ? new ZKConfig() : zkConfig);
+    }
+
+    /**
+     * Returns the max amount of time, in milliseconds, that the first UnifiedServerSocket read() operation should
+     * block for when trying to detect the client mode (TLS or PLAINTEXT).
+     * Defaults to {@link X509Util#DEFAULT_HANDSHAKE_DETECTION_TIMEOUT_MILLIS}.
+     *
+     * @return the handshake detection timeout, in milliseconds.
+     */
+    public int getSslHandshakeTimeoutMillis() {
+        try {
+            SSLContextAndOptions ctx = getDefaultSSLContextAndOptions();
+            return ctx.getHandshakeDetectionTimeoutMillis();
+        } catch (SSLContextException e) {
+            LOG.error("Error creating SSL context and options", e);
+            return DEFAULT_HANDSHAKE_DETECTION_TIMEOUT_MILLIS;
+        } catch (Exception e) {
+            LOG.error("Error parsing config property "
+                    + getSslHandshakeDetectionTimeoutMillisProperty(), e);
+            return DEFAULT_HANDSHAKE_DETECTION_TIMEOUT_MILLIS;
+        }
+    }
+
+    public SSLContextAndOptions createSSLContextAndOptions(ZKConfig config)
+            throws SSLContextException {
+        KeyManager[] keyManagers = null;
+        TrustManager[] trustManagers = null;
+
+        String keyStoreLocationProp = config.getProperty(sslKeystoreLocationProperty, "");
+        String keyStorePasswordProp = config.getProperty(sslKeystorePasswdProperty, "");
+        String keyStoreTypeProp = config.getProperty(sslKeystoreTypeProperty);
+
+        // There are legal states in some use cases for null KeyManager or TrustManager.
+        // But if a user wanna specify one, location is required. Password defaults to empty string if it is not
+        // specified by the user.
+
+        if (keyStoreLocationProp.isEmpty()) {
+            LOG.warn(getSslKeystoreLocationProperty() + " not specified");
+        } else {
+            try {
+                keyManagers = new KeyManager[] {
+                        createKeyManager(keyStoreLocationProp, keyStorePasswordProp,
+                                keyStoreTypeProp)};
+            } catch (KeyManagerException keyManagerException) {
+                throw new SSLContextException("Failed to create KeyManager", keyManagerException);
+            } catch (IllegalArgumentException e) {
+                throw new SSLContextException(
+                        "Bad value for " + sslKeystoreTypeProperty + ": " + keyStoreTypeProp, e);
+            }
+        }
+
+        String trustStoreLocationProp = config.getProperty(sslTruststoreLocationProperty, "");
+        String trustStorePasswordProp = config.getProperty(sslTruststorePasswdProperty, "");
+        String trustStoreTypeProp = config.getProperty(sslTruststoreTypeProperty);
+
+        boolean sslCrlEnabled = config.getBoolean(this.sslCrlEnabledProperty);
+        boolean sslOcspEnabled = config.getBoolean(this.sslOcspEnabledProperty);
+        boolean sslServerHostnameVerificationEnabled =
+                config.getBoolean(this.getSslHostnameVerificationEnabledProperty(), true);
+        boolean sslClientHostnameVerificationEnabled =
+                sslServerHostnameVerificationEnabled && shouldVerifyClientHostname();
+
+        if (trustStoreLocationProp.isEmpty()) {
+            LOG.warn(getSslTruststoreLocationProperty() + " not specified");
+        } else {
+            try {
+                trustManagers = new TrustManager[] {
+                        createTrustManager(trustStoreLocationProp, trustStorePasswordProp,
+                                trustStoreTypeProp, sslCrlEnabled, sslOcspEnabled,
+                                sslServerHostnameVerificationEnabled,
+                                sslClientHostnameVerificationEnabled)};
+            } catch (TrustManagerException trustManagerException) {
+                throw new SSLContextException("Failed to create TrustManager",
+                        trustManagerException);
+            } catch (IllegalArgumentException e) {
+                throw new SSLContextException(
+                        "Bad value for " + sslTruststoreTypeProperty + ": " + trustStoreTypeProp,
+                        e);
+            }
+        }
+
+        String protocol = config.getProperty(sslProtocolProperty, DEFAULT_PROTOCOL);
+        try {
+            SSLContext sslContext = SSLContext.getInstance(protocol);
+            sslContext.init(keyManagers, trustManagers, null);
+            return new SSLContextAndOptions(this, config, sslContext);
+        } catch (NoSuchAlgorithmException | KeyManagementException sslContextInitException) {
+            throw new SSLContextException(sslContextInitException);
+        }
+    }
+
+    public SSLSocket createSSLSocket() throws X509Exception, IOException {
+        return getDefaultSSLContextAndOptions().createSSLSocket();
+    }
+
+    public SSLSocket createSSLSocket(Socket socket, byte[] pushbackBytes)
+            throws X509Exception, IOException {
+        return getDefaultSSLContextAndOptions().createSSLSocket(socket, pushbackBytes);
+    }
+
+    public SSLServerSocket createSSLServerSocket() throws X509Exception, IOException {
+        return getDefaultSSLContextAndOptions().createSSLServerSocket();
+    }
+
+    public SSLServerSocket createSSLServerSocket(int port) throws X509Exception, IOException {
+        return getDefaultSSLContextAndOptions().createSSLServerSocket(port);
     }
 
     private FileChangeWatcher newFileChangeWatcher(String fileLocation) throws IOException {
@@ -625,9 +579,51 @@ public abstract class X509Util implements Closeable, AutoCloseable {
             }
         } else {
             if (LOG.isDebugEnabled()) {
-                LOG.debug("Ignoring watch event and keeping previous default SSL context. Event kind: " +
-                        event.kind() + " with context: " + event.context());
+                LOG.debug(
+                        "Ignoring watch event and keeping previous default SSL context. Event kind: "
+                                +
+                                event.kind() + " with context: " + event.context());
             }
+        }
+    }
+
+    /**
+     * Enum specifying the client auth requirement of server-side TLS sockets created by this X509Util.
+     * <ul>
+     *     <li>NONE - do not request a client certificate.</li>
+     *     <li>WANT - request a client certificate, but allow anonymous clients to connect.</li>
+     *     <li>NEED - require a client certificate, disconnect anonymous clients.</li>
+     * </ul>
+     *
+     * If the config property is not set, the default value is NEED.
+     */
+    public enum ClientAuth {
+        NONE(io.netty.handler.ssl.ClientAuth.NONE),
+        WANT(io.netty.handler.ssl.ClientAuth.OPTIONAL),
+        NEED(io.netty.handler.ssl.ClientAuth.REQUIRE);
+
+        private final io.netty.handler.ssl.ClientAuth nettyAuth;
+
+        ClientAuth(io.netty.handler.ssl.ClientAuth nettyAuth) {
+            this.nettyAuth = nettyAuth;
+        }
+
+        /**
+         * Converts a property value to a ClientAuth enum. If the input string is empty or null, returns
+         * <code>ClientAuth.NEED</code>.
+         * @param prop the property string.
+         * @return the ClientAuth.
+         * @throws IllegalArgumentException if the property value is not "NONE", "WANT", "NEED", or empty/null.
+         */
+        public static ClientAuth fromPropertyValue(String prop) {
+            if (prop == null || prop.length() == 0) {
+                return NEED;
+            }
+            return ClientAuth.valueOf(prop.toUpperCase());
+        }
+
+        public io.netty.handler.ssl.ClientAuth toNettyClientAuth() {
+            return nettyAuth;
         }
     }
 }

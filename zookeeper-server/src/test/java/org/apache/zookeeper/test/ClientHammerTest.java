@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,97 +18,24 @@
 
 package org.apache.zookeeper.test;
 
+import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.ZooDefs.Ids;
+import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.common.Time;
+import org.junit.Assert;
+import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.util.Date;
 import java.util.List;
-
-import org.apache.zookeeper.common.Time;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.ZooKeeper;
-import org.apache.zookeeper.ZooDefs.Ids;
-import org.junit.Assert;
-import org.junit.Test;
 
 public class ClientHammerTest extends ClientBase {
     protected static final Logger LOG = LoggerFactory.getLogger(ClientHammerTest.class);
 
     private static final long HAMMERTHREAD_LATENCY = 5;
-
-    private static abstract class HammerThread extends Thread {
-        protected final int count;
-        protected volatile int current = 0;
-
-        HammerThread(String name, int count) {
-            super(name);
-            this.count = count;
-        }
-    }
-
-    private static class BasicHammerThread extends HammerThread {
-        private final ZooKeeper zk;
-        private final String prefix;
-
-        BasicHammerThread(String name, ZooKeeper zk, String prefix, int count) {
-            super(name, count);
-            this.zk = zk;
-            this.prefix = prefix;
-        }
-
-        public void run() {
-            byte b[] = new byte[256];
-            try {
-                for (; current < count; current++) {
-                    // Simulate a bit of network latency...
-                    Thread.sleep(HAMMERTHREAD_LATENCY);
-                    zk.create(prefix + current, b, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
-                }
-            } catch (Throwable t) {
-                LOG.error("Client create operation Assert.failed", t);
-            } finally {
-                try {
-                    zk.close();
-                } catch (InterruptedException e) {
-                    LOG.warn("Unexpected", e);
-                }
-            }
-        }
-    }
-
-    private static class SuperHammerThread extends HammerThread {
-        private final ClientHammerTest parent;
-        private final String prefix;
-
-        SuperHammerThread(String name, ClientHammerTest parent, String prefix,
-                int count)
-        {
-            super(name, count);
-            this.parent = parent;
-            this.prefix = prefix;
-        }
-
-        public void run() {
-            byte b[] = new byte[256];
-            try {
-                for (; current < count; current++) {
-                    ZooKeeper zk = parent.createClient();
-                    try {
-                        zk.create(prefix + current, b, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
-                    } finally {
-                        try {
-                            zk.close();
-                        } catch (InterruptedException e) {
-                            LOG.warn("Unexpected", e);
-                        }
-                    }
-                }
-            } catch (Throwable t) {
-                LOG.error("Client create operation Assert.failed", t);
-            }
-        }
-    }
 
     /**
      * Separate threads each creating a number of nodes. Each thread
@@ -121,8 +48,7 @@ public class ClientHammerTest extends ClientBase {
     }
 
     public void runHammer(final int threadCount, final int childCount)
-        throws Throwable
-    {
+            throws Throwable {
         try {
             HammerThread[] threads = new HammerThread[threadCount];
             long start = Time.currentElapsedTime();
@@ -132,8 +58,8 @@ public class ClientHammerTest extends ClientBase {
                 zk.create(prefix, new byte[0], Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
                 prefix += "/";
                 HammerThread thread =
-                    new BasicHammerThread("BasicHammerThread-" + i, zk, prefix,
-                            childCount);
+                        new BasicHammerThread("BasicHammerThread-" + i, zk, prefix,
+                                childCount);
                 thread.start();
 
                 threads[i] = thread;
@@ -171,8 +97,8 @@ public class ClientHammerTest extends ClientBase {
                 }
                 prefix += "/";
                 HammerThread thread =
-                    new SuperHammerThread("SuperHammerThread-" + i, this,
-                            prefix, childCount);
+                        new SuperHammerThread("SuperHammerThread-" + i, this,
+                                prefix, childCount);
                 thread.start();
 
                 threads[i] = thread;
@@ -186,8 +112,7 @@ public class ClientHammerTest extends ClientBase {
     }
 
     public void verifyHammer(long start, HammerThread[] threads, int childCount)
-        throws IOException, InterruptedException, KeeperException
-    {
+            throws IOException, InterruptedException, KeeperException {
         // look for the clients to finish their create operations
         LOG.info("Starting check for completed hammers");
         int workingCount = threads.length;
@@ -215,8 +140,8 @@ public class ClientHammerTest extends ClientBase {
         for (HammerThread h : threads) {
             final int safetyFactor = 3;
             verifyThreadTerminated(h,
-                    (long)threads.length * (long)childCount
-                    * HAMMERTHREAD_LATENCY * (long)safetyFactor);
+                    (long) threads.length * (long) childCount
+                            * HAMMERTHREAD_LATENCY * (long) safetyFactor);
         }
         LOG.info(new Date() + " Total time "
                 + (Time.currentElapsedTime() - start));
@@ -227,20 +152,95 @@ public class ClientHammerTest extends ClientBase {
             for (int i = 0; i < threads.length; i++) {
                 LOG.info("Doing thread: " + i + " " + new Date());
                 List<String> children =
-                    zk.getChildren("/test-" + i, false);
+                        zk.getChildren("/test-" + i, false);
                 Assert.assertEquals(childCount, children.size());
                 children = zk.getChildren("/test-" + i, false, null);
                 Assert.assertEquals(childCount, children.size());
             }
             for (int i = 0; i < threads.length; i++) {
                 List<String> children =
-                    zk.getChildren("/test-" + i, false);
+                        zk.getChildren("/test-" + i, false);
                 Assert.assertEquals(childCount, children.size());
                 children = zk.getChildren("/test-" + i, false, null);
                 Assert.assertEquals(childCount, children.size());
             }
         } finally {
             zk.close();
+        }
+    }
+
+
+    private static abstract class HammerThread extends Thread {
+        protected final int count;
+        protected volatile int current = 0;
+
+        HammerThread(String name, int count) {
+            super(name);
+            this.count = count;
+        }
+    }
+
+
+    private static class BasicHammerThread extends HammerThread {
+        private final ZooKeeper zk;
+        private final String prefix;
+
+        BasicHammerThread(String name, ZooKeeper zk, String prefix, int count) {
+            super(name, count);
+            this.zk = zk;
+            this.prefix = prefix;
+        }
+
+        public void run() {
+            byte b[] = new byte[256];
+            try {
+                for (; current < count; current++) {
+                    // Simulate a bit of network latency...
+                    Thread.sleep(HAMMERTHREAD_LATENCY);
+                    zk.create(prefix + current, b, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+                }
+            } catch (Throwable t) {
+                LOG.error("Client create operation Assert.failed", t);
+            } finally {
+                try {
+                    zk.close();
+                } catch (InterruptedException e) {
+                    LOG.warn("Unexpected", e);
+                }
+            }
+        }
+    }
+
+
+    private static class SuperHammerThread extends HammerThread {
+        private final ClientHammerTest parent;
+        private final String prefix;
+
+        SuperHammerThread(String name, ClientHammerTest parent, String prefix,
+                          int count) {
+            super(name, count);
+            this.parent = parent;
+            this.prefix = prefix;
+        }
+
+        public void run() {
+            byte b[] = new byte[256];
+            try {
+                for (; current < count; current++) {
+                    ZooKeeper zk = parent.createClient();
+                    try {
+                        zk.create(prefix + current, b, Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+                    } finally {
+                        try {
+                            zk.close();
+                        } catch (InterruptedException e) {
+                            LOG.warn("Unexpected", e);
+                        }
+                    }
+                }
+            } catch (Throwable t) {
+                LOG.error("Client create operation Assert.failed", t);
+            }
         }
     }
 }

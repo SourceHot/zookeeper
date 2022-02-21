@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -28,8 +28,7 @@ public class SASLAuthenticationProvider implements AuthenticationProvider {
     }
 
     public KeeperException.Code
-        handleAuthentication(ServerCnxn cnxn, byte[] authData)
-    {
+    handleAuthentication(ServerCnxn cnxn, byte[] authData) {
         // Should never call this: SASL authentication is negotiated at session initiation.
         // TODO: consider substituting current implementation of direct ClientCnxn manipulation with
         // a call to this method (SASLAuthenticationProvider:handleAuthentication()) at session initiation.
@@ -37,13 +36,13 @@ public class SASLAuthenticationProvider implements AuthenticationProvider {
 
     }
 
-    public boolean matches(String id,String aclExpr) {
+    public boolean matches(String id, String aclExpr) {
         if ((id.equals("super") || id.equals(aclExpr))) {
-          return true;
+            return true;
         }
         String readAccessUser = System.getProperty("zookeeper.letAnySaslUserDoX");
-        if ( readAccessUser != null && aclExpr.equals(readAccessUser)) {
-          return true;
+        if (readAccessUser != null && aclExpr.equals(readAccessUser)) {
+            return true;
         }
         return false;
     }
@@ -64,11 +63,10 @@ public class SASLAuthenticationProvider implements AuthenticationProvider {
         try {
             new KerberosName(id);
             return true;
-        }
-        catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException e) {
             return false;
         }
-   }
+    }
 
 
 }

@@ -47,12 +47,12 @@ public class ContainerManager {
     private final AtomicReference<TimerTask> task = new AtomicReference<TimerTask>(null);
 
     /**
-     * @param zkDb the ZK database
+     * @param zkDb             the ZK database
      * @param requestProcessor request processer - used to inject delete
      *                         container requests
-     * @param checkIntervalMs how often to check containers in milliseconds
-     * @param maxPerMinute the max containers to delete per second - avoids
-     *                     herding of container deletions
+     * @param checkIntervalMs  how often to check containers in milliseconds
+     * @param maxPerMinute     the max containers to delete per second - avoids
+     *                         herding of container deletions
      */
     public ContainerManager(ZKDatabase zkDb, RequestProcessor requestProcessor,
                             int checkIntervalMs, int maxPerMinute) {
@@ -81,7 +81,7 @@ public class ContainerManager {
                         Thread.currentThread().interrupt();
                         LOG.info("interrupted");
                         cancel();
-                    } catch ( Throwable e ) {
+                    } catch (Throwable e) {
                         LOG.error("Error checking containers", e);
                     }
                 }
@@ -159,7 +159,7 @@ public class ContainerManager {
             if (node != null) {
                 Set<String> children = node.getChildren();
                 if ((children == null) || (children.size() == 0)) {
-                    if ( EphemeralType.get(node.stat.getEphemeralOwner()) == EphemeralType.TTL ) {
+                    if (EphemeralType.get(node.stat.getEphemeralOwner()) == EphemeralType.TTL) {
                         long elapsed = getElapsed(node);
                         long ttl = EphemeralType.TTL.getValue(node.stat.getEphemeralOwner());
                         if ((ttl != 0) && (getElapsed(node) > ttl)) {

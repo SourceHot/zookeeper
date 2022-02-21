@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,11 +18,6 @@
 
 package org.apache.zookeeper.server.quorum;
 
-import static org.apache.zookeeper.test.ClientBase.CONNECTION_TIMEOUT;
-
-import java.util.ArrayList;
-import java.util.HashSet;
-
 import org.apache.zookeeper.PortAssignment;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.test.ClientBase;
@@ -31,7 +26,43 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+
+import static org.apache.zookeeper.test.ClientBase.CONNECTION_TIMEOUT;
+
 public class ReconfigRecoveryTest extends QuorumPeerTestBase {
+    /*
+     * Generates 3 ports per server
+     */
+    public static int[][] generatePorts(int numServers) {
+        int[][] ports = new int[numServers][];
+        for (int i = 0; i < numServers; i++) {
+            ports[i] = new int[3];
+            for (int j = 0; j < 3; j++) {
+                ports[i][j] = PortAssignment.unique();
+            }
+        }
+        return ports;
+    }
+
+    /*
+     * Creates a configuration string for servers 0..numServers-1 Ids in
+     * observerIds correspond to observers, other ids are for participants.
+     */
+    public static StringBuilder generateConfig(int numServers, int[][] ports,
+                                               HashSet<Integer> observerIds) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < numServers; i++) {
+            String server = "server." + i + "=localhost:" + ports[i][0] + ":"
+                    + ports[i][1] + ":"
+                    + (observerIds.contains(i) ? "observer" : "participant")
+                    + ";localhost:" + ports[i][2];
+            sb.append(server + "\n");
+        }
+        return sb;
+    }
+
     @Before
     public void setup() {
         QuorumPeerConfig.setReconfigEnabled(true);
@@ -321,7 +352,8 @@ public class ReconfigRecoveryTest extends QuorumPeerTestBase {
                     + clientPorts[i];
             allServers.add(server);
             sb.append(server + "\n");
-            if (i == 1) currentQuorumCfgSection = sb.toString();
+            if (i == 1)
+                currentQuorumCfgSection = sb.toString();
         }
         nextQuorumCfgSection = sb.toString();
 
@@ -549,36 +581,5 @@ public class ReconfigRecoveryTest extends QuorumPeerTestBase {
             zk[i].close();
             mt[i].shutdown();
         }
-    }
-
-    /*
-     * Generates 3 ports per server
-     */
-    public static int[][] generatePorts(int numServers) {
-        int[][] ports = new int[numServers][];
-        for (int i = 0; i < numServers; i++) {
-            ports[i] = new int[3];
-            for (int j = 0; j < 3; j++) {
-                ports[i][j] = PortAssignment.unique();
-            }
-        }
-        return ports;
-    }
-
-    /*
-     * Creates a configuration string for servers 0..numServers-1 Ids in
-     * observerIds correspond to observers, other ids are for participants.
-     */
-    public static StringBuilder generateConfig(int numServers, int[][] ports,
-            HashSet<Integer> observerIds) {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < numServers; i++) {
-            String server = "server." + i + "=localhost:" + ports[i][0] + ":"
-                    + ports[i][1] + ":"
-                    + (observerIds.contains(i) ? "observer" : "participant")
-                    + ";localhost:" + ports[i][2];
-            sb.append(server + "\n");
-        }
-        return sb;
     }
 }

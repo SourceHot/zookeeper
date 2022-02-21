@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,59 +18,58 @@
 
 package org.apache.zookeeper.server;
 
-import java.util.Date;
-
 import org.apache.jute.BinaryInputArchive;
 import org.apache.zookeeper.Version;
 import org.apache.zookeeper.jmx.ZKMBeanInfo;
+
+import java.util.Date;
 
 /**
  * This class implements the ZooKeeper server MBean interface.
  */
 public class ZooKeeperServerBean implements ZooKeeperServerMXBean, ZKMBeanInfo {
+    protected final ZooKeeperServer zks;
     private final Date startTime;
     private final String name;
-    
-    protected final ZooKeeperServer zks;
-    
+
     public ZooKeeperServerBean(ZooKeeperServer zks) {
         startTime = new Date();
         this.zks = zks;
         name = "StandaloneServer_port" + zks.getClientPort();
     }
-    
+
     public String getClientPort() {
         return Integer.toString(zks.getClientPort());
     }
-    
+
     public String getName() {
         return name;
     }
-    
+
     public boolean isHidden() {
         return false;
     }
-    
+
     public String getStartTime() {
         return startTime.toString();
     }
-    
+
     public String getVersion() {
         return Version.getFullVersion();
     }
-    
+
     public long getAvgRequestLatency() {
         return zks.serverStats().getAvgLatency();
     }
-    
+
     public long getMaxRequestLatency() {
         return zks.serverStats().getMaxLatency();
     }
-    
+
     public long getMinRequestLatency() {
         return zks.serverStats().getMinLatency();
     }
-    
+
     public long getOutstandingRequests() {
         return zks.serverStats().getOutstandingRequests();
     }
@@ -119,11 +118,11 @@ public class ZooKeeperServerBean implements ZooKeeperServerMXBean, ZKMBeanInfo {
     public long getLogDirSize() {
         return zks.getLogDirSize();
     }
-    
+
     public long getPacketsReceived() {
         return zks.serverStats().getPacketsReceived();
     }
-    
+
     public long getPacketsSent() {
         return zks.serverStats().getPacketsSent();
     }
@@ -131,11 +130,11 @@ public class ZooKeeperServerBean implements ZooKeeperServerMXBean, ZKMBeanInfo {
     public long getFsyncThresholdExceedCount() {
         return zks.serverStats().getFsyncThresholdExceedCount();
     }
-    
+
     public void resetLatency() {
         zks.serverStats().resetLatency();
     }
-    
+
     public void resetMaxLatency() {
         zks.serverStats().resetMaxLatency();
     }
@@ -167,7 +166,7 @@ public class ZooKeeperServerBean implements ZooKeeperServerMXBean, ZKMBeanInfo {
     public String getSecureClientAddress() {
         if (zks.secureServerCnxnFactory != null) {
             return String.format("%s:%d", zks.secureServerCnxnFactory
-                    .getLocalAddress().getHostString(),
+                            .getLocalAddress().getHostString(),
                     zks.secureServerCnxnFactory.getLocalPort());
         }
         return "";

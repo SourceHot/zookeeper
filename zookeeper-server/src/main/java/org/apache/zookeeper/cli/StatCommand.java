@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -27,18 +27,19 @@ import org.apache.zookeeper.data.Stat;
 public class StatCommand extends CliCommand {
 
     private static final Options options = new Options();
-    private String[] args;
-    private CommandLine cl;
 
     static {
         options.addOption("w", false, "watch");
     }
-    
+
+    private String[] args;
+    private CommandLine cl;
+
     public StatCommand() {
         super("stat", "[-w] path");
     }
 
-    
+
     @Override
     public CliCommand parse(String[] cmdArgs) throws CliParseException {
         Parser parser = new PosixParser();
@@ -48,10 +49,10 @@ public class StatCommand extends CliCommand {
             throw new CliParseException(ex);
         }
         args = cl.getArgs();
-        if(args.length < 2) {
+        if (args.length < 2) {
             throw new CliParseException(getUsageStr());
-        }    
-        
+        }
+
         retainCompatibility(cmdArgs);
 
         return this;
@@ -73,7 +74,7 @@ public class StatCommand extends CliCommand {
             args = cl.getArgs();
         }
     }
-    
+
     @Override
     public boolean exec() throws CliException {
         String path = args[1];
@@ -83,7 +84,7 @@ public class StatCommand extends CliCommand {
             stat = zk.exists(path, watch);
         } catch (IllegalArgumentException ex) {
             throw new MalformedPathException(ex.getMessage());
-        } catch (KeeperException|InterruptedException ex) {
+        } catch (KeeperException | InterruptedException ex) {
             throw new CliWrapperException(ex);
         }
         if (stat == null) {

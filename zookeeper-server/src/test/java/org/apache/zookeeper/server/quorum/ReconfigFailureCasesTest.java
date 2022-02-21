@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,13 +17,6 @@
  */
 
 package org.apache.zookeeper.server.quorum;
-
-import static org.apache.zookeeper.test.ClientBase.CONNECTION_TIMEOUT;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
 
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.NewConfigNoQuorum;
@@ -37,6 +30,13 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+
+import static org.apache.zookeeper.test.ClientBase.CONNECTION_TIMEOUT;
 
 public class ReconfigFailureCasesTest extends QuorumPeerTestBase {
 
@@ -91,7 +91,7 @@ public class ReconfigFailureCasesTest extends QuorumPeerTestBase {
         List<String> leavingServers = new ArrayList<String>();
         leavingServers.add("3");
         try {
-             zkAdminArr[1].reconfigure(null, leavingServers, null, -1, null);
+            zkAdminArr[1].reconfigure(null, leavingServers, null, -1, null);
             Assert.fail("Reconfig should have failed since the current config isn't Majority QS");
         } catch (KeeperException.BadArgumentsException e) {
             // We expect this to happen.
@@ -121,7 +121,7 @@ public class ReconfigFailureCasesTest extends QuorumPeerTestBase {
         leavingServers.add("2");
         leavingServers.add("3");
         try {
-             zkAdminArr[1].reconfigure(null, leavingServers, null, -1, null);
+            zkAdminArr[1].reconfigure(null, leavingServers, null, -1, null);
             Assert.fail("Reconfig should have failed since the current config version is not 8");
         } catch (KeeperException.BadArgumentsException e) {
             // We expect this to happen.
@@ -147,7 +147,7 @@ public class ReconfigFailureCasesTest extends QuorumPeerTestBase {
         List<String> leavingServers = new ArrayList<String>();
         leavingServers.add("3");
         try {
-             zkAdminArr[1].reconfigure(null, leavingServers, null, 8, null);
+            zkAdminArr[1].reconfigure(null, leavingServers, null, 8, null);
             Assert.fail("Reconfig should have failed since the current config version is not 8");
         } catch (KeeperException.BadVersionException e) {
             // We expect this to happen.

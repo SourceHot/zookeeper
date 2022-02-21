@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,23 +17,18 @@
  */
 package org.apache.zookeeper.server.quorum.auth;
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import javax.security.auth.callback.Callback;
-import javax.security.auth.callback.CallbackHandler;
-import javax.security.auth.callback.NameCallback;
-import javax.security.auth.callback.PasswordCallback;
-import javax.security.auth.callback.UnsupportedCallbackException;
+import javax.security.auth.callback.*;
 import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.Configuration;
 import javax.security.sasl.AuthorizeCallback;
 import javax.security.sasl.RealmCallback;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * This is used by the SASL mechanisms to get further information to complete
@@ -43,31 +38,34 @@ import org.slf4j.LoggerFactory;
  */
 public class SaslQuorumServerCallbackHandler implements CallbackHandler {
     private static final String USER_PREFIX = "user_";
-    private static final Logger LOG = LoggerFactory.getLogger(SaslQuorumServerCallbackHandler.class);
-
-    private String userName;
-    private final Map<String,String> credentials = new HashMap<String,String>();
+    private static final Logger LOG =
+            LoggerFactory.getLogger(SaslQuorumServerCallbackHandler.class);
+    private final Map<String, String> credentials = new HashMap<String, String>();
     private final Set<String> authzHosts;
+    private String userName;
 
     public SaslQuorumServerCallbackHandler(Configuration configuration,
-            String serverSection, Set<String> authzHosts) throws IOException {
-        AppConfigurationEntry configurationEntries[] = configuration.getAppConfigurationEntry(serverSection);
+                                           String serverSection, Set<String> authzHosts)
+            throws IOException {
+        AppConfigurationEntry configurationEntries[] =
+                configuration.getAppConfigurationEntry(serverSection);
 
         if (configurationEntries == null) {
-            String errorMessage = "Could not find a '" + serverSection + "' entry in this configuration: Server cannot start.";
+            String errorMessage = "Could not find a '" + serverSection
+                    + "' entry in this configuration: Server cannot start.";
             LOG.error(errorMessage);
             throw new IOException(errorMessage);
         }
         credentials.clear();
-        for(AppConfigurationEntry entry: configurationEntries) {
-            Map<String,?> options = entry.getOptions();
+        for (AppConfigurationEntry entry : configurationEntries) {
+            Map<String, ?> options = entry.getOptions();
             // Populate DIGEST-MD5 user -> password map with JAAS configuration entries from the "QuorumServer" section.
             // Usernames are distinguished from other options by prefixing the username with a "user_" prefix.
-            for(Map.Entry<String, ?> pair : options.entrySet()) {
+            for (Map.Entry<String, ?> pair : options.entrySet()) {
                 String key = pair.getKey();
                 if (key.startsWith(USER_PREFIX)) {
                     String userName = key.substring(USER_PREFIX.length());
-                    credentials.put(userName,(String)pair.getValue());
+                    credentials.put(userName, (String) pair.getValue());
                 }
             }
         }
@@ -102,7 +100,7 @@ public class SaslQuorumServerCallbackHandler implements CallbackHandler {
     }
 
     private void handlePasswordCallback(PasswordCallback pc) {
-        if (credentials.containsKey(userName) ) {
+        if (credentials.containsKey(userName)) {
             pc.setPassword(credentials.get(userName).toCharArray());
         } else {
             LOG.warn("No password found for user: {}", userName);
@@ -140,7 +138,8 @@ public class SaslQuorumServerCallbackHandler implements CallbackHandler {
         ac.setAuthorized(authzFlag);
         if (ac.isAuthorized()) {
             ac.setAuthorizedID(authorizationID);
-            LOG.info("Successfully authenticated learner: authenticationID={};  authorizationID={}.",
+            LOG.info(
+                    "Successfully authenticated learner: authenticationID={};  authorizationID={}.",
                     authenticationID, authorizationID);
         }
         LOG.debug("SASL authorization completed, authorized flag set to {}", ac.isAuthorized());

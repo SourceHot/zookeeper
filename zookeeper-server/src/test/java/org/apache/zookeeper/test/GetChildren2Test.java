@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,18 +18,18 @@
 
 package org.apache.zookeeper.test;
 
+import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.ZooDefs.Ids;
+import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.data.Stat;
+import org.junit.Assert;
+import org.junit.Test;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.ZooKeeper;
-import org.apache.zookeeper.ZooDefs.Ids;
-import org.apache.zookeeper.data.Stat;
-import org.junit.Assert;
-import org.junit.Test;
 
 public class GetChildren2Test extends ClientBase {
     private ZooKeeper zk;
@@ -50,8 +50,7 @@ public class GetChildren2Test extends ClientBase {
 
     @Test
     public void testChild()
-        throws IOException, KeeperException, InterruptedException
-    {
+            throws IOException, KeeperException, InterruptedException {
         String name = "/foo";
         zk.create(name, name.getBytes(), Ids.OPEN_ACL_UNSAFE,
                 CreateMode.PERSISTENT);
@@ -90,8 +89,7 @@ public class GetChildren2Test extends ClientBase {
 
     @Test
     public void testChildren()
-        throws IOException, KeeperException, InterruptedException
-    {
+            throws IOException, KeeperException, InterruptedException {
         String name = "/foo";
         zk.create(name, name.getBytes(), Ids.OPEN_ACL_UNSAFE,
                 CreateMode.PERSISTENT);
@@ -106,7 +104,7 @@ public class GetChildren2Test extends ClientBase {
             children_s.add(childname_s);
         }
 
-        for(int i = 0; i < children.size(); i++) {
+        for (int i = 0; i < children.size(); i++) {
             String childname = children.get(i);
             zk.create(childname, childname.getBytes(), Ids.OPEN_ACL_UNSAFE,
                     CreateMode.EPHEMERAL);

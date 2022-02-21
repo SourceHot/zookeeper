@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,22 +17,15 @@
  */
 package org.apache.zookeeper.common;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.Writer;
-
 import org.apache.zookeeper.ZKTestCase;
 import org.apache.zookeeper.common.AtomicFileWritingIdiom.OutputStreamStatement;
 import org.apache.zookeeper.common.AtomicFileWritingIdiom.WriterStatement;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import java.io.*;
+
+import static org.junit.Assert.*;
 
 public class AtomicFileWritingIdiomTest extends ZKTestCase {
 
@@ -54,7 +47,8 @@ public class AtomicFileWritingIdiomTest extends ZKTestCase {
             @Override
             public void write(OutputStream os) throws IOException {
                 os.write("after".getBytes("ASCII"));
-                assertTrue("implementation of AtomicFileOutputStream has changed, update the test", tmp.exists());
+                assertTrue("implementation of AtomicFileOutputStream has changed, update the test",
+                        tmp.exists());
             }
         });
         assertFalse("tmp file should have been deleted", tmp.exists());
@@ -73,7 +67,8 @@ public class AtomicFileWritingIdiomTest extends ZKTestCase {
             @Override
             public void write(Writer os) throws IOException {
                 os.write("after");
-                assertTrue("implementation of AtomicFileOutputStream has changed, update the test", tmp.exists());
+                assertTrue("implementation of AtomicFileOutputStream has changed, update the test",
+                        tmp.exists());
             }
         });
         assertFalse("tmp file should have been deleted", tmp.exists());
@@ -95,7 +90,9 @@ public class AtomicFileWritingIdiomTest extends ZKTestCase {
                 public void write(OutputStream os) throws IOException {
                     os.write("after".getBytes("ASCII"));
                     os.flush();
-                    assertTrue("implementation of AtomicFileOutputStream has changed, update the test", tmp.exists());
+                    assertTrue(
+                            "implementation of AtomicFileOutputStream has changed, update the test",
+                            tmp.exists());
                     throw new RuntimeException();
                 }
             });
@@ -122,7 +119,9 @@ public class AtomicFileWritingIdiomTest extends ZKTestCase {
                 public void write(Writer os) throws IOException {
                     os.write("after");
                     os.flush();
-                    assertTrue("implementation of AtomicFileOutputStream has changed, update the test", tmp.exists());
+                    assertTrue(
+                            "implementation of AtomicFileOutputStream has changed, update the test",
+                            tmp.exists());
                     throw new RuntimeException();
                 }
             });
@@ -149,7 +148,9 @@ public class AtomicFileWritingIdiomTest extends ZKTestCase {
                 public void write(OutputStream os) throws IOException {
                     os.write("after".getBytes("ASCII"));
                     os.flush();
-                    assertTrue("implementation of AtomicFileOutputStream has changed, update the test", tmp.exists());
+                    assertTrue(
+                            "implementation of AtomicFileOutputStream has changed, update the test",
+                            tmp.exists());
                     throw new IOException();
                 }
             });
@@ -176,7 +177,9 @@ public class AtomicFileWritingIdiomTest extends ZKTestCase {
                 public void write(Writer os) throws IOException {
                     os.write("after");
                     os.flush();
-                    assertTrue("implementation of AtomicFileOutputStream has changed, update the test", tmp.exists());
+                    assertTrue(
+                            "implementation of AtomicFileOutputStream has changed, update the test",
+                            tmp.exists());
                     throw new IOException();
                 }
             });
@@ -203,7 +206,9 @@ public class AtomicFileWritingIdiomTest extends ZKTestCase {
                 public void write(OutputStream os) throws IOException {
                     os.write("after".getBytes("ASCII"));
                     os.flush();
-                    assertTrue("implementation of AtomicFileOutputStream has changed, update the test", tmp.exists());
+                    assertTrue(
+                            "implementation of AtomicFileOutputStream has changed, update the test",
+                            tmp.exists());
                     throw new Error();
                 }
             });
@@ -230,7 +235,9 @@ public class AtomicFileWritingIdiomTest extends ZKTestCase {
                 public void write(Writer os) throws IOException {
                     os.write("after");
                     os.flush();
-                    assertTrue("implementation of AtomicFileOutputStream has changed, update the test", tmp.exists());
+                    assertTrue(
+                            "implementation of AtomicFileOutputStream has changed, update the test",
+                            tmp.exists());
                     throw new Error();
                 }
             });
@@ -256,7 +263,8 @@ public class AtomicFileWritingIdiomTest extends ZKTestCase {
             @Override
             public void write(OutputStream os) throws IOException {
                 os.write("after".getBytes("ASCII"));
-                assertTrue("implementation of AtomicFileOutputStream has changed, update the test", tmp.exists());
+                assertTrue("implementation of AtomicFileOutputStream has changed, update the test",
+                        tmp.exists());
             }
         });
         // content changed
@@ -274,7 +282,8 @@ public class AtomicFileWritingIdiomTest extends ZKTestCase {
             @Override
             public void write(Writer os) throws IOException {
                 os.write("after");
-                assertTrue("implementation of AtomicFileOutputStream has changed, update the test", tmp.exists());
+                assertTrue("implementation of AtomicFileOutputStream has changed, update the test",
+                        tmp.exists());
             }
         });
         assertFalse("tmp file should have been deleted", tmp.exists());
@@ -296,7 +305,9 @@ public class AtomicFileWritingIdiomTest extends ZKTestCase {
                 public void write(OutputStream os) throws IOException {
                     os.write("after".getBytes("ASCII"));
                     os.flush();
-                    assertTrue("implementation of AtomicFileOutputStream has changed, update the test", tmp.exists());
+                    assertTrue(
+                            "implementation of AtomicFileOutputStream has changed, update the test",
+                            tmp.exists());
                     throw new RuntimeException();
                 }
             });
@@ -322,7 +333,9 @@ public class AtomicFileWritingIdiomTest extends ZKTestCase {
                 public void write(Writer os) throws IOException {
                     os.write("after");
                     os.flush();
-                    assertTrue("implementation of AtomicFileOutputStream has changed, update the test", tmp.exists());
+                    assertTrue(
+                            "implementation of AtomicFileOutputStream has changed, update the test",
+                            tmp.exists());
                     throw new RuntimeException();
                 }
             });
@@ -341,7 +354,7 @@ public class AtomicFileWritingIdiomTest extends ZKTestCase {
         byte[] b = new byte[20];
         int nb;
         while ((nb = fis.read(b)) != -1) {
-               result.append(new String(b, 0, nb, encoding));
+            result.append(new String(b, 0, nb, encoding));
         }
         fis.close();
         return result.toString();

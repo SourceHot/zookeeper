@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,18 +18,6 @@
 
 package org.apache.zookeeper.test;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
 import org.apache.zookeeper.PortAssignment;
 import org.apache.zookeeper.server.quorum.Election;
 import org.apache.zookeeper.server.quorum.QuorumPeer;
@@ -39,6 +27,11 @@ import org.apache.zookeeper.server.util.OSMXBean;
 import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.util.*;
 
 /**
  * Utility for quorum testing. Setups 2n+1 peers and allows to start/stop all
@@ -52,23 +45,14 @@ public class QuorumUtil {
 
     private static final Logger LOG = LoggerFactory.getLogger(QuorumUtil.class);
     private static final Set<QuorumPeer.ServerState> CONNECTED_STATES = new TreeSet<>(
-            Arrays.asList(QuorumPeer.ServerState.LEADING, QuorumPeer.ServerState.FOLLOWING, QuorumPeer.ServerState.OBSERVING));
-
-    public static class PeerStruct {
-        public int id;
-        public QuorumPeer peer;
-        public File dataDir;
-        public int clientPort;
-    }
-
-    private final Map<Long, QuorumServer> peersView = new HashMap<Long, QuorumServer>();
-
-    private final Map<Integer, PeerStruct> peers = new HashMap<Integer, PeerStruct>();
-
+            Arrays.asList(QuorumPeer.ServerState.LEADING, QuorumPeer.ServerState.FOLLOWING,
+                    QuorumPeer.ServerState.OBSERVING));
     public final int N;
-
     public final int ALL;
-
+    private final Map<Long, QuorumServer> peersView = new HashMap<Long, QuorumServer>();
+    private final Map<Integer, PeerStruct> peers = new HashMap<Integer, PeerStruct>();
+    // This was added to avoid running into the problem of ZOOKEEPER-1539
+    public boolean disableJMXTest = false;
     private String hostPort;
 
     private int tickTime;
@@ -107,11 +91,11 @@ public class QuorumUtil {
                 ps.clientPort = PortAssignment.unique();
                 peers.put(i, ps);
 
-                peersView.put(Long.valueOf(i), new QuorumServer(i, 
-                               new InetSocketAddress("127.0.0.1", PortAssignment.unique()),
-                               new InetSocketAddress("127.0.0.1", PortAssignment.unique()),
-                               new InetSocketAddress("127.0.0.1", ps.clientPort),
-                               LearnerType.PARTICIPANT));
+                peersView.put(Long.valueOf(i), new QuorumServer(i,
+                        new InetSocketAddress("127.0.0.1", PortAssignment.unique()),
+                        new InetSocketAddress("127.0.0.1", PortAssignment.unique()),
+                        new InetSocketAddress("127.0.0.1", ps.clientPort),
+                        LearnerType.PARTICIPANT));
                 hostPort += "127.0.0.1:" + ps.clientPort + ((i == ALL) ? "" : ",");
             }
             for (int i = 1; i <= ALL; ++i) {
@@ -134,10 +118,6 @@ public class QuorumUtil {
         return peers.get(id);
     }
 
-    // This was added to avoid running into the problem of ZOOKEEPER-1539
-    public boolean disableJMXTest = false;
-    
-
     public void enableLocalSession(boolean localSessionEnabled) {
         this.localSessionEnabled = localSessionEnabled;
     }
@@ -157,8 +137,9 @@ public class QuorumUtil {
         }
 
         // This was added to avoid running into the problem of ZOOKEEPER-1539
-        if (disableJMXTest) return;
-        
+        if (disableJMXTest)
+            return;
+
         // interesting to see what's there...
         try {
             JMXEnv.dump();
@@ -284,20 +265,20 @@ public class QuorumUtil {
     }
 
     public QuorumPeer getLeaderQuorumPeer() {
-        for (PeerStruct ps: peers.values()) {
+        for (PeerStruct ps : peers.values()) {
             if (ps.peer.leader != null) {
-               return ps.peer;
+                return ps.peer;
             }
         }
         throw new RuntimeException("Unable to find a leader peer");
     }
 
     public List<QuorumPeer> getFollowerQuorumPeers() {
-        List<QuorumPeer> peerList = new ArrayList<QuorumPeer>(ALL - 1); 
+        List<QuorumPeer> peerList = new ArrayList<QuorumPeer>(ALL - 1);
 
-        for (PeerStruct ps: peers.values()) {
+        for (PeerStruct ps : peers.values()) {
             if (ps.peer.leader == null) {
-               peerList.add(ps.peer);      
+                peerList.add(ps.peer);
             }
         }
 
@@ -308,7 +289,7 @@ public class QuorumUtil {
         LOG.info("TearDown started");
 
         OSMXBean osMbean = new OSMXBean();
-        if (osMbean.getUnix() == true) {    
+        if (osMbean.getUnix() == true) {
             LOG.info("fdcount after test is: " + osMbean.getOpenFileDescriptorCount());
         }
 
@@ -340,5 +321,13 @@ public class QuorumUtil {
 
     public String getConnectionStringForServer(final int index) {
         return "127.0.0.1:" + getPeer(index).clientPort;
+    }
+
+
+    public static class PeerStruct {
+        public int id;
+        public QuorumPeer peer;
+        public File dataDir;
+        public int clientPort;
     }
 }

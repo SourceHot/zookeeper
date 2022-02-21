@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,18 +17,6 @@
  */
 
 package org.apache.zookeeper.server;
-
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.Writer;
-import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
-import java.nio.channels.SelectionKey;
-import java.security.cert.Certificate;
-import java.util.Arrays;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
@@ -51,26 +39,42 @@ import org.apache.zookeeper.server.command.SetTraceMaskCommand;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.Writer;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.SelectionKey;
+import java.security.cert.Certificate;
+import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+
 public class NettyServerCnxn extends ServerCnxn {
     private static final Logger LOG = LoggerFactory.getLogger(NettyServerCnxn.class);
     private final Channel channel;
-    private CompositeByteBuf queuedBuffer;
     private final AtomicBoolean throttled = new AtomicBoolean(false);
-    private ByteBuffer bb;
     private final ByteBuffer bbLen = ByteBuffer.allocate(4);
+    private final NettyServerCnxnFactory factory;
+    // Use a single listener instance to reduce GC
+    private final GenericFutureListener<Future<Void>> onSendBufferDoneListener = f -> {
+        if (f.isSuccess()) {
+            packetSent();
+        }
+    };
+    private CompositeByteBuf queuedBuffer;
+    private ByteBuffer bb;
     private long sessionId;
     private int sessionTimeout;
     private AtomicLong outstandingCount = new AtomicLong();
     private Certificate[] clientChain;
     private volatile boolean closingChannel;
-
     /** The ZooKeeperServer for this connection. May be null if the server
-      * is not currently serving requests (for example if the server is not
-      * an active quorum participant.
-      */
+     * is not currently serving requests (for example if the server is not
+     * an active quorum participant.
+     */
     private volatile ZooKeeperServer zkServer;
-
-    private final NettyServerCnxnFactory factory;
     private boolean initialized;
 
     NettyServerCnxn(Channel channel, ZooKeeperServer zks, NettyServerCnxnFactory factory) {
@@ -114,7 +118,7 @@ public class NettyServerCnxn extends ServerCnxn {
 
         factory.removeCnxnFromIpMap(
                 this,
-                ((InetSocketAddress)channel.remoteAddress()).getAddress());
+                ((InetSocketAddress) channel.remoteAddress()).getAddress());
 
         if (zkServer != null) {
             zkServer.removeCnxn(this);
@@ -141,8 +145,18 @@ public class NettyServerCnxn extends ServerCnxn {
     }
 
     @Override
+    public void setSessionId(long sessionId) {
+        this.sessionId = sessionId;
+    }
+
+    @Override
     public int getSessionTimeout() {
         return sessionTimeout;
+    }
+
+    @Override
+    public void setSessionTimeout(int sessionTimeout) {
+        this.sessionTimeout = sessionTimeout;
     }
 
     @Override
@@ -150,9 +164,9 @@ public class NettyServerCnxn extends ServerCnxn {
         ReplyHeader h = new ReplyHeader(-1, -1L, 0);
         if (LOG.isTraceEnabled()) {
             ZooTrace.logTraceMessage(LOG, ZooTrace.EVENT_DELIVERY_TRACE_MASK,
-                                     "Deliver event " + event + " to 0x"
-                                     + Long.toHexString(this.sessionId)
-                                     + " through " + this);
+                    "Deliver event " + event + " to 0x"
+                            + Long.toHexString(this.sessionId)
+                            + " through " + this);
         }
 
         // Convert WatchedEvent to a type that can be sent over the wire
@@ -184,64 +198,13 @@ public class NettyServerCnxn extends ServerCnxn {
     }
 
     @Override
-    public void setSessionId(long sessionId) {
-        this.sessionId = sessionId;
-    }
-
-    // Use a single listener instance to reduce GC
-    private final GenericFutureListener<Future<Void>> onSendBufferDoneListener = f -> {
-        if (f.isSuccess()) {
-            packetSent();
-        }
-    };
-
-    @Override
     public void sendBuffer(ByteBuffer sendBuffer) {
         if (sendBuffer == ServerCnxnFactory.closeConn) {
             close();
             return;
         }
-        channel.writeAndFlush(Unpooled.wrappedBuffer(sendBuffer)).addListener(onSendBufferDoneListener);
-    }
-
-    /**
-     * This class wraps the sendBuffer method of NIOServerCnxn. It is
-     * responsible for chunking up the response to a client. Rather
-     * than cons'ing up a response fully in memory, which may be large
-     * for some commands, this class chunks up the result.
-     */
-    private class SendBufferWriter extends Writer {
-        private StringBuffer sb = new StringBuffer();
-
-        /**
-         * Check if we are ready to send another chunk.
-         * @param force force sending, even if not a full chunk
-         */
-        private void checkFlush(boolean force) {
-            if ((force && sb.length() > 0) || sb.length() > 2048) {
-                sendBuffer(ByteBuffer.wrap(sb.toString().getBytes()));
-                // clear our internal buffer
-                sb.setLength(0);
-            }
-        }
-
-        @Override
-        public void close() throws IOException {
-            if (sb == null) return;
-            checkFlush(true);
-            sb = null; // clear out the ref to ensure no reuse
-        }
-
-        @Override
-        public void flush() throws IOException {
-            checkFlush(true);
-        }
-
-        @Override
-        public void write(char[] cbuf, int off, int len) throws IOException {
-            sb.append(cbuf, off, len);
-            checkFlush(false);
-        }
+        channel.writeAndFlush(Unpooled.wrappedBuffer(sendBuffer))
+                .addListener(onSendBufferDoneListener);
     }
 
     /** Return if four letter word found and responded to, otw false **/
@@ -274,7 +237,7 @@ public class NettyServerCnxn extends ServerCnxn {
 
         LOG.info("Processing {} command from {}", cmd, channel.remoteAddress());
 
-       if (len == FourLetterCommands.setTraceMaskCmd) {
+        if (len == FourLetterCommands.setTraceMaskCmd) {
             ByteBuffer mask = ByteBuffer.allocate(8);
             message.readBytes(mask);
             mask.flip();
@@ -285,7 +248,7 @@ public class NettyServerCnxn extends ServerCnxn {
             return true;
         } else {
             CommandExecutor commandExecutor = new CommandExecutor();
-            return commandExecutor.execute(this, pwriter, len, zkServer,factory);
+            return commandExecutor.execute(this, pwriter, len, zkServer, factory);
         }
     }
 
@@ -436,7 +399,7 @@ public class NettyServerCnxn extends ServerCnxn {
     private void receiveMessage(ByteBuf message) {
         checkIsInEventLoop("receiveMessage");
         try {
-            while(message.isReadable() && !throttled.get()) {
+            while (message.isReadable() && !throttled.get()) {
                 if (bb != null) {
                     if (LOG.isTraceEnabled()) {
                         LOG.trace("message readable {} bb len {} {}",
@@ -539,20 +502,10 @@ public class NettyServerCnxn extends ServerCnxn {
                     }
                 }
             }
-        } catch(IOException e) {
+        } catch (IOException e) {
             LOG.warn("Closing connection to " + getRemoteSocketAddress(), e);
             close();
         }
-    }
-
-    /**
-     * An event that triggers a change in the channel's "Auto Read" setting.
-     * Used for throttling. By using an enum we can treat the two values as
-     * singletons and compare with ==.
-     */
-    enum AutoReadEvent {
-        DISABLE,
-        ENABLE
     }
 
     /**
@@ -588,11 +541,6 @@ public class NettyServerCnxn extends ServerCnxn {
     }
 
     @Override
-    public void setSessionTimeout(int sessionTimeout) {
-        this.sessionTimeout = sessionTimeout;
-    }
-
-    @Override
     public int getInterestOps() {
         // This might not be 100% right, but it's only used for printing
         // connection info in the netty implementation so it's probably ok.
@@ -613,7 +561,7 @@ public class NettyServerCnxn extends ServerCnxn {
 
     @Override
     public InetSocketAddress getRemoteSocketAddress() {
-        return (InetSocketAddress)channel.remoteAddress();
+        return (InetSocketAddress) channel.remoteAddress();
     }
 
     /** Send close connection packet to the client.
@@ -638,8 +586,7 @@ public class NettyServerCnxn extends ServerCnxn {
 
     @Override
     public Certificate[] getClientCertificateChain() {
-        if (clientChain == null)
-        {
+        if (clientChain == null) {
             return null;
         }
         return Arrays.copyOf(clientChain, clientChain.length);
@@ -647,8 +594,7 @@ public class NettyServerCnxn extends ServerCnxn {
 
     @Override
     public void setClientCertificateChain(Certificate[] chain) {
-        if (chain == null)
-        {
+        if (chain == null) {
             clientChain = null;
         } else {
             clientChain = Arrays.copyOf(chain, chain.length);
@@ -658,5 +604,57 @@ public class NettyServerCnxn extends ServerCnxn {
     // For tests and NettyServerCnxnFactory only, thus package-private.
     Channel getChannel() {
         return channel;
+    }
+
+    /**
+     * An event that triggers a change in the channel's "Auto Read" setting.
+     * Used for throttling. By using an enum we can treat the two values as
+     * singletons and compare with ==.
+     */
+    enum AutoReadEvent {
+        DISABLE,
+        ENABLE
+    }
+
+
+    /**
+     * This class wraps the sendBuffer method of NIOServerCnxn. It is
+     * responsible for chunking up the response to a client. Rather
+     * than cons'ing up a response fully in memory, which may be large
+     * for some commands, this class chunks up the result.
+     */
+    private class SendBufferWriter extends Writer {
+        private StringBuffer sb = new StringBuffer();
+
+        /**
+         * Check if we are ready to send another chunk.
+         * @param force force sending, even if not a full chunk
+         */
+        private void checkFlush(boolean force) {
+            if ((force && sb.length() > 0) || sb.length() > 2048) {
+                sendBuffer(ByteBuffer.wrap(sb.toString().getBytes()));
+                // clear our internal buffer
+                sb.setLength(0);
+            }
+        }
+
+        @Override
+        public void close() throws IOException {
+            if (sb == null)
+                return;
+            checkFlush(true);
+            sb = null; // clear out the ref to ensure no reuse
+        }
+
+        @Override
+        public void flush() throws IOException {
+            checkFlush(true);
+        }
+
+        @Override
+        public void write(char[] cbuf, int off, int len) throws IOException {
+            sb.append(cbuf, off, len);
+            checkFlush(false);
+        }
     }
 }

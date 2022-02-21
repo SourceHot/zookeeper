@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -21,14 +21,9 @@ package org.apache.zookeeper.common;
 import org.apache.zookeeper.server.ZooKeeperThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
-import java.nio.file.ClosedWatchServiceException;
-import java.nio.file.FileSystem;
-import java.nio.file.Path;
-import java.nio.file.StandardWatchEventKinds;
-import java.nio.file.WatchEvent;
-import java.nio.file.WatchKey;
-import java.nio.file.WatchService;
+import java.nio.file.*;
 import java.util.function.Consumer;
 
 /**
@@ -44,18 +39,8 @@ import java.util.function.Consumer;
  */
 public final class FileChangeWatcher {
     private static final Logger LOG = LoggerFactory.getLogger(FileChangeWatcher.class);
-
-    public enum State {
-        NEW,      // object created but start() not called yet
-        STARTING, // start() called but background thread has not entered main loop
-        RUNNING,  // background thread is running
-        STOPPING, // stop() called but background thread has not exited main loop
-        STOPPED   // stop() called and background thread has exited, or background thread crashed
-    }
-
     private final WatcherThread watcherThread;
     private State state; // protected by synchronized(this)
-
     /**
      * Creates a watcher that watches <code>dirPath</code> and invokes <code>callback</code> on changes.
      *
@@ -72,7 +57,7 @@ public final class FileChangeWatcher {
         }
         dirPath.register(
                 watchService,
-                new WatchEvent.Kind<?>[]{
+                new WatchEvent.Kind<?>[] {
                         StandardWatchEventKinds.ENTRY_CREATE,
                         StandardWatchEventKinds.ENTRY_DELETE,
                         StandardWatchEventKinds.ENTRY_MODIFY,
@@ -91,6 +76,15 @@ public final class FileChangeWatcher {
     }
 
     /**
+     * Sets the state to <code>newState</code>.
+     * @param newState the new state.
+     */
+    private synchronized void setState(State newState) {
+        state = newState;
+        this.notifyAll();
+    }
+
+    /**
      * Blocks until the current state becomes <code>desiredState</code>.
      * Currently only used by tests, thus package-private.
      * @param desiredState the desired state.
@@ -100,15 +94,6 @@ public final class FileChangeWatcher {
         while (this.state != desiredState) {
             this.wait();
         }
-    }
-
-    /**
-     * Sets the state to <code>newState</code>.
-     * @param newState the new state.
-     */
-    private synchronized void setState(State newState) {
-        state = newState;
-        this.notifyAll();
     }
 
     /**
@@ -163,11 +148,20 @@ public final class FileChangeWatcher {
      */
     public void stop() {
         if (compareAndSetState(
-                new State[]{State.RUNNING, State.STARTING},
+                new State[] {State.RUNNING, State.STARTING},
                 State.STOPPING)) {
             watcherThread.interrupt();
         }
     }
+
+    public enum State {
+        NEW,      // object created but start() not called yet
+        STARTING, // start() called but background thread has not entered main loop
+        RUNNING,  // background thread is running
+        STOPPING, // stop() called but background thread has not exited main loop
+        STOPPED   // stop() called and background thread has exited, or background thread crashed
+    }
+
 
     /**
      * Inner class that implements the watcher thread logic.
@@ -219,7 +213,7 @@ public final class FileChangeWatcher {
                 WatchKey key;
                 try {
                     key = watchService.take();
-                } catch (InterruptedException|ClosedWatchServiceException e) {
+                } catch (InterruptedException | ClosedWatchServiceException e) {
                     if (LOG.isDebugEnabled()) {
                         LOG.debug(getName() + " was interrupted and is shutting down ...");
                     }
@@ -227,7 +221,8 @@ public final class FileChangeWatcher {
                 }
                 for (WatchEvent<?> event : key.pollEvents()) {
                     if (LOG.isDebugEnabled()) {
-                        LOG.debug("Got file changed event: " + event.kind() + " with context: " + event.context());
+                        LOG.debug("Got file changed event: " + event.kind() + " with context: "
+                                + event.context());
                     }
                     try {
                         callback.accept(event);

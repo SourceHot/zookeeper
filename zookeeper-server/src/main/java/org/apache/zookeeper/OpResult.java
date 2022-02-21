@@ -34,8 +34,9 @@ public abstract class OpResult {
      * Encodes the return type as from ZooDefs.OpCode.  Can be used
      * to dispatch to the correct cast needed for getting the desired
      * additional result data.
-     * @see ZooDefs.OpCode
+     *
      * @return an integer identifying what kind of operation this result came from.
+     * @see ZooDefs.OpCode
      */
     public int getType() {
         return type;
@@ -51,7 +52,7 @@ public abstract class OpResult {
         private Stat stat;
 
         public CreateResult(String path) {
-        	this(ZooDefs.OpCode.create, path, null);
+            this(ZooDefs.OpCode.create, path, null);
         }
 
         public CreateResult(String path, Stat stat) {
@@ -59,7 +60,7 @@ public abstract class OpResult {
         }
 
         private CreateResult(int opcode, String path, Stat stat) {
-        	super(opcode);
+            super(opcode);
             this.path = path;
             this.stat = stat;
         }
@@ -74,16 +75,18 @@ public abstract class OpResult {
 
         @Override
         public boolean equals(Object o) {
-            if (this == o) return true;
-            if (!(o instanceof CreateResult)) return false;
+            if (this == o)
+                return true;
+            if (!(o instanceof CreateResult))
+                return false;
 
             CreateResult other = (CreateResult) o;
 
             boolean statsAreEqual = (stat == null && other.stat == null ||
-                        						(stat != null && other.stat != null &&
-                        					   stat.getMzxid() == other.stat.getMzxid()));
+                    (stat != null && other.stat != null &&
+                            stat.getMzxid() == other.stat.getMzxid()));
             return getType() == other.getType() &&
-                   path.equals(other.getPath()) && statsAreEqual;
+                    path.equals(other.getPath()) && statsAreEqual;
         }
 
         @Override
@@ -92,6 +95,7 @@ public abstract class OpResult {
                     (stat == null ? 0 : stat.getMzxid()));
         }
     }
+
 
     /**
      * A result from a delete operation.  No special values are available.
@@ -103,8 +107,10 @@ public abstract class OpResult {
 
         @Override
         public boolean equals(Object o) {
-            if (this == o) return true;
-            if (!(o instanceof DeleteResult)) return false;
+            if (this == o)
+                return true;
+            if (!(o instanceof DeleteResult))
+                return false;
 
             DeleteResult opResult = (DeleteResult) o;
             return getType() == opResult.getType();
@@ -115,6 +121,7 @@ public abstract class OpResult {
             return getType();
         }
     }
+
 
     /**
      * A result from a setData operation.  This kind of result provides access
@@ -134,8 +141,10 @@ public abstract class OpResult {
 
         @Override
         public boolean equals(Object o) {
-            if (this == o) return true;
-            if (!(o instanceof SetDataResult)) return false;
+            if (this == o)
+                return true;
+            if (!(o instanceof SetDataResult))
+                return false;
 
             SetDataResult other = (SetDataResult) o;
             return getType() == other.getType() && stat.getMzxid() == other.stat.getMzxid();
@@ -147,6 +156,7 @@ public abstract class OpResult {
         }
     }
 
+
     /**
      * A result from a version check operation.  No special values are available.
      */
@@ -157,8 +167,10 @@ public abstract class OpResult {
 
         @Override
         public boolean equals(Object o) {
-            if (this == o) return true;
-            if (!(o instanceof CheckResult)) return false;
+            if (this == o)
+                return true;
+            if (!(o instanceof CheckResult))
+                return false;
 
             CheckResult other = (CheckResult) o;
             return getType() == other.getType();
@@ -170,11 +182,12 @@ public abstract class OpResult {
         }
     }
 
+
     /**
      * An error result from any kind of operation.  The point of error results
      * is that they contain an error code which helps understand what happened.
-     * @see KeeperException.Code
      *
+     * @see KeeperException.Code
      */
     public static class ErrorResult extends OpResult {
         private int err;
@@ -190,8 +203,10 @@ public abstract class OpResult {
 
         @Override
         public boolean equals(Object o) {
-            if (this == o) return true;
-            if (!(o instanceof ErrorResult)) return false;
+            if (this == o)
+                return true;
+            if (!(o instanceof ErrorResult))
+                return false;
 
             ErrorResult other = (ErrorResult) o;
             return getType() == other.getType() && err == other.getErr();

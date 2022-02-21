@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,14 +18,15 @@
 
 package org.apache.zookeeper;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.junit.Test;
 import org.junit.internal.runners.statements.InvokeMethod;
 import org.junit.runners.BlockJUnit4ClassRunner;
 import org.junit.runners.model.FrameworkMethod;
 import org.junit.runners.model.InitializationError;
 import org.junit.runners.model.Statement;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Arrays;
 import java.util.List;
 
@@ -41,7 +42,8 @@ public class JUnit4ZKTestRunner extends BlockJUnit4ClassRunner {
     }
 
     @SuppressWarnings("unchecked")
-    public static List<FrameworkMethod> computeTestMethodsForClass(final Class klass, final List<FrameworkMethod> defaultMethods) {
+    public static List<FrameworkMethod> computeTestMethodsForClass(final Class klass,
+                                                                   final List<FrameworkMethod> defaultMethods) {
         List<FrameworkMethod> list = defaultMethods;
         String methodName = System.getProperty("test.method");
         if (methodName == null) {
@@ -51,7 +53,8 @@ public class JUnit4ZKTestRunner extends BlockJUnit4ClassRunner {
             try {
                 list = Arrays.asList(new FrameworkMethod(klass.getMethod(methodName)));
             } catch (NoSuchMethodException nsme) {
-                LOG.warn("{} does not have test.method={}. failing to default methods.", klass.getName(), methodName);
+                LOG.warn("{} does not have test.method={}. failing to default methods.",
+                        klass.getName(), methodName);
             }
         }
         return list;
@@ -60,8 +63,15 @@ public class JUnit4ZKTestRunner extends BlockJUnit4ClassRunner {
 
     @Override
     protected List<FrameworkMethod> computeTestMethods() {
-        return computeTestMethodsForClass(getTestClass().getJavaClass(), super.computeTestMethods());
+        return computeTestMethodsForClass(getTestClass().getJavaClass(),
+                super.computeTestMethods());
     }
+
+    @Override
+    protected Statement methodInvoker(FrameworkMethod method, Object test) {
+        return new LoggedInvokeMethod(method, test);
+    }
+
 
     public static class LoggedInvokeMethod extends InvokeMethod {
         private final FrameworkMethod method;
@@ -94,7 +104,7 @@ public class JUnit4ZKTestRunner extends BlockJUnit4ClassRunner {
                 if (annotation != null && annotation.expected() != null &&
                         annotation.expected().isAssignableFrom(t.getClass())) {
                     LOG.info("TEST METHOD {} THREW EXPECTED EXCEPTION {}", name,
-                        annotation.expected());
+                            annotation.expected());
                 } else {
                     LOG.info("TEST METHOD FAILED {}", name, t);
                 }
@@ -102,10 +112,5 @@ public class JUnit4ZKTestRunner extends BlockJUnit4ClassRunner {
             }
             LOG.info("FINISHED TEST METHOD {}", name);
         }
-    }
-
-    @Override
-    protected Statement methodInvoker(FrameworkMethod method, Object test) {
-        return new LoggedInvokeMethod(method, test);
     }
 }

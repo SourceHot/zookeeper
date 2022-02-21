@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,25 +18,19 @@
 
 package org.apache.zookeeper.server.quorum;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.SocketAddress;
-import java.net.SocketException;
-import java.net.SocketTimeoutException;
-import java.nio.channels.SocketChannel;
-
-import javax.net.ssl.SSLSocket;
-
 import io.netty.buffer.Unpooled;
 import io.netty.handler.ssl.SslHandler;
 import org.apache.zookeeper.common.X509Exception;
 import org.apache.zookeeper.common.X509Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import javax.net.ssl.SSLSocket;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.*;
+import java.nio.channels.SocketChannel;
 
 /**
  * A ServerSocket that can act either as a regular ServerSocket, as a SSLServerSocket, or as both, depending on
@@ -56,9 +50,8 @@ import org.slf4j.LoggerFactory;
  */
 public class UnifiedServerSocket extends ServerSocket {
     private static final Logger LOG = LoggerFactory.getLogger(UnifiedServerSocket.class);
-
-    private X509Util x509Util;
     private final boolean allowInsecureConnection;
+    private X509Util x509Util;
 
     /**
      * Creates an unbound unified server socket by calling {@link ServerSocket#ServerSocket()}.
@@ -69,7 +62,8 @@ public class UnifiedServerSocket extends ServerSocket {
      * @param allowInsecureConnection if true, accept plaintext connections, otherwise close them.
      * @throws IOException if {@link ServerSocket#ServerSocket()} throws.
      */
-    public UnifiedServerSocket(X509Util x509Util, boolean allowInsecureConnection) throws IOException {
+    public UnifiedServerSocket(X509Util x509Util, boolean allowInsecureConnection)
+            throws IOException {
         super();
         this.x509Util = x509Util;
         this.allowInsecureConnection = allowInsecureConnection;
@@ -85,7 +79,8 @@ public class UnifiedServerSocket extends ServerSocket {
      * @param port the port number, or {@code 0} to use a port number that is automatically allocated.
      * @throws IOException if {@link ServerSocket#ServerSocket(int)} throws.
      */
-    public UnifiedServerSocket(X509Util x509Util, boolean allowInsecureConnection, int port) throws IOException {
+    public UnifiedServerSocket(X509Util x509Util, boolean allowInsecureConnection, int port)
+            throws IOException {
         super(port);
         this.x509Util = x509Util;
         this.allowInsecureConnection = allowInsecureConnection;
@@ -178,18 +173,11 @@ public class UnifiedServerSocket extends ServerSocket {
      * and can get the underlying SSLSocket by calling {@link UnifiedSocket#getSslSocket()}.
      */
     public static class UnifiedSocket extends Socket {
-        private enum Mode {
-            UNKNOWN,
-            PLAINTEXT,
-            TLS
-        }
-
         private final X509Util x509Util;
         private final boolean allowInsecureConnection;
         private PrependableSocket prependableSocket;
         private SSLSocket sslSocket;
         private Mode mode;
-
         /**
          * Note: this constructor is intentionally private. The only intended caller is
          * {@link UnifiedServerSocket#accept()}.
@@ -198,7 +186,9 @@ public class UnifiedServerSocket extends ServerSocket {
          * @param allowInsecureConnection
          * @param prependableSocket
          */
-        private UnifiedSocket(X509Util x509Util, boolean allowInsecureConnection, PrependableSocket prependableSocket) {
+        private UnifiedSocket(X509Util x509Util,
+                              boolean allowInsecureConnection,
+                              PrependableSocket prependableSocket) {
             this.x509Util = x509Util;
             this.allowInsecureConnection = allowInsecureConnection;
             this.prependableSocket = prependableSocket;
@@ -247,7 +237,8 @@ public class UnifiedServerSocket extends ServerSocket {
                 bytesRead = prependableSocket.getInputStream().read(litmus, 0, litmus.length);
             } catch (SocketTimeoutException e) {
                 // Didn't read anything within the timeout, fallthrough and assume the connection is plaintext.
-                LOG.warn("Socket mode detection timed out after " + newTimeout + " ms, assuming PLAINTEXT");
+                LOG.warn("Socket mode detection timed out after " + newTimeout
+                        + " ms, assuming PLAINTEXT");
             } finally {
                 // restore socket timeout to the old value
                 try {
@@ -255,14 +246,16 @@ public class UnifiedServerSocket extends ServerSocket {
                         prependableSocket.setSoTimeout(oldTimeout);
                     }
                 } catch (Exception e) {
-                    LOG.warn("Failed to restore old socket timeout value of " + oldTimeout + " ms", e);
+                    LOG.warn("Failed to restore old socket timeout value of " + oldTimeout + " ms",
+                            e);
                 }
             }
             if (bytesRead < 0) { // Got a EOF right away, definitely not using TLS. Fallthrough.
                 bytesRead = 0;
             }
 
-            if (bytesRead == litmus.length && SslHandler.isEncrypted(Unpooled.wrappedBuffer(litmus))) {
+            if (bytesRead == litmus.length && SslHandler.isEncrypted(
+                    Unpooled.wrappedBuffer(litmus))) {
                 try {
                     sslSocket = x509Util.createSSLSocket(prependableSocket, litmus);
                 } catch (X509Exception e) {
@@ -270,11 +263,14 @@ public class UnifiedServerSocket extends ServerSocket {
                 }
                 prependableSocket = null;
                 mode = Mode.TLS;
-                LOG.info("Accepted TLS connection from {} - {} - {}", sslSocket.getRemoteSocketAddress(), sslSocket.getSession().getProtocol(), sslSocket.getSession().getCipherSuite());
+                LOG.info("Accepted TLS connection from {} - {} - {}",
+                        sslSocket.getRemoteSocketAddress(), sslSocket.getSession().getProtocol(),
+                        sslSocket.getSession().getCipherSuite());
             } else if (allowInsecureConnection) {
                 prependableSocket.prependToInputStream(litmus, 0, bytesRead);
                 mode = Mode.PLAINTEXT;
-                LOG.info("Accepted plaintext connection from {}", prependableSocket.getRemoteSocketAddress());
+                LOG.info("Accepted plaintext connection from {}",
+                        prependableSocket.getRemoteSocketAddress());
             } else {
                 prependableSocket.close();
                 mode = Mode.PLAINTEXT;
@@ -427,19 +423,19 @@ public class UnifiedServerSocket extends ServerSocket {
         }
 
         /**
-         * See {@link Socket#setTcpNoDelay(boolean)}. Calling this method does not trigger mode detection.
-         */
-        @Override
-        public void setTcpNoDelay(boolean on) throws SocketException {
-            getSocketAllowUnknownMode().setTcpNoDelay(on);
-        }
-
-        /**
          * See {@link Socket#getTcpNoDelay()}. Calling this method does not trigger mode detection.
          */
         @Override
         public boolean getTcpNoDelay() throws SocketException {
             return getSocketAllowUnknownMode().getTcpNoDelay();
+        }
+
+        /**
+         * See {@link Socket#setTcpNoDelay(boolean)}. Calling this method does not trigger mode detection.
+         */
+        @Override
+        public void setTcpNoDelay(boolean on) throws SocketException {
+            getSocketAllowUnknownMode().setTcpNoDelay(on);
         }
 
         /**
@@ -468,14 +464,6 @@ public class UnifiedServerSocket extends ServerSocket {
         }
 
         /**
-         * See {@link Socket#setOOBInline(boolean)}. Calling this method does not trigger mode detection.
-         */
-        @Override
-        public void setOOBInline(boolean on) throws SocketException {
-            getSocketAllowUnknownMode().setOOBInline(on);
-        }
-
-        /**
          * See {@link Socket#getOOBInline()}. Calling this method does not trigger mode detection.
          */
         @Override
@@ -484,11 +472,11 @@ public class UnifiedServerSocket extends ServerSocket {
         }
 
         /**
-         * See {@link Socket#setSoTimeout(int)}. Calling this method does not trigger mode detection.
+         * See {@link Socket#setOOBInline(boolean)}. Calling this method does not trigger mode detection.
          */
         @Override
-        public synchronized void setSoTimeout(int timeout) throws SocketException {
-            getSocketAllowUnknownMode().setSoTimeout(timeout);
+        public void setOOBInline(boolean on) throws SocketException {
+            getSocketAllowUnknownMode().setOOBInline(on);
         }
 
         /**
@@ -500,11 +488,11 @@ public class UnifiedServerSocket extends ServerSocket {
         }
 
         /**
-         * See {@link Socket#setSendBufferSize(int)}. Calling this method does not trigger mode detection.
+         * See {@link Socket#setSoTimeout(int)}. Calling this method does not trigger mode detection.
          */
         @Override
-        public synchronized void setSendBufferSize(int size) throws SocketException {
-            getSocketAllowUnknownMode().setSendBufferSize(size);
+        public synchronized void setSoTimeout(int timeout) throws SocketException {
+            getSocketAllowUnknownMode().setSoTimeout(timeout);
         }
 
         /**
@@ -516,11 +504,11 @@ public class UnifiedServerSocket extends ServerSocket {
         }
 
         /**
-         * See {@link Socket#setReceiveBufferSize(int)}. Calling this method does not trigger mode detection.
+         * See {@link Socket#setSendBufferSize(int)}. Calling this method does not trigger mode detection.
          */
         @Override
-        public synchronized void setReceiveBufferSize(int size) throws SocketException {
-            getSocketAllowUnknownMode().setReceiveBufferSize(size);
+        public synchronized void setSendBufferSize(int size) throws SocketException {
+            getSocketAllowUnknownMode().setSendBufferSize(size);
         }
 
         /**
@@ -532,11 +520,11 @@ public class UnifiedServerSocket extends ServerSocket {
         }
 
         /**
-         * See {@link Socket#setKeepAlive(boolean)}. Calling this method does not trigger mode detection.
+         * See {@link Socket#setReceiveBufferSize(int)}. Calling this method does not trigger mode detection.
          */
         @Override
-        public void setKeepAlive(boolean on) throws SocketException {
-            getSocketAllowUnknownMode().setKeepAlive(on);
+        public synchronized void setReceiveBufferSize(int size) throws SocketException {
+            getSocketAllowUnknownMode().setReceiveBufferSize(size);
         }
 
         /**
@@ -548,11 +536,11 @@ public class UnifiedServerSocket extends ServerSocket {
         }
 
         /**
-         * See {@link Socket#setTrafficClass(int)}. Calling this method does not trigger mode detection.
+         * See {@link Socket#setKeepAlive(boolean)}. Calling this method does not trigger mode detection.
          */
         @Override
-        public void setTrafficClass(int tc) throws SocketException {
-            getSocketAllowUnknownMode().setTrafficClass(tc);
+        public void setKeepAlive(boolean on) throws SocketException {
+            getSocketAllowUnknownMode().setKeepAlive(on);
         }
 
         /**
@@ -564,11 +552,11 @@ public class UnifiedServerSocket extends ServerSocket {
         }
 
         /**
-         * See {@link Socket#setReuseAddress(boolean)}. Calling this method does not trigger mode detection.
+         * See {@link Socket#setTrafficClass(int)}. Calling this method does not trigger mode detection.
          */
         @Override
-        public void setReuseAddress(boolean on) throws SocketException {
-            getSocketAllowUnknownMode().setReuseAddress(on);
+        public void setTrafficClass(int tc) throws SocketException {
+            getSocketAllowUnknownMode().setTrafficClass(tc);
         }
 
         /**
@@ -577,6 +565,14 @@ public class UnifiedServerSocket extends ServerSocket {
         @Override
         public boolean getReuseAddress() throws SocketException {
             return getSocketAllowUnknownMode().getReuseAddress();
+        }
+
+        /**
+         * See {@link Socket#setReuseAddress(boolean)}. Calling this method does not trigger mode detection.
+         */
+        @Override
+        public void setReuseAddress(boolean on) throws SocketException {
+            getSocketAllowUnknownMode().setReuseAddress(on);
         }
 
         /**
@@ -608,7 +604,8 @@ public class UnifiedServerSocket extends ServerSocket {
          */
         @Override
         public String toString() {
-            return "UnifiedSocket[mode=" + mode.toString() + "socket=" + getSocketAllowUnknownMode().toString() + "]";
+            return "UnifiedSocket[mode=" + mode.toString() + "socket="
+                    + getSocketAllowUnknownMode().toString() + "]";
         }
 
         /**
@@ -657,9 +654,17 @@ public class UnifiedServerSocket extends ServerSocket {
          */
         @Override
         public void setPerformancePreferences(int connectionTime, int latency, int bandwidth) {
-            getSocketAllowUnknownMode().setPerformancePreferences(connectionTime, latency, bandwidth);
+            getSocketAllowUnknownMode().setPerformancePreferences(connectionTime, latency,
+                    bandwidth);
+        }
+
+        private enum Mode {
+            UNKNOWN,
+            PLAINTEXT,
+            TLS
         }
     }
+
 
     /**
      * An input stream for a UnifiedSocket. The first read from this stream will trigger mode detection on the
@@ -741,6 +746,7 @@ public class UnifiedServerSocket extends ServerSocket {
         }
 
     }
+
 
     private static class UnifiedOutputStream extends OutputStream {
         private final UnifiedSocket unifiedSocket;

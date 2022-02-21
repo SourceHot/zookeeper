@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,15 +22,7 @@ import org.bouncycastle.asn1.DERIA5String;
 import org.bouncycastle.asn1.DEROctetString;
 import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers;
 import org.bouncycastle.asn1.x500.X500Name;
-import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
-import org.bouncycastle.asn1.x509.BasicConstraints;
-import org.bouncycastle.asn1.x509.ExtendedKeyUsage;
-import org.bouncycastle.asn1.x509.Extension;
-import org.bouncycastle.asn1.x509.GeneralName;
-import org.bouncycastle.asn1.x509.GeneralNames;
-import org.bouncycastle.asn1.x509.KeyPurposeId;
-import org.bouncycastle.asn1.x509.KeyUsage;
-import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
+import org.bouncycastle.asn1.x509.*;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.X509v3CertificateBuilder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
@@ -40,11 +32,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openssl.jcajce.JcaPEMWriter;
 import org.bouncycastle.openssl.jcajce.JcaPKCS8Generator;
 import org.bouncycastle.openssl.jcajce.JceOpenSSLPKCS8EncryptorBuilder;
-import org.bouncycastle.operator.ContentSigner;
-import org.bouncycastle.operator.DefaultDigestAlgorithmIdentifierFinder;
-import org.bouncycastle.operator.DefaultSignatureAlgorithmIdentifierFinder;
-import org.bouncycastle.operator.OperatorCreationException;
-import org.bouncycastle.operator.OutputEncryptor;
+import org.bouncycastle.operator.*;
 import org.bouncycastle.operator.bc.BcContentSignerBuilder;
 import org.bouncycastle.operator.bc.BcECContentSignerBuilder;
 import org.bouncycastle.operator.bc.BcRSAContentSignerBuilder;
@@ -57,13 +45,7 @@ import java.io.StringWriter;
 import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.security.GeneralSecurityException;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.KeyStore;
-import java.security.PrivateKey;
-import java.security.PublicKey;
-import java.security.SecureRandom;
+import java.security.*;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
@@ -103,7 +85,8 @@ public class X509TestHelpers {
     public static X509Certificate newSelfSignedCACert(
             X500Name subject,
             KeyPair keyPair,
-            long expirationMillis) throws IOException, OperatorCreationException, GeneralSecurityException {
+            long expirationMillis)
+            throws IOException, OperatorCreationException, GeneralSecurityException {
         Date now = new Date();
         X509v3CertificateBuilder builder = initCertBuilder(
                 subject, // for self-signed certs, issuer == subject
@@ -111,7 +94,8 @@ public class X509TestHelpers {
                 new Date(now.getTime() + expirationMillis),
                 subject,
                 keyPair.getPublic());
-        builder.addExtension(Extension.basicConstraints, true, new BasicConstraints(true)); // is a CA
+        builder.addExtension(Extension.basicConstraints, true,
+                new BasicConstraints(true)); // is a CA
         builder.addExtension(
                 Extension.keyUsage,
                 true,
@@ -139,9 +123,11 @@ public class X509TestHelpers {
             KeyPair caKeyPair,
             X500Name certSubject,
             PublicKey certPublicKey,
-            long expirationMillis) throws IOException, OperatorCreationException, GeneralSecurityException {
+            long expirationMillis)
+            throws IOException, OperatorCreationException, GeneralSecurityException {
         if (!caKeyPair.getPublic().equals(caCert.getPublicKey())) {
-            throw new IllegalArgumentException("CA private key does not match the public key in the CA cert");
+            throw new IllegalArgumentException(
+                    "CA private key does not match the public key in the CA cert");
         }
         Date now = new Date();
         X509v3CertificateBuilder builder = initCertBuilder(
@@ -150,13 +136,16 @@ public class X509TestHelpers {
                 new Date(now.getTime() + expirationMillis),
                 certSubject,
                 certPublicKey);
-        builder.addExtension(Extension.basicConstraints, true, new BasicConstraints(false)); // not a CA
+        builder.addExtension(Extension.basicConstraints, true,
+                new BasicConstraints(false)); // not a CA
         builder.addExtension(
-                Extension.keyUsage, true, new KeyUsage(KeyUsage.digitalSignature | KeyUsage.keyEncipherment));
+                Extension.keyUsage, true,
+                new KeyUsage(KeyUsage.digitalSignature | KeyUsage.keyEncipherment));
         builder.addExtension(
                 Extension.extendedKeyUsage,
                 true,
-                new ExtendedKeyUsage(new KeyPurposeId[] { KeyPurposeId.id_kp_serverAuth, KeyPurposeId.id_kp_clientAuth }));
+                new ExtendedKeyUsage(new KeyPurposeId[] {KeyPurposeId.id_kp_serverAuth,
+                        KeyPurposeId.id_kp_clientAuth}));
 
         builder.addExtension(
                 Extension.subjectAlternativeName,
@@ -173,9 +162,11 @@ public class X509TestHelpers {
         InetAddress[] localAddresses = InetAddress.getAllByName("localhost");
         GeneralName[] generalNames = new GeneralName[localAddresses.length + 1];
         for (int i = 0; i < localAddresses.length; i++) {
-            generalNames[i] = new GeneralName(GeneralName.iPAddress, new DEROctetString(localAddresses[i].getAddress()));
+            generalNames[i] = new GeneralName(GeneralName.iPAddress,
+                    new DEROctetString(localAddresses[i].getAddress()));
         }
-        generalNames[generalNames.length - 1] = new GeneralName(GeneralName.dNSName, new DERIA5String("localhost"));
+        generalNames[generalNames.length - 1] =
+                new GeneralName(GeneralName.dNSName, new DERIA5String("localhost"));
         return new GeneralNames(generalNames);
     }
 
@@ -215,20 +206,27 @@ public class X509TestHelpers {
      */
     private static X509Certificate buildAndSignCertificate(
             PrivateKey privateKey,
-            X509v3CertificateBuilder builder) throws IOException, OperatorCreationException, CertificateException {
+            X509v3CertificateBuilder builder)
+            throws IOException, OperatorCreationException, CertificateException {
         BcContentSignerBuilder signerBuilder;
-        if (privateKey.getAlgorithm().contains("RSA")) { // a little hacky way to detect key type, but it works
-            AlgorithmIdentifier signatureAlgorithm = new DefaultSignatureAlgorithmIdentifierFinder().find(
-                    "SHA256WithRSAEncryption");
-            AlgorithmIdentifier digestAlgorithm = new DefaultDigestAlgorithmIdentifierFinder().find(signatureAlgorithm);
+        if (privateKey.getAlgorithm()
+                .contains("RSA")) { // a little hacky way to detect key type, but it works
+            AlgorithmIdentifier signatureAlgorithm =
+                    new DefaultSignatureAlgorithmIdentifierFinder().find(
+                            "SHA256WithRSAEncryption");
+            AlgorithmIdentifier digestAlgorithm =
+                    new DefaultDigestAlgorithmIdentifierFinder().find(signatureAlgorithm);
             signerBuilder = new BcRSAContentSignerBuilder(signatureAlgorithm, digestAlgorithm);
         } else { // if not RSA, assume EC
-            AlgorithmIdentifier signatureAlgorithm = new DefaultSignatureAlgorithmIdentifierFinder().find(
-                    "SHA256withECDSA");
-            AlgorithmIdentifier digestAlgorithm = new DefaultDigestAlgorithmIdentifierFinder().find(signatureAlgorithm);
+            AlgorithmIdentifier signatureAlgorithm =
+                    new DefaultSignatureAlgorithmIdentifierFinder().find(
+                            "SHA256withECDSA");
+            AlgorithmIdentifier digestAlgorithm =
+                    new DefaultDigestAlgorithmIdentifierFinder().find(signatureAlgorithm);
             signerBuilder = new BcECContentSignerBuilder(signatureAlgorithm, digestAlgorithm);
         }
-        AsymmetricKeyParameter privateKeyParam = PrivateKeyFactory.createKey(privateKey.getEncoded());
+        AsymmetricKeyParameter privateKeyParam =
+                PrivateKeyFactory.createKey(privateKey.getEncoded());
         ContentSigner signer = signerBuilder.build(privateKeyParam);
         return toX509Cert(builder.build(signer));
     }
@@ -308,7 +306,8 @@ public class X509TestHelpers {
         JcaPEMWriter pemWriter = new JcaPEMWriter(stringWriter);
         OutputEncryptor encryptor = null;
         if (password != null && password.length() > 0) {
-            encryptor = new JceOpenSSLPKCS8EncryptorBuilder(PKCSObjectIdentifiers.pbeWithSHAAnd3_KeyTripleDES_CBC)
+            encryptor = new JceOpenSSLPKCS8EncryptorBuilder(
+                    PKCSObjectIdentifiers.pbeWithSHAAnd3_KeyTripleDES_CBC)
                     .setProvider(BouncyCastleProvider.PROVIDER_NAME)
                     .setRandom(PRNG)
                     .setPasssword(password.toCharArray())
@@ -371,7 +370,8 @@ public class X509TestHelpers {
 
     private static byte[] certToTrustStoreBytes(X509Certificate cert,
                                                 String keyPassword,
-                                                KeyStore trustStore) throws IOException, GeneralSecurityException {
+                                                KeyStore trustStore)
+            throws IOException, GeneralSecurityException {
         char[] keyPasswordChars = keyPassword == null ? new char[0] : keyPassword.toCharArray();
         trustStore.load(null, keyPasswordChars);
         trustStore.setCertificateEntry(cert.getSubjectDN().toString(), cert);
@@ -432,7 +432,7 @@ public class X509TestHelpers {
                 "key",
                 privateKey,
                 keyPasswordChars,
-                new Certificate[] { cert });
+                new Certificate[] {cert});
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         keyStore.store(outputStream, keyPasswordChars);
         outputStream.flush();
@@ -447,7 +447,9 @@ public class X509TestHelpers {
      * @return a java X509Certificate
      * @throws CertificateException if the conversion fails.
      */
-    public static X509Certificate toX509Cert(X509CertificateHolder certHolder) throws CertificateException {
-        return new JcaX509CertificateConverter().setProvider(BouncyCastleProvider.PROVIDER_NAME).getCertificate(certHolder);
+    public static X509Certificate toX509Cert(X509CertificateHolder certHolder)
+            throws CertificateException {
+        return new JcaX509CertificateConverter().setProvider(BouncyCastleProvider.PROVIDER_NAME)
+                .getCertificate(certHolder);
     }
 }

@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,9 +17,9 @@
  */
 package org.apache.zookeeper.test;
 
-import java.io.File;
-
 import org.junit.Assert;
+
+import java.io.File;
 
 /**
  * This class contains test utility methods
@@ -28,14 +28,14 @@ public class TestUtils {
 
     /**
      * deletes a folder recursively
-     * 
+     *
      * @param file
      *            folder to be deleted
      * @param failOnError
      *            if true file deletion success is ensured
      */
     public static boolean deleteFileRecursively(File file,
-            final boolean failOnError) {
+                                                final boolean failOnError) {
         if (file != null) {
             if (file.isDirectory()) {
                 File[] files = file.listFiles();
@@ -43,9 +43,8 @@ public class TestUtils {
                 for (int i = 0; i < size; i++) {
                     File f = files[i];
                     boolean deleted = deleteFileRecursively(files[i], failOnError);
-                    if(!deleted && failOnError)
-                    {
-                        Assert.fail("file '" + f.getAbsolutePath()+"' deletion failed");
+                    if (!deleted && failOnError) {
+                        Assert.fail("file '" + f.getAbsolutePath() + "' deletion failed");
                     }
                 }
             }

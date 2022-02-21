@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,19 +18,18 @@
 
 package org.apache.zookeeper.admin;
 
-import java.io.IOException;
-import java.util.List;
-
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.zookeeper.ZooKeeper;
-import org.apache.zookeeper.Watcher;
-import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.AsyncCallback.DataCallback;
+import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.client.ZKClientConfig;
 import org.apache.zookeeper.data.Stat;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.util.List;
 
 /**
  * This is the main class for ZooKeeperAdmin client library.
@@ -75,7 +74,7 @@ public class ZooKeeperAdmin extends ZooKeeper {
      *
      */
     public ZooKeeperAdmin(String connectString, int sessionTimeout, Watcher watcher)
-        throws IOException {
+            throws IOException {
         super(connectString, sessionTimeout, watcher);
     }
 
@@ -109,7 +108,7 @@ public class ZooKeeperAdmin extends ZooKeeper {
      * @see ZooKeeper#ZooKeeper(String, int, Watcher, ZKClientConfig)
      */
     public ZooKeeperAdmin(String connectString, int sessionTimeout, Watcher watcher,
-            ZKClientConfig conf) throws IOException {
+                          ZKClientConfig conf) throws IOException {
         super(connectString, sessionTimeout, watcher, conf);
     }
 
@@ -148,7 +147,7 @@ public class ZooKeeperAdmin extends ZooKeeper {
      * @see ZooKeeper#ZooKeeper(String, int, Watcher, boolean)
      */
     public ZooKeeperAdmin(String connectString, int sessionTimeout, Watcher watcher,
-                     boolean canBeReadOnly) throws IOException {
+                          boolean canBeReadOnly) throws IOException {
         super(connectString, sessionTimeout, watcher, canBeReadOnly);
     }
 
@@ -170,7 +169,8 @@ public class ZooKeeperAdmin extends ZooKeeper {
      * @throws KeeperException If the server signals an error with a non-zero error code.
      */
     public byte[] reconfigure(String joiningServers, String leavingServers,
-                              String newMembers, long fromConfig, Stat stat) throws KeeperException, InterruptedException {
+                              String newMembers, long fromConfig, Stat stat)
+            throws KeeperException, InterruptedException {
         return internalReconfig(joiningServers, leavingServers, newMembers, fromConfig, stat);
     }
 
