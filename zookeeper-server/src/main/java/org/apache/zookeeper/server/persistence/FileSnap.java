@@ -58,6 +58,7 @@ public class FileSnap implements SnapShot {
 
     /**
      * deserialize a data tree from the most recent snapshot
+     *
      * @return the zxid of the snapshot
      */
     public long deserialize(DataTree dt, Map<Long, Integer> sessions)
@@ -98,9 +99,10 @@ public class FileSnap implements SnapShot {
 
     /**
      * deserialize the datatree from an inputarchive
-     * @param dt the datatree to be serialized into
+     *
+     * @param dt       the datatree to be serialized into
      * @param sessions the sessions to be filled up
-     * @param ia the input archive to restore from
+     * @param ia       the input archive to restore from
      * @throws IOException
      */
     public void deserialize(DataTree dt, Map<Long, Integer> sessions,
@@ -117,6 +119,7 @@ public class FileSnap implements SnapShot {
 
     /**
      * find the most recent snapshot in the database.
+     *
      * @return the file containing the most recent snapshot
      */
     public File findMostRecentSnapshot() throws IOException {
@@ -128,12 +131,13 @@ public class FileSnap implements SnapShot {
     }
 
     /**
-     * find the last (maybe) valid n snapshots. this does some 
+     * find the last (maybe) valid n snapshots. this does some
      * minor checks on the validity of the snapshots. It just
      * checks for / at the end of the snapshot. This does
      * not mean that the snapshot is truly valid but is
-     * valid with a high probability. also, the most recent 
-     * will be first on the list. 
+     * valid with a high probability. also, the most recent
+     * will be first on the list.
+     *
      * @param n the number of most recent snapshots
      * @return the last n snapshots (the number might be
      * less than n in case enough snapshots are not available).
@@ -165,6 +169,7 @@ public class FileSnap implements SnapShot {
     /**
      * find the last n snapshots. this does not have
      * any checks if the snapshot might be valid or not
+     *
      * @param n the number of most recent snapshots
      * @return the last n snapshots
      * @throws IOException
@@ -186,10 +191,11 @@ public class FileSnap implements SnapShot {
 
     /**
      * serialize the datatree and sessions
-     * @param dt the datatree to be serialized
+     *
+     * @param dt       the datatree to be serialized
      * @param sessions the sessions to be serialized
-     * @param oa the output archive to serialize into
-     * @param header the header of this snapshot
+     * @param oa       the output archive to serialize into
+     * @param header   the header of this snapshot
      * @throws IOException
      */
     protected void serialize(DataTree dt, Map<Long, Integer> sessions,
@@ -205,20 +211,28 @@ public class FileSnap implements SnapShot {
 
     /**
      * serialize the datatree and session into the file snapshot
-     * @param dt the datatree to be serialized
+     *
+     * @param dt       the datatree to be serialized
      * @param sessions the sessions to be serialized
      * @param snapShot the file to store snapshot into
      */
     public synchronized void serialize(DataTree dt, Map<Long, Integer> sessions, File snapShot)
             throws IOException {
+        // 判断是否关闭
         if (!close) {
+            // 打开输出流和检查输出流
             try (OutputStream sessOS = new BufferedOutputStream(new FileOutputStream(snapShot));
                     CheckedOutputStream crcOut = new CheckedOutputStream(sessOS, new Adler32())) {
                 //CheckedOutputStream cout = new CheckedOutputStream()
+                // 获取输出文档
                 OutputArchive oa = BinaryOutputArchive.getArchive(crcOut);
+                // 创建文件头
                 FileHeader header = new FileHeader(SNAP_MAGIC, VERSION, dbId);
+                // 序列化数据
                 serialize(dt, sessions, oa, header);
+                // 获取校验和
                 long val = crcOut.getChecksum().getValue();
+                // 写出
                 oa.writeLong(val, "val");
                 oa.writeString("/", "path");
                 sessOS.flush();

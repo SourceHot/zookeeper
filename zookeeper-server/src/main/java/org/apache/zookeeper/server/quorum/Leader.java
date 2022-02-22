@@ -1272,6 +1272,9 @@ public class Leader {
     }
 
 
+    /**
+     * 提案
+     */
     static public class Proposal extends SyncedLearnerTracker {
         public QuorumPacket packet;
         public Request request;

@@ -53,6 +53,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * The tree maintains two parallel data structures: a hashtable that maps from
  * full paths to DataNodes and a tree of DataNodes. All accesses to a path is
  * through the hashtable. The tree is traversed only when serializing to disk.
+ *
+ * 数据树
  */
 public class DataTree {
     private static final Logger LOG = LoggerFactory.getLogger(DataTree.class);
@@ -1399,6 +1401,9 @@ public class DataTree {
     }
 
 
+    /**
+     * 事务处理结果存储对象
+     */
     static public class ProcessTxnResult {
         public long clientId;
 

@@ -74,6 +74,10 @@ public class ZKDatabase {
     protected DataTree dataTree;
     protected ConcurrentHashMap<Long, Integer> sessionsWithTimeouts;
     protected FileTxnSnapLog snapLog;
+    /**
+     * 最小提交日志的zxid
+     * 最大提交日志的zxid
+     */
     protected long minCommittedLog, maxCommittedLog;
     protected LinkedList<Proposal> committedLog = new LinkedList<Proposal>();
     protected ReentrantReadWriteLock logLock = new ReentrantReadWriteLock();
@@ -251,31 +255,45 @@ public class ZKDatabase {
 
     /**
      * maintains a list of last <i>committedLog</i>
-     *  or so committed requests. This is used for
+     * or so committed requests. This is used for
      * fast follower synchronization.
+     *
      * @param request committed request
      */
     public void addCommittedProposal(Request request) {
+        // 写锁
         WriteLock wl = logLock.writeLock();
         try {
+            // 上锁
             wl.lock();
+            // 提交日志总量大于默认最大提交数量
             if (committedLog.size() > commitLogCount) {
+                // 移除第一个元素
                 committedLog.removeFirst();
+                // 最小提交日志的zxid设置为事务日志中的第一个
                 minCommittedLog = committedLog.getFirst().packet.getZxid();
             }
+            // 如果提交日志为空
             if (committedLog.isEmpty()) {
+                // 最小提交日志的zxid和最大提交日志的zxid都设置为请求中的zxid
                 minCommittedLog = request.zxid;
                 maxCommittedLog = request.zxid;
             }
 
+            // 解析请求中的数据
             byte[] data = SerializeUtils.serializeRequest(request);
+            // 构造数据信息
             QuorumPacket pp = new QuorumPacket(Leader.PROPOSAL, request.zxid, data, null);
+            // 构造提案
             Proposal p = new Proposal();
             p.packet = pp;
             p.request = request;
+            // 向提交日志中加入提案信息
             committedLog.add(p);
+            // 最大提交日志的zxid修改为提案中的zxid
             maxCommittedLog = p.packet.getZxid();
         } finally {
+            // 解锁
             wl.unlock();
         }
     }

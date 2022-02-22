@@ -87,7 +87,7 @@ public interface TxnLog {
      * truncate the log to get in sync with the
      * leader.
      * <p>
-     * 截断日志
+     * 根据zxid截断日志
      *
      * @param zxid the zxid to truncate at.
      * @throws IOException

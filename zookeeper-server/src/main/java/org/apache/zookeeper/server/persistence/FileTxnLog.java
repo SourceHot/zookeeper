@@ -521,11 +521,29 @@ public class FileTxnLog implements TxnLog, Closeable {
      */
     public static class FileTxnIterator implements TxnLog.TxnIterator {
         static final String CRC_ERROR = "CRC check failed";
+        /**
+         * 日志文件夹
+         */
         File logDir;
+        /**
+         * zxid
+         */
         long zxid;
+        /**
+         * 交易头信息
+         */
         TxnHeader hdr;
+        /**
+         * 数据信息
+         */
         Record record;
+        /**
+         * 日志文件
+         */
         File logFile;
+        /**
+         * 输入档案
+         */
         InputArchive ia;
         PositionInputStream inputStream = null;
         //stored files is the list of files greater than
