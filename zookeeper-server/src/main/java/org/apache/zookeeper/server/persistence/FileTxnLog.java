@@ -103,6 +103,9 @@ public class FileTxnLog implements TxnLog, Closeable {
 
     private final boolean forceSync =
             !System.getProperty("zookeeper.forceSync", "yes").equals("no");
+    /**
+     * 最大的zxid，最新的zxid
+     */
     long lastZxidSeen;
     volatile BufferedOutputStream logStream = null;
     volatile OutputArchive oa;
@@ -240,15 +243,18 @@ public class FileTxnLog implements TxnLog, Closeable {
 
     /**
      * append an entry to the transaction log
+     *
      * @param hdr the header of the transaction
      * @param txn the transaction part of the entry
-     * returns true iff something appended, otw false
+     *            returns true iff something appended, otw false
      */
     public synchronized boolean append(TxnHeader hdr, Record txn)
             throws IOException {
+        // 判断事务头是否为空，如果为空则返回false结束处理
         if (hdr == null) {
             return false;
         }
+        // 判断事务头信息中的zxid是否小于等于最大的zxid，如果是则输出warn日志，反之则会将最大zxid设置数据进行重设，重设内容是事务头信息中的zxid
         if (hdr.getZxid() <= lastZxidSeen) {
             LOG.warn("Current zxid " + hdr.getZxid()
                     + " is <= " + lastZxidSeen + " for "
@@ -256,31 +262,48 @@ public class FileTxnLog implements TxnLog, Closeable {
         } else {
             lastZxidSeen = hdr.getZxid();
         }
+        // 日志流为空
         if (logStream == null) {
             if (LOG.isInfoEnabled()) {
                 LOG.info("Creating new log file: " + Util.makeLogName(hdr.getZxid()));
             }
 
+            // 创建需要写出的文件对象
             logFileWrite = new File(logDir, Util.makeLogName(hdr.getZxid()));
+            // 创建文件输出流
             fos = new FileOutputStream(logFileWrite);
+            // 初始化日志流对象
             logStream = new BufferedOutputStream(fos);
+            // 初始化输出档案对象
             oa = BinaryOutputArchive.getArchive(logStream);
+            // 构造事务头信息
             FileHeader fhdr = new FileHeader(TXNLOG_MAGIC, VERSION, dbId);
+            // 序列化头信息
             fhdr.serialize(oa, "fileheader");
             // Make sure that the magic number is written before padding.
+            // 写出到文件
             logStream.flush();
+            // 计算当前通道的大小并设置到filePadding对象中
             filePadding.setCurrentSize(fos.getChannel().position());
+            // 将fos放入到集合中
             streamsToFlush.add(fos);
         }
+        // 填充文件
         filePadding.padFile(fos.getChannel());
+        // 对事务头信息和事务对象进行序列化
         byte[] buf = Util.marshallTxnEntry(hdr, txn);
+        // 序列化结果为空或者长度为0抛出异常
         if (buf == null || buf.length == 0) {
             throw new IOException("Faulty serialization for header " +
                     "and txn");
         }
+        // 获取校验和计算接口
         Checksum crc = makeChecksumAlgorithm();
+        // 更新校验和
         crc.update(buf, 0, buf.length);
+        // 将校验和信息写入到输出档案
         oa.writeLong(crc.getValue(), "txnEntryCRC");
+        // 写入到输出档案中
         Util.writeTxnBytes(oa, buf);
 
         return true;

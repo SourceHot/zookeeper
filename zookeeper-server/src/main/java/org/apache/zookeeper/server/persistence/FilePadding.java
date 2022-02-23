@@ -68,8 +68,11 @@ public class FilePadding {
      * file and preAllocSize is > 0.
      *
      * @param position     the point in the file we have written to
+     *                     当前位置
      * @param fileSize     application keeps track of the current file size
+     *                     当前文件大小
      * @param preAllocSize how many bytes to pad
+     *                     需要填充的大小
      * @return the new file size. It can be the same as fileSize if no
      * padding was done.
      * @throws IOException
@@ -79,14 +82,21 @@ public class FilePadding {
                                                     long fileSize,
                                                     long preAllocSize) {
         // If preAllocSize is positive and we are within 4KB of the known end of the file calculate a new file size
+        // 1. 需要填充的数据大小大于0
+        // 2. 当前位置+4096后大于等于当前文件大小
         if (preAllocSize > 0 && position + 4096 >= fileSize) {
             // If we have written more than we have previously preallocated we need to make sure the new
             // file size is larger than what we already have
+
+            // 如果当前位置大于文件大小
             if (position > fileSize) {
+                // 文件大小重新计算：当前位置+需要填充的大小
                 fileSize = position + preAllocSize;
-                fileSize -= fileSize % preAllocSize;
+                // 文件大小重新计算： 文件大小-（文件大小取模需要填充的大小)
+                fileSize = fileSize - (fileSize % preAllocSize);
             } else {
-                fileSize += preAllocSize;
+                // 文件大小重新计算： 文件大小+需要填充的大小
+                fileSize = fileSize + preAllocSize;
             }
         }
 
@@ -104,10 +114,13 @@ public class FilePadding {
      * @throws IOException
      */
     long padFile(FileChannel fileChannel) throws IOException {
+        // 计算新的文件大小
         long newFileSize =
                 calculateFileSizeWithPadding(fileChannel.position(), currentSize, preAllocSize);
+        // 当前文件大小不等于新的文件大小需要填充0
         if (currentSize != newFileSize) {
             fileChannel.write((ByteBuffer) fill.position(0), newFileSize - fill.remaining());
+            // 将当前文件大小设置为新的文件大小
             currentSize = newFileSize;
         }
         return currentSize;
