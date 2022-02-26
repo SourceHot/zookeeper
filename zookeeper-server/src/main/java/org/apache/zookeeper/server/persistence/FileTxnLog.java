@@ -143,29 +143,40 @@ public class FileTxnLog implements TxnLog, Closeable {
      * Find the log file that starts at, or just before, the snapshot. Return
      * this and all subsequent logs. Results are ordered by zxid of file,
      * ascending order.
-     * @param logDirList array of files
+     *
+     * @param logDirList   array of files
      * @param snapshotZxid return files at, or before this zxid
      * @return
      */
     public static File[] getLogFiles(File[] logDirList, long snapshotZxid) {
+        // 通过Util.sortDataDir对日志文件排序
         List<File> files = Util.sortDataDir(logDirList, LOG_FILE_PREFIX, true);
+        // 日志zxid标记
         long logZxid = 0;
         // Find the log file that starts before or at the same time as the
         // zxid of the snapshot
+        // 循环日志文件集合
         for (File f : files) {
+            // 从文件名称中获取zxid
             long fzxid = Util.getZxidFromName(f.getName(), LOG_FILE_PREFIX);
+            // 如果文件名的zxid大于快照zxid跳过处理
             if (fzxid > snapshotZxid) {
                 continue;
             }
             // the files
             // are sorted with zxid's
+            // 如果文件名的zxid大于日志zxid将文件名的zxid赋值给日志zxid
             if (fzxid > logZxid) {
                 logZxid = fzxid;
             }
         }
+        // 创建结果集
         List<File> v = new ArrayList<File>(5);
+        // 循环日志文件集合
         for (File f : files) {
+            // 从文件名称中获取zxid
             long fzxid = Util.getZxidFromName(f.getName(), LOG_FILE_PREFIX);
+            // 如果文件名称的zxid小于日志zxid不将其加入到结果集中
             if (fzxid < logZxid) {
                 continue;
             }
@@ -314,20 +325,29 @@ public class FileTxnLog implements TxnLog, Closeable {
      * @return the last zxid logged in the transaction logs
      */
     public long getLastLoggedZxid() {
+        // 获取日志目录下的所有文件
         File[] files = getLogFiles(logDir.listFiles(), 0);
+        // 确定最大日志编号
+        // 日志文件数量大于零的情况下通过getZxidFromName方法获取，反之则直接取值-1
         long maxLog = files.length > 0 ?
                 Util.getZxidFromName(files[files.length - 1].getName(), LOG_FILE_PREFIX) : -1;
 
         // if a log file is more recent we must scan it to find
         // the highest zxid
+        // 设置zxid，先将最大日志编号设置给zxid
         long zxid = maxLog;
         TxnIterator itr = null;
         try {
+            // 将日志目录转换为事务日志
             FileTxnLog txn = new FileTxnLog(logDir);
+            // 从事务日志中读取TxnIterator
             itr = txn.read(maxLog);
+            // 循环处理TxnIterator中的数据，跳出条件是没有下一个TxnIterator对象
             while (true) {
-                if (!itr.next())
+                if (!itr.next()) {
                     break;
+                }
+                // 获取头信息，将
                 TxnHeader hdr = itr.getHeader();
                 zxid = hdr.getZxid();
             }
@@ -417,25 +437,34 @@ public class FileTxnLog implements TxnLog, Closeable {
 
     /**
      * truncate the current transaction logs
+     *
      * @param zxid the zxid to truncate the logs to
      * @return true if successful false if not
      */
     public boolean truncate(long zxid) throws IOException {
         FileTxnIterator itr = null;
         try {
+            // 创建FileTxnIterator对象
             itr = new FileTxnIterator(this.logDir, zxid);
+            // 从FileTxnIterator对象中获取输入流
             PositionInputStream input = itr.inputStream;
+            // 如果输入流为空抛出异常
             if (input == null) {
                 throw new IOException("No log files found to truncate! This could " +
                         "happen if you still have snapshots from an old setup or " +
                         "log files were deleted accidentally or dataLogDir was changed in zoo.cfg.");
             }
+            // 从输入流中获取位置索引
             long pos = input.getPosition();
             // now, truncate at the current position
+            // 截断日志文件内容
             RandomAccessFile raf = new RandomAccessFile(itr.logFile, "rw");
+            // 阶段到pos的位置
             raf.setLength(pos);
             raf.close();
+            // 如果存在下一个日志文件
             while (itr.goToNextLog()) {
+                // 删除失败记录warn级别日志
                 if (!itr.logFile.delete()) {
                     LOG.warn("Unable to truncate {}", itr.logFile);
                 }
@@ -454,8 +483,9 @@ public class FileTxnLog implements TxnLog, Closeable {
         FileTxnIterator itr = new FileTxnIterator(logDir, 0);
         FileHeader fh = readHeader(itr.logFile);
         itr.close();
-        if (fh == null)
+        if (fh == null) {
             throw new IOException("Unsupported Format.");
+        }
         return fh.getDbid();
     }
 
@@ -614,20 +644,27 @@ public class FileTxnLog implements TxnLog, Closeable {
          */
         void init() throws IOException {
             storedFiles = new ArrayList<File>();
+            // 读取日志目录下的所有日志文件
             List<File> files =
                     Util.sortDataDir(FileTxnLog.getLogFiles(logDir.listFiles(), 0), LOG_FILE_PREFIX,
                             false);
+            // 循环日志文件
             for (File f : files) {
+                // 获取日志文件名称中的zxid，如果大于等于则加入到storedFiles集合中
                 if (Util.getZxidFromName(f.getName(), LOG_FILE_PREFIX) >= zxid) {
                     storedFiles.add(f);
                 }
                 // add the last logfile that is less than the zxid
+                // 如果日志文件名称中的zxid小于zxid则加入到storedFiles集合中，并且结束循环
                 else if (Util.getZxidFromName(f.getName(), LOG_FILE_PREFIX) < zxid) {
                     storedFiles.add(f);
                     break;
                 }
             }
+
+            // 将storedFiles集合中的最后一个文件转换为InputArchive类型，并赋值给成员变量ia
             goToNextLog();
+            // 移动到下一个FileTxnIterator
             next();
         }
 
@@ -711,7 +748,9 @@ public class FileTxnLog implements TxnLog, Closeable {
                 return false;
             }
             try {
+                // 从ia(档案)中读取crcvalue数据
                 long crcValue = ia.readLong("crcvalue");
+                // 读取ia中的txn数据
                 byte[] bytes = Util.readTxnBytes(ia);
                 // Since we preallocate, we define EOF to be an
                 if (bytes == null || bytes.length == 0) {
@@ -719,11 +758,17 @@ public class FileTxnLog implements TxnLog, Closeable {
                 }
                 // EOF or corrupted record
                 // validate CRC
+                // 生成校验和接口实现类
                 Checksum crc = makeChecksumAlgorithm();
+                // 更新校验和数据
                 crc.update(bytes, 0, bytes.length);
-                if (crcValue != crc.getValue())
+                // 如果发现前后两个校验和数据不同抛出异常
+                if (crcValue != crc.getValue()) {
                     throw new IOException(CRC_ERROR);
+                }
+                // 创建事务头
                 hdr = new TxnHeader();
+                // 将txn反序列化到record
                 record = SerializeUtils.deserializeTxn(bytes, hdr);
             } catch (EOFException e) {
                 LOG.debug("EOF exception " + e);

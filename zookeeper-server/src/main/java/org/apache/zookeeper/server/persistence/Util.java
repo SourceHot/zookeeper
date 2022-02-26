@@ -121,15 +121,19 @@ public class Util {
      * Extracts zxid from the file name. The file name should have been created
      * using one of the {@link #makeLogName(long)} or {@link #makeSnapshotName(long)}.
      *
-     * @param name the file name to parse
+     * @param name   the file name to parse
      * @param prefix the file name prefix (snapshot or log)
      * @return zxid
      */
     public static long getZxidFromName(String name, String prefix) {
+        // 创建zxid标记
         long zxid = -1;
+        // 将文件名按照小数点进行拆分
         String nameParts[] = name.split("\\.");
+        // 如果拆分后数组长度为2并且第一个元素与前缀相同
         if (nameParts.length == 2 && nameParts[0].equals(prefix)) {
             try {
+                // zxid的取值为拆分后的第二个元素
                 zxid = Long.parseLong(nameParts[1], 16);
             } catch (NumberFormatException e) {
             }
