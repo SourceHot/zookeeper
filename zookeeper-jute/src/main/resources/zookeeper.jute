@@ -18,11 +18,11 @@
 
 module org.apache.zookeeper.data {
     class Id {
-        ustring scheme;
-        ustring id;
+        ustring scheme; // 授权策略
+        ustring id;  // 授权对象
     }
     class ACL {
-        int perms;
+        int perms; // 权限
         Id id;
     }
     // information shared with the client

@@ -36,6 +36,9 @@ public class ZooDefs {
             "getConfig"};
 
 
+    /**
+     * Zookeeper操作编码
+     */
     @InterfaceAudience.Public
     public interface OpCode {
         public final int notification = 0;

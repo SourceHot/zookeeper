@@ -142,23 +142,27 @@ public class Util {
     }
 
     /**
-     * Verifies that the file is a valid snapshot. Snapshot may be invalid if 
+     * Verifies that the file is a valid snapshot. Snapshot may be invalid if
      * it's incomplete as in a situation when the server dies while in the process
-     * of storing a snapshot. Any file that is not a snapshot is also 
-     * an invalid snapshot. 
+     * of storing a snapshot. Any file that is not a snapshot is also
+     * an invalid snapshot.
      *
      * @param f file to verify
      * @return true if the snapshot is valid
      * @throws IOException
      */
     public static boolean isValidSnapshot(File f) throws IOException {
+        // 1. 文件为空
+        // 2. 文件名称中的zxid为-1-1
         if (f == null || Util.getZxidFromName(f.getName(), FileSnap.SNAPSHOT_FILE_PREFIX) == -1)
             return false;
 
         // Check for a valid snapshot
+        // 将文件对象转换为RandomAccessFile对象
         try (RandomAccessFile raf = new RandomAccessFile(f, "r")) {
             // including the header and the last / bytes
             // the snapshot should be at least 10 bytes
+            // 如果RandomAccessFile对象长度小于10返回false
             if (raf.length() < 10) {
                 return false;
             }
@@ -170,13 +174,19 @@ public class Util {
                     (l = raf.read(bytes, readlen, bytes.length - readlen)) >= 0) {
                 readlen += l;
             }
+
+
+            // 读取长度和内容字节长度不相同返回false
             if (readlen != bytes.length) {
                 LOG.info("Invalid snapshot " + f
                         + " too short, len = " + readlen);
                 return false;
             }
+            // 将字节数组转换为ByteBuffer
             ByteBuffer bb = ByteBuffer.wrap(bytes);
+            // 读取字节数组中第四位的int数据
             int len = bb.getInt();
+            // 读取字节数组中的第五位的数据
             byte b = bb.get();
             if (len != 1 || b != '/') {
                 LOG.info("Invalid snapshot " + f + " len = " + len

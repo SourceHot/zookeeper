@@ -101,6 +101,8 @@ public class DataTree {
 
     /**
      * This set contains the paths of all container nodes
+     *
+     * 所有的节点路径
      */
     private final Set<String> containers =
             Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
@@ -121,6 +123,9 @@ public class DataTree {
      * zookeeper
      */
     private final DataNode quotaDataNode = new DataNode(new byte[0], -1L, new StatPersisted());
+    /**
+     * 最后处理的zxid
+     */
     public volatile long lastProcessedZxid = 0;
     /**
      * This is a pointer to the root of the DataTree. It is the source of truth,

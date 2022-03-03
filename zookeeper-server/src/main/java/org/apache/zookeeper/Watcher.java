@@ -38,7 +38,7 @@ public interface Watcher {
 
     /**
      * Enumeration of types of watchers
-     * 观察者lei
+     * 观察者类型
      */
     @InterfaceAudience.Public
     enum WatcherType {

@@ -34,6 +34,7 @@ public interface SnapShot {
     /**
      * deserialize a data tree from the last valid snapshot and 
      * return the last zxid that was deserialized
+     * 从最后一个有效快照中反序列化一个数据树并返回最后一个被反序列化的 zxid
      * @param dt the datatree to be deserialized into
      * @param sessions the sessions to be deserialized into
      * @return the last zxid that was deserialized from the snapshot
@@ -44,6 +45,8 @@ public interface SnapShot {
 
     /**
      * persist the datatree and the sessions into a persistence storage
+     *
+     * 将数据树和会话持久化到持久存储中
      * @param dt the datatree to be serialized
      * @param sessions
      * @throws IOException
@@ -54,6 +57,7 @@ public interface SnapShot {
 
     /**
      * find the most recent snapshot file
+     * 查找最新的快照文件
      * @return the most recent snapshot file
      * @throws IOException
      */
@@ -61,6 +65,7 @@ public interface SnapShot {
 
     /**
      * free resources from this snapshot immediately
+     * 关闭快照
      * @throws IOException
      */
     void close() throws IOException;

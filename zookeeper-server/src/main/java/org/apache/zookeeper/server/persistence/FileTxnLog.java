@@ -374,20 +374,29 @@ public class FileTxnLog implements TxnLog, Closeable {
      * disk
      */
     public synchronized void commit() throws IOException {
+        // 日志流不为空的情况下进行输出
         if (logStream != null) {
             logStream.flush();
         }
+        // 循环文件输出流集合
         for (FileOutputStream log : streamsToFlush) {
+            // 输出流
             log.flush();
+            // 如果需要强制同步
             if (forceSync) {
+                // 获取当前纳秒时间
                 long startSyncNS = System.nanoTime();
-
+                // 获取通道
                 FileChannel channel = log.getChannel();
+                // 强制将通道中的数据写出
                 channel.force(false);
-
+                // 计算时间差
                 syncElapsedMS = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startSyncNS);
+                // 如果时间差大于最大允许同步时间
                 if (syncElapsedMS > fsyncWarningThresholdMS) {
+                    // 服务状态不为空
                     if (serverStats != null) {
+                        // 同步超时次数累加1
                         serverStats.incrementFsyncThresholdExceedCount();
                     }
                     LOG.warn("fsync-ing the write ahead log in "
@@ -399,6 +408,7 @@ public class FileTxnLog implements TxnLog, Closeable {
                 }
             }
         }
+        // 如果文件输出流集合数量大于1则会将第一个移除并且关闭
         while (streamsToFlush.size() > 1) {
             streamsToFlush.removeFirst().close();
         }
