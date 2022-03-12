@@ -42,6 +42,9 @@ import java.util.Collection;
  * * A HostProvider that loads the list of Hosts from an URL or from DNS 
  * * A HostProvider that re-resolves the InetSocketAddress after a timeout. 
  * * A HostProvider that prefers nearby hosts.
+ *
+ *
+ * 主机供应商
  */
 @InterfaceAudience.Public
 public interface HostProvider {

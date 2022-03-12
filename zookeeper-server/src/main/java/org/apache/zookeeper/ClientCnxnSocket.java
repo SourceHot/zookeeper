@@ -49,29 +49,67 @@ abstract class ClientCnxnSocket {
     private static final Logger LOG = LoggerFactory.getLogger(ClientCnxnSocket.class);
     /**
      * This buffer is only used to read the length of the incoming message.
+     *
+     * 用于读取消息的缓存长度
      */
     protected final ByteBuffer lenBuffer = ByteBuffer.allocateDirect(4);
+    /**
+     * 发送数量
+     */
     protected final AtomicLong sentCount = new AtomicLong(0L);
+    /**
+     * 接收数量
+     */
     protected final AtomicLong recvCount = new AtomicLong(0L);
+    /**
+     * 是否初始化
+     */
     protected boolean initialized;
     /**
      * After the length is read, a new incomingBuffer is allocated in
      * readLength() to receive the full message.
+     * 读取消息的长度
      */
     protected ByteBuffer incomingBuffer = lenBuffer;
+    /**
+     * 上一次数据接收时间
+     */
     protected long lastHeard;
+    /**
+     * 上一次数据发送时间
+     */
     protected long lastSend;
+    /**
+     * 当前时间
+     */
     protected long now;
+    /**
+     * 发送线程
+     */
     protected ClientCnxn.SendThread sendThread;
+    /**
+     * 需要发送的队列
+     */
     protected LinkedBlockingDeque<Packet> outgoingQueue;
+    /**
+     * zk客户端配置
+     */
     protected ZKClientConfig clientConfig;
     /**
      * The sessionId is only available here for Log and Exception messages.
      * Otherwise the socket doesn't need to know it.
+     *
+     * 会话id
      */
     protected long sessionId;
+    /**
+     * 数据包长度 (4mb)
+     */
     private int packetLen = ZKClientConfig.CLIENT_MAX_PACKET_LENGTH_DEFAULT;
 
+    /**
+     * 设置成员变量
+     */
     void introduce(ClientCnxn.SendThread sendThread, long sessionId,
                    LinkedBlockingDeque<Packet> outgoingQueue) {
         this.sendThread = sendThread;
@@ -107,11 +145,18 @@ abstract class ClientCnxnSocket {
         this.lastSend = now;
     }
 
+    /**
+     * 更新lastSend和lastHeard
+     */
     void updateLastSendAndHeard() {
         this.lastSend = now;
         this.lastHeard = now;
     }
 
+    /**
+     * 读取长度
+     * @throws IOException
+     */
     void readLength() throws IOException {
         int len = incomingBuffer.getInt();
         if (len < 0 || len >= packetLen) {
@@ -120,7 +165,12 @@ abstract class ClientCnxnSocket {
         incomingBuffer = ByteBuffer.allocate(len);
     }
 
+    /**
+     * 读取连接结果
+     * @throws IOException
+     */
     void readConnectResult() throws IOException {
+
         if (LOG.isTraceEnabled()) {
             StringBuilder buf = new StringBuilder("0x[");
             for (byte b : incomingBuffer.array()) {
@@ -150,44 +200,62 @@ abstract class ClientCnxnSocket {
                 conRsp.getPasswd(), isRO);
     }
 
+    /**
+     * 判断是否已连接
+     */
     abstract boolean isConnected();
 
+    /**
+     * 建立连接
+     * @param addr
+     * @throws IOException
+     */
     abstract void connect(InetSocketAddress addr) throws IOException;
 
     /**
      * Returns the address to which the socket is connected.
+     * 获取远端套接字地址
      */
     abstract SocketAddress getRemoteSocketAddress();
 
     /**
      * Returns the address to which the socket is bound.
+     *
+     * 获取本地套接字地址
      */
     abstract SocketAddress getLocalSocketAddress();
 
     /**
      * Clean up resources for a fresh new socket.
      * It's called before reconnect or close.
+     *
+     * 清理资源
      */
     abstract void cleanup();
 
     /**
      * new packets are added to outgoingQueue.
+     * 将 packet放入到outgoingQueue
      */
     abstract void packetAdded();
 
     /**
      * connState is marked CLOSED and notify ClientCnxnSocket to react.
+     * 将connState状态设置为CLOSED并且通知ClientCnxnSocket
      */
     abstract void onClosing();
 
     /**
      * Sasl completes. Allows non-priming packgets to be sent.
      * Note that this method will only be called if Sasl starts and completes.
+     *
+     * sasl连接后执行
      */
     abstract void saslCompleted();
 
     /**
      * being called after ClientCnxn finish PrimeConnection
+     * 完成PrimeConnection后执行
      */
     abstract void connectionPrimed();
 
@@ -197,6 +265,7 @@ abstract class ClientCnxnSocket {
      * - write outgoing queue packets.
      * - update relevant timestamp.
      *
+     * 执行数据传输
      * @param waitTimeOut timeout in blocking wait. Unit in MilliSecond.
      * @param pendingQueue These are the packets that have been sent and
      *                     are waiting for a response.
@@ -210,11 +279,13 @@ abstract class ClientCnxnSocket {
 
     /**
      * Close the socket.
+     * 关闭套接字
      */
     abstract void testableCloseSocket() throws IOException;
 
     /**
      * Close this client.
+     * 关闭客户端
      */
     abstract void close();
 
@@ -223,11 +294,18 @@ abstract class ClientCnxnSocket {
      * The Sasl process will send the first (requestHeader == null) packet,
      * and then block the doTransport write,
      * finally unblock it when finished.
+     *
+     * 发送包
      */
     abstract void sendPacket(Packet p) throws IOException;
 
+    /**
+     * 初始化配置
+     * @throws IOException
+     */
     protected void initProperties() throws IOException {
         try {
+            // 从zk客户端配置中获取数据包长度
             packetLen = clientConfig.getInt(ZKConfig.JUTE_MAXBUFFER,
                     ZKClientConfig.CLIENT_MAX_PACKET_LENGTH_DEFAULT);
             LOG.info("{} value is {} Bytes", ZKConfig.JUTE_MAXBUFFER,

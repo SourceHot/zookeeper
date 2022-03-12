@@ -45,13 +45,15 @@ public final class ConnectStringParser {
     private final ArrayList<InetSocketAddress> serverAddresses = new ArrayList<InetSocketAddress>();
 
     /**
-     *
+     * 连接字符串解析器
      * @throws IllegalArgumentException
      *             for an invalid chroot path.
      */
     public ConnectStringParser(String connectString) {
         // parse out chroot, if any
+        // 确认/的索引位置
         int off = connectString.indexOf('/');
+        // 如果斜杠索引存在就将其解析成为成员变量chrootPath的数据，不存在将成员变量chrootPath设置为null
         if (off >= 0) {
             String chrootPath = connectString.substring(off);
             // ignore "/" chroot spec, same as null
@@ -62,20 +64,27 @@ public final class ConnectStringParser {
                 this.chrootPath = chrootPath;
             }
             connectString = connectString.substring(0, off);
-        } else {
+        }
+        else {
             this.chrootPath = null;
         }
 
+        // 将连接字符串按照逗号拆分
         List<String> hostsList = split(connectString, ",");
         for (String host : hostsList) {
+            // 设置端口为默认端口
             int port = DEFAULT_PORT;
+            // 拆分host，拆分后结果：host,port
             String[] hostAndPort = NetUtils.getIPV6HostAndPort(host);
             if (hostAndPort.length != 0) {
                 host = hostAndPort[0];
                 if (hostAndPort.length == 2) {
                     port = Integer.parseInt(hostAndPort[1]);
                 }
-            } else {
+            }
+            // 拆分后长度为0
+            else {
+                // 按照冒号拆分
                 int pidx = host.lastIndexOf(':');
                 if (pidx >= 0) {
                     // otherwise : is at the end of the string, ignore
