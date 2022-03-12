@@ -1536,7 +1536,7 @@ public class ClientCnxn {
                     // If we are in read-only mode, seek for read/write server
                     // zk状态是只读连接
                     if (state == States.CONNECTEDREADONLY) {
-                        // 获取党建实践
+                        // 获取当前时间
                         long now = Time.currentElapsedTime();
                         // 当前时间和最后ping服务器时间差
                         int idlePingRwServer = (int) (now - lastPingRwServer);
