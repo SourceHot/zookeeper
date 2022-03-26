@@ -1271,6 +1271,7 @@ public class ZooKeeper implements AutoCloseable {
      */
     public void delete(final String path, int version)
             throws InterruptedException, KeeperException {
+
         final String clientPath = path;
         PathUtils.validatePath(clientPath);
 
