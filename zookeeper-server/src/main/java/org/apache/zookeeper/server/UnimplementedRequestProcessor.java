@@ -31,15 +31,21 @@ import java.io.IOException;
 public class UnimplementedRequestProcessor implements RequestProcessor {
 
     public void processRequest(Request request) throws RequestProcessorException {
+        // 创建异常对象
         KeeperException ke = new KeeperException.UnimplementedException();
+        // 向请求中写入异常信息
         request.setException(ke);
-        ReplyHeader rh = new ReplyHeader(request.cxid, request.zxid, ke.code().intValue());
+        // 组装响应
+        ReplyHeader rh = new ReplyHeader(request.cxid, request.zxid,
+                ke.code().intValue());
         try {
+            // 发送响应
             request.cnxn.sendResponse(rh, null, "response");
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
             throw new RequestProcessorException("Can't send the response", e);
         }
-
+        // 发送关闭session请求
         request.cnxn.sendCloseSession();
     }
 

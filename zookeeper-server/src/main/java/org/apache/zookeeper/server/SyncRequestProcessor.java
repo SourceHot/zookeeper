@@ -43,6 +43,8 @@ import java.util.concurrent.LinkedBlockingQueue;
  *             It never send ack back to the leader, so the nextProcessor will
  *             be null. This change the semantic of txnlog on the observer
  *             since it only contains committed txns.
+ *
+ *             同步处理器
  */
 public class SyncRequestProcessor extends ZooKeeperCriticalThread implements
         RequestProcessor {

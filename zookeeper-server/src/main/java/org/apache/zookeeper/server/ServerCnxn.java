@@ -126,6 +126,9 @@ public abstract class ServerCnxn implements Stats, Watcher {
 
     abstract void enableRecv();
 
+    /**
+     * 禁止接收数据
+     */
     abstract void disableRecv();
 
     protected void packetReceived() {

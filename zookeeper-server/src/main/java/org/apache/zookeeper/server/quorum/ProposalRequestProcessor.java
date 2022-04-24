@@ -28,6 +28,8 @@ import org.slf4j.LoggerFactory;
 /**
  * This RequestProcessor simply forwards requests to an AckRequestProcessor and
  * SyncRequestProcessor.
+ *
+ * 将请求转发给 AckRequestProcessor 和 SyncRequestProcessor。
  */
 public class ProposalRequestProcessor implements RequestProcessor {
     private static final Logger LOG =

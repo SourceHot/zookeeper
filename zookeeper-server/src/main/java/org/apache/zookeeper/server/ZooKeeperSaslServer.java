@@ -54,6 +54,10 @@ public class ZooKeeperSaslServer {
         return saslServer.isComplete();
     }
 
+    /**
+     * 获取授权标志
+     * @return
+     */
     public String getAuthorizationID() {
         return saslServer.getAuthorizationID();
     }

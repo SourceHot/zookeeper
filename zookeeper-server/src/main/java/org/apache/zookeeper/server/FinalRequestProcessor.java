@@ -55,6 +55,8 @@ import java.util.Locale;
  *
  * This RequestProcessor counts on ZooKeeperServer to populate the
  * outstandingRequests member of ZooKeeperServer.
+ *
+ * 最终处理器
  */
 public class FinalRequestProcessor implements RequestProcessor {
     private static final Logger LOG = LoggerFactory.getLogger(FinalRequestProcessor.class);

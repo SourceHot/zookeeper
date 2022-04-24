@@ -58,6 +58,7 @@ import java.util.concurrent.LinkedBlockingQueue;
  * state of the system. It counts on ZooKeeperServer to update
  * outstandingRequests, so that it can take into account transactions that are
  * in the queue to be applied when generating a transaction.
+ * 前置处理器
  */
 public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
         RequestProcessor {

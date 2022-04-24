@@ -351,7 +351,10 @@ public abstract class KeeperException extends Exception {
         INVALIDCALLBACK(InvalidCallback),
         /** Invalid ACL specified */
         INVALIDACL(InvalidACL),
-        /** Client authentication failed */
+        /**
+         *  Client authentication failed
+         *  客户端安全认证失败
+         * */
         AUTHFAILED(AuthFailed),
         /** Session moved to another server, so operation is ignored */
         SESSIONMOVED(-118),
@@ -365,9 +368,12 @@ public abstract class KeeperException extends Exception {
         REQUESTTIMEOUT(-122),
         /** Attempts to perform a reconfiguration operation when reconfiguration feature is disabled. */
         RECONFIGDISABLED(-123),
-        /** The session has been closed by server because server requires client to do SASL authentication,
+        /**
+         * The session has been closed by server because server requires client to do SASL authentication,
          *  but client is not configured with SASL authentication or configuted with SASL but failed
-         *  (i.e. wrong credential used.). */
+         *  (i.e. wrong credential used.).
+         *
+         *  */
         SESSIONCLOSEDREQUIRESASLAUTH(-124);
 
         private static final Map<Integer, Code> lookup
