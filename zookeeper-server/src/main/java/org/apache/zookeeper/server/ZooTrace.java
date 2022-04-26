@@ -28,6 +28,8 @@ import org.slf4j.LoggerFactory;
  * Trace messages go to the log with TRACE level.
  * <p>
  * Log4j must be correctly configured to capture the TRACE messages.
+ *
+ * 跟踪类型
  */
 public class ZooTrace {
     final static public long CLIENT_REQUEST_TRACE_MASK = 1 << 1;

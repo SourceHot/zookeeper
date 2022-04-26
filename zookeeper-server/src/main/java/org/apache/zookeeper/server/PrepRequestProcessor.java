@@ -79,6 +79,9 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
     }
 
     private final RequestProcessor nextProcessor;
+    /**
+     * 已提交的请求
+     */
     LinkedBlockingQueue<Request> submittedRequests = new LinkedBlockingQueue<Request>();
     ZooKeeperServer zks;
 
@@ -159,24 +162,31 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
         LOG.info(String.format("PrepRequestProcessor (sid:%d) started, reconfigEnabled=%s",
                 zks.getServerId(), zks.reconfigEnabled));
         try {
+            // 死循环
             while (true) {
+                // 从成员变量submittedRequests中获取一个请求
                 Request request = submittedRequests.take();
+                // 设置跟踪类型为CLIENT_REQUEST_TRACE_MASK
                 long traceMask = ZooTrace.CLIENT_REQUEST_TRACE_MASK;
+                // 如果请求类型是ping，将跟踪类型设置为CLIENT_PING_TRACE_MASK
                 if (request.type == OpCode.ping) {
                     traceMask = ZooTrace.CLIENT_PING_TRACE_MASK;
                 }
                 if (LOG.isTraceEnabled()) {
                     ZooTrace.logRequest(LOG, traceMask, 'P', request, "");
                 }
+                // 如果当前请求和死亡请求相同结束死循环停止工作
                 if (Request.requestOfDeath == request) {
                     break;
                 }
+                // 处理请求
                 pRequest(request);
             }
         } catch (RequestProcessorException e) {
             if (e.getCause() instanceof XidRolloverException) {
                 LOG.info(e.getCause().getMessage());
             }
+            // 处理异常
             handleException(this.getName(), e);
         } catch (Exception e) {
             handleException(this.getName(), e);
@@ -212,6 +222,11 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
         }
     }
 
+    /**
+     * 添加变化档案
+     *
+     * @param c
+     */
     private void addChangeRecord(ChangeRecord c) {
         synchronized (zks.outstandingChanges) {
             zks.outstandingChanges.add(c);
@@ -330,10 +345,10 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
      * This method will be called inside the ProcessRequestThread, which is a
      * singleton, so there will be a single thread calling this code.
      *
-     * @param type
-     * @param zxid
-     * @param request
-     * @param record
+     * @param type 操作类型
+     * @param zxid zxid
+     * @param request 请求
+     * @param record 档案（用于记录的对象)
      */
     protected void pRequest2Txn(int type, long zxid, Request request,
                                 Record record, boolean deserialize)
@@ -346,24 +361,35 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
             case OpCode.create2:
             case OpCode.createTTL:
             case OpCode.createContainer: {
+                // 转换创建相关请求
                 pRequest2TxnCreate(type, request, record, deserialize);
                 break;
             }
             case OpCode.deleteContainer: {
+                // 提取请求中的路径
                 String path = new String(request.request.array());
+                // 提取父路径
                 String parentPath = getParentPathAndValidate(path);
+                // 父节点档案信息
                 ChangeRecord parentRecord = getRecordForPath(parentPath);
+                // 当前节点档案信息
                 ChangeRecord nodeRecord = getRecordForPath(path);
+                // 当前节点存在子节点抛出异常
                 if (nodeRecord.childCount > 0) {
                     throw new KeeperException.NotEmptyException(path);
                 }
+                // todo: 看不懂
                 if (EphemeralType.get(nodeRecord.stat.getEphemeralOwner())
                         == EphemeralType.NORMAL) {
                     throw new KeeperException.BadVersionException(path);
                 }
+                // 设置 txn
                 request.setTxn(new DeleteTxn(path));
+                // 拷贝父节点数据
                 parentRecord = parentRecord.duplicate(request.getHdr().getZxid());
+                // 父节点的子节点数量减一
                 parentRecord.childCount--;
+                // 添加变化档案
                 addChangeRecord(parentRecord);
                 addChangeRecord(new ChangeRecord(request.getHdr().getZxid(), path, null, -1, null));
                 break;
@@ -627,15 +653,22 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
 
     private void pRequest2TxnCreate(int type, Request request, Record record, boolean deserialize)
             throws IOException, KeeperException {
+        // 是否需要反序列化，如果需要则将请求转换到record中
         if (deserialize) {
             ByteBufferInputStream.byteBuffer2Record(request.request, record);
         }
 
+        // 标记，该标记表示了创建类型
         int flags;
+        // 节点地址
         String path;
+        // 权限信息
         List<ACL> acl;
+        // 数据信息
         byte[] data;
+        // 过期时间
         long ttl;
+        // 类型为创建具备过期时间的节点
         if (type == OpCode.createTTL) {
             CreateTTLRequest createTtlRequest = (CreateTTLRequest) record;
             flags = createTtlRequest.getFlags();
@@ -643,7 +676,8 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
             acl = createTtlRequest.getAcl();
             data = createTtlRequest.getData();
             ttl = createTtlRequest.getTtl();
-        } else {
+        }
+        else {
             CreateRequest createRequest = (CreateRequest) record;
             flags = createRequest.getFlags();
             path = createRequest.getPath();
@@ -651,37 +685,54 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
             data = createRequest.getData();
             ttl = -1;
         }
+        // 将 flags 转换为创建类型
         CreateMode createMode = CreateMode.fromFlag(flags);
+        // 验证创建请求是否合法
         validateCreateRequest(path, createMode, request, ttl);
+        // 验证创建地址
         String parentPath = validatePathForCreate(path, request.sessionId);
 
+        // 处理ACL
         List<ACL> listACL = fixupACL(path, request.authInfo, acl);
+        // 获取父节点的数据记录
         ChangeRecord parentRecord = getRecordForPath(parentPath);
 
+        // 验证ACL
         checkACL(zks, parentRecord.acl, ZooDefs.Perms.CREATE, request.authInfo);
+        // 获取父节点的cversion(创建版本号)
         int parentCVersion = parentRecord.stat.getCversion();
+        // 是否是顺序创建
         if (createMode.isSequential()) {
             path = path + String.format(Locale.ENGLISH, "%010d", parentCVersion);
         }
+        // 验证路径是否合法
         validatePath(path, request.sessionId);
         try {
+            // 如果当前路径已经存在相关档案抛出异常
             if (getRecordForPath(path) != null) {
                 throw new KeeperException.NodeExistsException(path);
             }
         } catch (KeeperException.NoNodeException e) {
             // ignore this one
         }
+        // 是否是临时节点
         boolean ephemeralParent =
                 EphemeralType.get(parentRecord.stat.getEphemeralOwner()) == EphemeralType.NORMAL;
         if (ephemeralParent) {
             throw new KeeperException.NoChildrenForEphemeralsException(path);
         }
+        // 计算新的创建版本号
         int newCversion = parentRecord.stat.getCversion() + 1;
+        // 如果操作类型是创建容器则将txn设置为CreateContainerTxn
         if (type == OpCode.createContainer) {
             request.setTxn(new CreateContainerTxn(path, data, listACL, newCversion));
-        } else if (type == OpCode.createTTL) {
+        }
+        // 如果操作类型是创建过期节点则将txn设置为CreateTTLTxn
+        else if (type == OpCode.createTTL) {
             request.setTxn(new CreateTTLTxn(path, data, listACL, newCversion, ttl));
-        } else {
+        }
+        // 其他创建相关的操作类型将txn设置为CreateTxn
+        else {
             request.setTxn(new CreateTxn(path, data, listACL, createMode.isEphemeral(),
                     newCversion));
         }
@@ -689,9 +740,13 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
         if (createMode.isEphemeral()) {
             s.setEphemeralOwner(request.sessionId);
         }
+        // 拷贝父节点数据
         parentRecord = parentRecord.duplicate(request.getHdr().getZxid());
+        // 父节点中子节点数量加一
         parentRecord.childCount++;
+        // 设置创建版本号
         parentRecord.stat.setCversion(newCversion);
+        // 添加变化档案
         addChangeRecord(parentRecord);
         addChangeRecord(new ChangeRecord(request.getHdr().getZxid(), path, s, 0, listACL));
     }
@@ -763,10 +818,13 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
                     pRequest2Txn(request.type, zks.getNextZxid(), request, checkRequest, true);
                     break;
                 case OpCode.multi:
+                    // 创建多事务请求对象
                     MultiTransactionRecord multiRequest = new MultiTransactionRecord();
                     try {
+                        // 请求对象转换为多事务请求对象
                         ByteBufferInputStream.byteBuffer2Record(request.request, multiRequest);
                     } catch (IOException e) {
+                        // 异常设置头信息
                         request.setHdr(
                                 new TxnHeader(request.sessionId, request.cxid, zks.getNextZxid(),
                                         Time.currentWallTime(), OpCode.multi));
@@ -774,21 +832,29 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
                     }
                     List<Txn> txns = new ArrayList<Txn>();
                     //Each op in a multi-op must have the same zxid!
+                    // 获取下一个zxid
                     long zxid = zks.getNextZxid();
+                    // 异常记录变量
                     KeeperException ke = null;
 
                     //Store off current pending change records in case we need to rollback
+                    // 将多事务请求对象转换为map结构，用于后续回滚操作
                     Map<String, ChangeRecord> pendingChanges = getPendingChanges(multiRequest);
 
+                    // 循环处理多事务请求对象
                     for (Op op : multiRequest) {
+                        // 从单个事务中获取请求信息
                         Record subrequest = op.toRequestRecord();
+                        // 操作类型
                         int type;
+                        // 档案信息
                         Record txn;
 
                         /* If we've already failed one of the ops, don't bother
                          * trying the rest as we know it's going to fail and it
                          * would be confusing in the logfiles.
                          */
+                        // 如果异常记录变量不为空设置异常相关信息
                         if (ke != null) {
                             type = OpCode.error;
                             txn = new ErrorTxn(Code.RUNTIMEINCONSISTENCY.intValue());
@@ -797,10 +863,16 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
                         /* Prep the request and convert to a Txn */
                         else {
                             try {
+                                // 执行核心请求转事务逻辑
                                 pRequest2Txn(op.getType(), zxid, request, subrequest, false);
+                                // 记录操作类型
                                 type = request.getHdr().getType();
+                                // 记录txn
                                 txn = request.getTxn();
-                            } catch (KeeperException e) {
+                            }
+                            // 异常相关信息记录
+                            catch (KeeperException e) {
+
                                 ke = e;
                                 type = OpCode.error;
                                 txn = new ErrorTxn(e.code().intValue());
@@ -823,6 +895,8 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
                         //FIXME: I don't want to have to serialize it here and then
                         //       immediately deserialize in next processor. But I'm
                         //       not sure how else to get the txn stored into our list.
+
+                        // 输出档案处理
                         ByteArrayOutputStream baos = new ByteArrayOutputStream();
                         BinaryOutputArchive boa = BinaryOutputArchive.getArchive(baos);
                         txn.serialize(boa, "request");
@@ -840,6 +914,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
                 //create/close session don't require request record
                 case OpCode.createSession:
                 case OpCode.closeSession:
+                    // 不是本地session
                     if (!request.isLocalSession()) {
                         pRequest2Txn(request.type, zks.getNextZxid(), request,
                                 null, true);
@@ -857,6 +932,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
                 case OpCode.setWatches:
                 case OpCode.checkWatches:
                 case OpCode.removeWatches:
+                    // 检查session是否合法
                     zks.sessionTracker.checkSession(request.sessionId,
                             request.getOwner());
                     break;
@@ -953,42 +1029,61 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
             throws KeeperException.InvalidACLException {
         // check for well formed ACLs
         // This resolves https://issues.apache.org/jira/browse/ZOOKEEPER-1877
+        // 将参数 acls 中重复的数据进行过滤
         List<ACL> uniqacls = removeDuplicates(acls);
+        // 返回结果值存储容器
         LinkedList<ACL> rv = new LinkedList<ACL>();
+        // 如果过滤后的ACL数量为空将抛出异常
         if (uniqacls == null || uniqacls.size() == 0) {
             throw new KeeperException.InvalidACLException(path);
         }
+        // 遍历过滤后的acl集合
         for (ACL a : uniqacls) {
             LOG.debug("Processing ACL: {}", a);
+            // 如果当前元素为空抛出异常
             if (a == null) {
                 throw new KeeperException.InvalidACLException(path);
             }
+            // 提取id
             Id id = a.getId();
+            // id 为空或者id中存储的方案为空抛出异常
             if (id == null || id.getScheme() == null) {
                 throw new KeeperException.InvalidACLException(path);
             }
+            // 如果id中存储的方案是world并且id中的id变量为anyone加入到结果集合中
             if (id.getScheme().equals("world") && id.getId().equals("anyone")) {
                 rv.add(a);
-            } else if (id.getScheme().equals("auth")) {
+            }
+            // 如果id中存储的方案是auth则进行验证逻辑
+            else if (id.getScheme().equals("auth")) {
                 // This is the "auth" id, so we have to expand it to the
                 // authenticated ids of the requestor
+                // 身份认证通过标记
                 boolean authIdValid = false;
                 for (Id cid : authInfo) {
+                    // 根据安全方案获取安全验证器
                     AuthenticationProvider ap =
                             ProviderRegistry.getProvider(cid.getScheme());
+
                     if (ap == null) {
                         LOG.error("Missing AuthenticationProvider for "
                                 + cid.getScheme());
-                    } else if (ap.isAuthenticated()) {
+                    }
+                    // 通过身份验证
+                    else if (ap.isAuthenticated()) {
                         authIdValid = true;
                         rv.add(new ACL(a.getPerms(), cid));
                     }
                 }
+                // 是否认证通过标记为false抛出异常
                 if (!authIdValid) {
                     throw new KeeperException.InvalidACLException(path);
                 }
-            } else {
+            }
+            else {
+                // 根据安全方案获取安全验证器
                 AuthenticationProvider ap = ProviderRegistry.getProvider(id.getScheme());
+                // 安全验证器为空或者id验证不通过抛出异常
                 if (ap == null || !ap.isValid(id.getId())) {
                     throw new KeeperException.InvalidACLException(path);
                 }

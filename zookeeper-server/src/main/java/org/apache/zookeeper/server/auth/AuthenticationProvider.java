@@ -24,6 +24,8 @@ import org.apache.zookeeper.server.ServerCnxn;
 /**
  * This interface is implemented by authentication providers to add new kinds of
  * authentication schemes to ZooKeeper.
+ *
+ * 安全验证器
  */
 public interface AuthenticationProvider {
     /**
@@ -67,6 +69,7 @@ public interface AuthenticationProvider {
      * and ip addresses are rather transient and in general don't really
      * identify a client even though sometimes they do.
      *
+     * 是否通过身份验证
      * @return true if this provider identifies creators.
      */
     boolean isAuthenticated();

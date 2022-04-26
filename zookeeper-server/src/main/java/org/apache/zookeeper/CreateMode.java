@@ -29,20 +29,25 @@ public enum CreateMode {
 
     /**
      * The znode will not be automatically deleted upon client's disconnect.
+     * 持久化类型
      */
     PERSISTENT(0, false, false, false, false),
     /**
      * The znode will not be automatically deleted upon client's disconnect,
      * and its name will be appended with a monotonically increasing number.
+     *
+     * 顺序持久化类型
      */
     PERSISTENT_SEQUENTIAL(2, false, true, false, false),
     /**
      * The znode will be deleted upon the client's disconnect.
+     * 临时类型
      */
     EPHEMERAL(1, true, false, false, false),
     /**
      * The znode will be deleted upon the client's disconnect, and its name
      * will be appended with a monotonically increasing number.
+     * 顺序临时类型
      */
     EPHEMERAL_SEQUENTIAL(3, true, true, false, false),
     /**
@@ -53,12 +58,14 @@ public enum CreateMode {
      * Given this property, you should be prepared to get
      * {@link org.apache.zookeeper.KeeperException.NoNodeException}
      * when creating children inside of this container node.
+     * 容器节点，如果当前节点下没有子节点将会进行清理动作
      */
     CONTAINER(4, false, false, true, false),
     /**
      * The znode will not be automatically deleted upon client's disconnect.
      * However if the znode has not been modified within the given TTL, it
      * will be deleted once it has no children.
+     * 带有过期时间的持久化类型
      */
     PERSISTENT_WITH_TTL(5, false, false, false, true),
     /**
@@ -66,6 +73,7 @@ public enum CreateMode {
      * and its name will be appended with a monotonically increasing number.
      * However if the znode has not been modified within the given TTL, it
      * will be deleted once it has no children.
+     * 带有过期时间的顺序持久化类型
      */
     PERSISTENT_SEQUENTIAL_WITH_TTL(6, false, true, false, true);
 
