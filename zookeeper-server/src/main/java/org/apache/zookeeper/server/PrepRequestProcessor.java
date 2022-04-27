@@ -104,13 +104,14 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
     /**
      * Grant or deny authorization to an operation on a node as a function of:
      *
-     * @param zks: not used.
+     * @param zks:  not used.
      * @param acl:  set of ACLs for the node
      * @param perm: the permission that the client is requesting
      * @param ids:  the credentials supplied by the client
      */
     static void checkACL(ZooKeeperServer zks, List<ACL> acl, int perm,
                          List<Id> ids) throws KeeperException.NoAuthException {
+        // 跳过acl认证
         if (skipACL) {
             return;
         }
@@ -119,25 +120,35 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
             LOG.debug("ACLs for node: {}", acl);
             LOG.debug("Client credentials: {}", ids);
         }
+        // acl集合为空或acl数量为空
         if (acl == null || acl.size() == 0) {
             return;
         }
+        // 处理id集合
         for (Id authId : ids) {
+            // 如果id集合中的元素中有一个方案是super返回
             if (authId.getScheme().equals("super")) {
                 return;
             }
         }
+        // 处理acl集合
         for (ACL a : acl) {
             Id id = a.getId();
             if ((a.getPerms() & perm) != 0) {
+                // 方案是world并且id数据为anyone就放行
                 if (id.getScheme().equals("world")
                         && id.getId().equals("anyone")) {
                     return;
                 }
+                // 根据安全方案获取安全验证器
                 AuthenticationProvider ap = ProviderRegistry.getProvider(id
                         .getScheme());
+                // 安全验证器不为空
                 if (ap != null) {
+                    // 处理参数ids
                     for (Id authId : ids) {
+                        // 当前id中的方案是否和acl中id的方案相同
+                        // 安全认证器对当前id和acl中的id进行匹配判断
                         if (authId.getScheme().equals(id.getScheme())
                                 && ap.matches(authId.getId(), id.getId())) {
                             return;
@@ -146,6 +157,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
                 }
             }
         }
+        // 抛出异常
         throw new KeeperException.NoAuthException();
     }
 
@@ -196,15 +208,21 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
 
     private ChangeRecord getRecordForPath(String path) throws KeeperException.NoNodeException {
         ChangeRecord lastChange = null;
+        // 锁住未完成的变化记录
         synchronized (zks.outstandingChanges) {
+            // 从outstandingChangesForPath对象中获取变化档案
             lastChange = zks.outstandingChangesForPath.get(path);
             if (lastChange == null) {
+                // 从zk数据库中获取path对应的数据节点
                 DataNode n = zks.getZKDatabase().getNode(path);
+                // 如果数据节点不为空
                 if (n != null) {
                     Set<String> children;
                     synchronized (n) {
+                        // 获取当前节点的子节点
                         children = n.getChildren();
                     }
+                    // 重写变化档案
                     lastChange = new ChangeRecord(-1, path, n.stat, children.size(),
                             zks.getZKDatabase().aclForNode(n));
                 }
@@ -213,6 +231,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
         if (lastChange == null || lastChange.stat == null) {
             throw new KeeperException.NoNodeException(path);
         }
+        // 返回
         return lastChange;
     }
 

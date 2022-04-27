@@ -81,8 +81,12 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         Environment.logEnv("Server environment:", LOG);
     }
 
+    /**
+     * 没有完成的变化档案集合
+     */
     final Deque<ChangeRecord> outstandingChanges = new ArrayDeque<>();
     // this data structure must be accessed under the outstandingChanges lock
+    // 未完成的变换档案，key:path，value: 变化档案
     final HashMap<String, ChangeRecord> outstandingChangesForPath =
             new HashMap<String, ChangeRecord>();
     private final AtomicLong hzxid = new AtomicLong(0);
