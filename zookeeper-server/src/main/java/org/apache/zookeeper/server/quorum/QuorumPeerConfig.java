@@ -46,6 +46,9 @@ import java.util.Map.Entry;
 
 import static org.apache.zookeeper.common.NetUtils.formatInetAddr;
 
+/**
+ * 仲裁配置
+ */
 @InterfaceAudience.Public
 public class QuorumPeerConfig {
     public static final String nextDynamicConfigFileSuffix = ".dynamic.next";

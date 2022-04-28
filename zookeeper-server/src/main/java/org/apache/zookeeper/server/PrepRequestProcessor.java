@@ -161,6 +161,14 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
         throw new KeeperException.NoAuthException();
     }
 
+    /**
+     *
+     * @param currentVersion 当前版本号
+     * @param expectedVersion 预期版本
+     * @param path
+     * @return
+     * @throws KeeperException.BadVersionException
+     */
     private static int checkAndIncVersion(int currentVersion, int expectedVersion, String path)
             throws KeeperException.BadVersionException {
         if (expectedVersion != -1 && expectedVersion != currentVersion) {
@@ -376,6 +384,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
                 Time.currentWallTime(), type));
 
         switch (type) {
+            // 创建操作
             case OpCode.create:
             case OpCode.create2:
             case OpCode.createTTL:
@@ -384,6 +393,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
                 pRequest2TxnCreate(type, request, record, deserialize);
                 break;
             }
+            // 删除容器操作
             case OpCode.deleteContainer: {
                 // 提取请求中的路径
                 String path = new String(request.request.array());
@@ -397,7 +407,6 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
                 if (nodeRecord.childCount > 0) {
                     throw new KeeperException.NotEmptyException(path);
                 }
-                // todo: 看不懂
                 if (EphemeralType.get(nodeRecord.stat.getEphemeralOwner())
                         == EphemeralType.NORMAL) {
                     throw new KeeperException.BadVersionException(path);
@@ -413,68 +422,111 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
                 addChangeRecord(new ChangeRecord(request.getHdr().getZxid(), path, null, -1, null));
                 break;
             }
+            // 删除节点操作
             case OpCode.delete:
+                // 通过sessionTracker验证session
                 zks.sessionTracker.checkSession(request.sessionId, request.getOwner());
+                // 转换为删除请求
                 DeleteRequest deleteRequest = (DeleteRequest) record;
-                if (deserialize)
+                // 如果需要反序列化请求对象中的信息反序列化到删除请求中
+                if (deserialize) {
                     ByteBufferInputStream.byteBuffer2Record(request.request, deleteRequest);
+                }
+                // 获取需要删除的路径
                 String path = deleteRequest.getPath();
+                // 获取删除路径的父路径
                 String parentPath = getParentPathAndValidate(path);
+                // 获取父路径的档案
                 ChangeRecord parentRecord = getRecordForPath(parentPath);
+                // 获取当前路径的档案
                 ChangeRecord nodeRecord = getRecordForPath(path);
+                // 验证ACL
                 checkACL(zks, parentRecord.acl, ZooDefs.Perms.DELETE, request.authInfo);
+                // 验证版本号
                 checkAndIncVersion(nodeRecord.stat.getVersion(), deleteRequest.getVersion(), path);
+                // 当前节点的子节点数量大于0抛出异常
                 if (nodeRecord.childCount > 0) {
                     throw new KeeperException.NotEmptyException(path);
                 }
+                // 设置txn
                 request.setTxn(new DeleteTxn(path));
+                // 拷贝父节点
                 parentRecord = parentRecord.duplicate(request.getHdr().getZxid());
+                // 父节点的子节点数量减一
                 parentRecord.childCount--;
+                // 加入变化档案
                 addChangeRecord(parentRecord);
                 addChangeRecord(new ChangeRecord(request.getHdr().getZxid(), path, null, -1, null));
                 break;
+            //设置数据操作
             case OpCode.setData:
+                // 通过sessionTracker验证session
                 zks.sessionTracker.checkSession(request.sessionId, request.getOwner());
+                // 转换为设置数据请求
                 SetDataRequest setDataRequest = (SetDataRequest) record;
-                if (deserialize)
+                // 如果需要反序列化请求对象中的信息反序列化到设置数据请求中
+                if (deserialize) {
                     ByteBufferInputStream.byteBuffer2Record(request.request, setDataRequest);
+                }
+                // 获取当前操作路径
                 path = setDataRequest.getPath();
+                // 验证当前操作路径
                 validatePath(path, request.sessionId);
+                // 获取当前操作路径对应的档案
                 nodeRecord = getRecordForPath(path);
+                // 验证权限
                 checkACL(zks, nodeRecord.acl, ZooDefs.Perms.WRITE, request.authInfo);
+                // 计算新的版本
                 int newVersion = checkAndIncVersion(nodeRecord.stat.getVersion(),
                         setDataRequest.getVersion(), path);
+
+                // 设置txn
                 request.setTxn(new SetDataTxn(path, setDataRequest.getData(), newVersion));
+                // 拷贝当前节点的档案
                 nodeRecord = nodeRecord.duplicate(request.getHdr().getZxid());
+                // 设置版本号
                 nodeRecord.stat.setVersion(newVersion);
+                // 添加变化档案
                 addChangeRecord(nodeRecord);
                 break;
+            // 重载配置操作
             case OpCode.reconfig:
+                // 如果zk服务没有启动配置重载将抛出异常
                 if (!zks.isReconfigEnabled()) {
                     LOG.error("Reconfig operation requested but reconfig feature is disabled.");
                     throw new KeeperException.ReconfigDisabledException();
                 }
 
+                // 如果跳过acl会输出警告日志
                 if (skipACL) {
                     LOG.warn("skipACL is set, reconfig operation will skip ACL checks!");
                 }
 
+                // 通过sessionTracker验证session
                 zks.sessionTracker.checkSession(request.sessionId, request.getOwner());
+                // 转换为重载配置请求
                 ReconfigRequest reconfigRequest = (ReconfigRequest) record;
+                // 确认leader服务
                 LeaderZooKeeperServer lzks;
                 try {
+                    // 如果当前zk服务无法转换为LeaderZooKeeperServer将抛出异常
                     lzks = (LeaderZooKeeperServer) zks;
                 } catch (ClassCastException e) {
                     // standalone mode - reconfiguration currently not supported
                     throw new KeeperException.UnimplementedException();
                 }
+                // 获取最后一个验证器 QuorumVerifier
                 QuorumVerifier lastSeenQV = lzks.self.getLastSeenQuorumVerifier();
                 // check that there's no reconfig in progress
+                // 最后一个验证器的版本和leader服务中的验证器版本不相等将抛出异常
                 if (lastSeenQV.getVersion() != lzks.self.getQuorumVerifier().getVersion()) {
                     throw new KeeperException.ReconfigInProgress();
                 }
+                // 获取配置id
                 long configId = reconfigRequest.getCurConfigId();
 
+                // 配置id为-1
+                // 配置id不等于最后一个验证器的版本
                 if (configId != -1 && configId != lzks.self.getLastSeenQuorumVerifier()
                         .getVersion()) {
                     String msg = "Reconfiguration from version " + configId
@@ -483,8 +535,10 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
                     throw new KeeperException.BadVersionException(msg);
                 }
 
+                // 获取新成员(配置数据)
                 String newMembers = reconfigRequest.getNewMembers();
 
+                // 新成员不为空
                 if (newMembers != null) { //non-incremental membership change
                     LOG.info("Non-incremental reconfig");
 
@@ -492,8 +546,10 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
                     newMembers = newMembers.replaceAll(",", "\n");
 
                     try {
+                        // 读取新成员数据
                         Properties props = new Properties();
                         props.load(new StringReader(newMembers));
+                        // 解析配置
                         request.qv = QuorumPeerConfig.parseDynamicConfig(props,
                                 lzks.self.getElectionType(), true, false);
                         request.qv.setVersion(request.getHdr().getZxid());
@@ -503,33 +559,39 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
                 } else { //incremental change - must be a majority quorum system
                     LOG.info("Incremental reconfig");
 
+                    // 求需要进入集群的服务
                     List<String> joiningServers = null;
                     String joiningServersString = reconfigRequest.getJoiningServers();
                     if (joiningServersString != null) {
                         joiningServers = StringUtils.split(joiningServersString, ",");
                     }
 
+                    // 求需要离开的服务
                     List<String> leavingServers = null;
                     String leavingServersString = reconfigRequest.getLeavingServers();
                     if (leavingServersString != null) {
                         leavingServers = StringUtils.split(leavingServersString, ",");
                     }
 
+                    // 类型不同抛出异常
                     if (!(lastSeenQV instanceof QuorumMaj)) {
                         String msg =
                                 "Incremental reconfiguration requested but last configuration seen has a non-majority quorum system";
                         LOG.warn(msg);
                         throw new KeeperException.BadArgumentsException(msg);
                     }
+                    // 服务集合
                     Map<Long, QuorumServer> nextServers =
                             new HashMap<Long, QuorumServer>(lastSeenQV.getAllMembers());
                     try {
+                        // 如果需要离开的服务变量存在则将nextServers中对应的数据删除
                         if (leavingServers != null) {
                             for (String leaving : leavingServers) {
                                 long sid = Long.parseLong(leaving);
                                 nextServers.remove(sid);
                             }
                         }
+                        // 如果需要进入的服务存在则将数据加入到nextServers中
                         if (joiningServers != null) {
                             for (String joiner : joiningServers) {
                                 // joiner should have the following format: server.x = server_spec;client_spec
@@ -564,22 +626,27 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
                     } catch (ConfigException e) {
                         throw new KeeperException.BadArgumentsException("Reconfiguration failed");
                     }
+                    // 设置请求参数qv
                     request.qv = new QuorumMaj(nextServers);
                     request.qv.setVersion(request.getHdr().getZxid());
                 }
+                // 如果仲裁配置启用并且投票成员数量小于2，抛出异常
                 if (QuorumPeerConfig.isStandaloneEnabled()
                         && request.qv.getVotingMembers().size() < 2) {
                     String msg =
                             "Reconfig failed - new configuration must include at least 2 followers";
                     LOG.warn(msg);
                     throw new KeeperException.BadArgumentsException(msg);
-                } else if (request.qv.getVotingMembers().size() < 1) {
+                }
+                // 如果成员数量小于1抛出异常
+                else if (request.qv.getVotingMembers().size() < 1) {
                     String msg =
                             "Reconfig failed - new configuration must include at least 1 follower";
                     LOG.warn(msg);
                     throw new KeeperException.BadArgumentsException(msg);
                 }
 
+                // 仲裁数据是否同步，如果没有同步抛出异常
                 if (!lzks.getLeader().isQuorumSynced(request.qv)) {
                     String msg2 =
                             "Reconfig failed - there must be a connected and synced quorum in new configuration";
@@ -587,14 +654,18 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
                     throw new KeeperException.NewConfigNoQuorum();
                 }
 
+                // 获取配置节点的档案
                 nodeRecord = getRecordForPath(ZooDefs.CONFIG_NODE);
+                // 验证权限
                 checkACL(zks, nodeRecord.acl, ZooDefs.Perms.WRITE, request.authInfo);
+                // 设置txn
                 request.setTxn(
                         new SetDataTxn(ZooDefs.CONFIG_NODE, request.qv.toString().getBytes(), -1));
                 nodeRecord = nodeRecord.duplicate(request.getHdr().getZxid());
                 nodeRecord.stat.setVersion(-1);
                 addChangeRecord(nodeRecord);
                 break;
+            // 设置权限操作
             case OpCode.setACL:
                 zks.sessionTracker.checkSession(request.sessionId, request.getOwner());
                 SetACLRequest setAclRequest = (SetACLRequest) record;
@@ -612,6 +683,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
                 nodeRecord.stat.setAversion(newVersion);
                 addChangeRecord(nodeRecord);
                 break;
+            // 创建session操作
             case OpCode.createSession:
                 request.request.rewind();
                 int to = request.request.getInt();
@@ -626,6 +698,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
                 }
                 zks.setOwner(request.sessionId, request.getOwner());
                 break;
+            // 关闭session操作
             case OpCode.closeSession:
                 // We don't want to do this check since the session expiration thread
                 // queues up this operation without being the session owner.
@@ -651,6 +724,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
                     zks.sessionTracker.setSessionClosing(request.sessionId);
                 }
                 break;
+            // 检查
             case OpCode.check:
                 zks.sessionTracker.checkSession(request.sessionId, request.getOwner());
                 CheckVersionRequest checkVersionRequest = (CheckVersionRequest) record;
@@ -1012,23 +1086,31 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
                                        Request request,
                                        long ttl)
             throws KeeperException {
+        // 创建模型是否是TTL的
+        // 是否启用临时节点的拓展属性
         if (createMode.isTTL() && !EphemeralType.extendedEphemeralTypesEnabled()) {
             throw new KeeperException.UnimplementedException();
         }
         try {
+            // 验证TTL是否合法
             EphemeralType.validateTTL(createMode, ttl);
         } catch (IllegalArgumentException e) {
             throw new BadArgumentsException(path);
         }
+        // 创建模型属于临时的
         if (createMode.isEphemeral()) {
             // Exception is set when local session failed to upgrade
             // so we just need to report the error
+            // 请求中是否携带异常
             if (request.getException() != null) {
                 throw request.getException();
             }
+            // 会话跟踪器验证会话
             zks.sessionTracker.checkGlobalSession(request.sessionId,
                     request.getOwner());
-        } else {
+        }
+        else {
+            // 会话跟踪器验证会话
             zks.sessionTracker.checkSession(request.sessionId,
                     request.getOwner());
         }
