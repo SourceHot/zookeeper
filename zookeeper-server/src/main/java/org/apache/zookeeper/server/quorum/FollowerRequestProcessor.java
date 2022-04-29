@@ -47,6 +47,11 @@ public class FollowerRequestProcessor extends ZooKeeperCriticalThread implements
 
     boolean finished = false;
 
+    /**
+     * 跟随者处理器
+     * @param zks
+     * @param nextProcessor
+     */
     public FollowerRequestProcessor(FollowerZooKeeperServer zks,
                                     RequestProcessor nextProcessor) {
         super("FollowerRequestProcessor:" + zks.getServerId(), zks

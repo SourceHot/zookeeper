@@ -1058,18 +1058,26 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
         return localSessionsEnabled;
     }
 
-    /** Whether to enable local sessions */
+    /**
+     * Whether to enable local sessions
+     */
     public void enableLocalSessions(boolean flag) {
         LOG.info("Local sessions " + (flag ? "enabled" : "disabled"));
         localSessionsEnabled = flag;
     }
 
-    /** Whether local sessions are allowed to upgrade to global sessions */
+    /**
+     * Whether local sessions are allowed to upgrade to global sessions
+     * <p>
+     * 是否允许本地会话升级为全局会话
+     */
     public boolean isLocalSessionsUpgradingEnabled() {
         return localSessionsUpgradingEnabled;
     }
 
-    /** Whether to allow local sessions to upgrade to global sessions */
+    /**
+     * Whether to allow local sessions to upgrade to global sessions
+     */
     public void enableLocalSessionsUpgrading(boolean flag) {
         LOG.info("Local session upgrading " + (flag ? "enabled" : "disabled"));
         localSessionsUpgradingEnabled = flag;

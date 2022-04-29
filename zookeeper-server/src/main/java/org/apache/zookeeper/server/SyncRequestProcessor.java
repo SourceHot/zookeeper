@@ -44,7 +44,7 @@ import java.util.concurrent.LinkedBlockingQueue;
  *             be null. This change the semantic of txnlog on the observer
  *             since it only contains committed txns.
  *
- *             同步处理器
+ *             同步请求处理器
  */
 public class SyncRequestProcessor extends ZooKeeperCriticalThread implements
         RequestProcessor {
@@ -68,6 +68,11 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements
     private Thread snapInProcess = null;
     volatile private boolean running;
 
+    /**
+     * 同步请求处理器
+     * @param zks
+     * @param nextProcessor
+     */
     public SyncRequestProcessor(ZooKeeperServer zks,
                                 RequestProcessor nextProcessor) {
         super("SyncThread:" + zks.getServerId(), zks

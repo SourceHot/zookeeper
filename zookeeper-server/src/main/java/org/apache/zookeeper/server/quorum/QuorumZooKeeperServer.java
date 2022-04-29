@@ -64,47 +64,68 @@ public abstract class QuorumZooKeeperServer extends ZooKeeperServer {
         // This is called by the request processor thread (either follower
         // or observer request processor), which is unique to a learner.
         // So will not be called concurrently by two threads.
-        if ((request.type != OpCode.create && request.type != OpCode.create2
+
+
+        // 请求类型不是创建和多事务请求
+        // 不是本地session
+        if (
+                (request.type != OpCode.create && request.type != OpCode.create2
                 && request.type != OpCode.multi) ||
                 !upgradeableSessionTracker.isLocalSession(request.sessionId)) {
             return null;
         }
 
+        // 如果请求类型是多事务请求
         if (OpCode.multi == request.type) {
+            // 将请求信息转换到多事务记录中
             MultiTransactionRecord multiTransactionRecord = new MultiTransactionRecord();
             request.request.rewind();
             ByteBufferInputStream.byteBuffer2Record(request.request, multiTransactionRecord);
             request.request.rewind();
+            // 是否包含临时节点的创建
             boolean containsEphemeralCreate = false;
+            // 遍历多事务记录
             for (Op op : multiTransactionRecord) {
+                // 操作列席是创建
                 if (op.getType() == OpCode.create || op.getType() == OpCode.create2) {
+                    // 转换为创建请求
                     CreateRequest createRequest = (CreateRequest) op.toRequestRecord();
+                    // 获取创建类型
                     CreateMode createMode = CreateMode.fromFlag(createRequest.getFlags());
+                    // 创建类型属于临时的将设置containsEphemeralCreate变量为真并结束循环
                     if (createMode.isEphemeral()) {
                         containsEphemeralCreate = true;
                         break;
                     }
                 }
             }
+            // 如果不包含临时节点创建返回null
             if (!containsEphemeralCreate) {
                 return null;
             }
-        } else {
+        }
+        // 非多事务请求处理
+        else {
+            // 将请求对象转换为创建请求对象
             CreateRequest createRequest = new CreateRequest();
             request.request.rewind();
             ByteBufferInputStream.byteBuffer2Record(request.request, createRequest);
             request.request.rewind();
+            // 确认创建类型
             CreateMode createMode = CreateMode.fromFlag(createRequest.getFlags());
+            // 如果创建类型是非临时的则返回null
             if (!createMode.isEphemeral()) {
                 return null;
             }
         }
 
         // Uh oh.  We need to upgrade before we can proceed.
+        // 是否允许本地会话升级为全局会话，如果不允许则抛出异常
         if (!self.isLocalSessionsUpgradingEnabled()) {
             throw new KeeperException.EphemeralOnLocalSessionException();
         }
 
+        // 进行升级操作
         return makeUpgradeRequest(request.sessionId);
     }
 

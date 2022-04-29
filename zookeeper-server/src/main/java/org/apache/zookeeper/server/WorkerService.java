@@ -87,28 +87,35 @@ public class WorkerService {
      * this thread.
      */
     public void schedule(WorkRequest workRequest, long id) {
+        // 判断是否停止处理
         if (stopped) {
+            // 清空请求
             workRequest.cleanup();
             return;
         }
 
+        // 转换请求
         ScheduledWorkRequest scheduledWorkRequest =
                 new ScheduledWorkRequest(workRequest);
 
         // If we have a worker thread pool, use that; otherwise, do the work
         // directly.
+        // 获取任务执行器数量
         int size = workers.size();
+        // 任务执行器数量大于0
         if (size > 0) {
             try {
                 // make sure to map negative ids as well to [0, size-1]
                 int workerNum = ((int) (id % size) + size) % size;
+                // 取出任务执行
                 ExecutorService worker = workers.get(workerNum);
                 worker.execute(scheduledWorkRequest);
             } catch (RejectedExecutionException e) {
                 LOG.warn("ExecutorService rejected execution", e);
                 workRequest.cleanup();
             }
-        } else {
+        }
+        else {
             // When there is no worker thread pool, do the work directly
             // and wait for its completion
             scheduledWorkRequest.run();

@@ -36,8 +36,14 @@ public class LeaderRequestProcessor implements RequestProcessor {
     private static final Logger LOG = LoggerFactory
             .getLogger(LeaderRequestProcessor.class);
 
+    /**
+     * Zookeeper的领导者服务
+     */
     private final LeaderZooKeeperServer lzks;
 
+    /**
+     * 下一个请求处理器
+     */
     private final RequestProcessor nextProcessor;
 
     public LeaderRequestProcessor(LeaderZooKeeperServer zks,
@@ -51,8 +57,10 @@ public class LeaderRequestProcessor implements RequestProcessor {
             throws RequestProcessorException {
         // Check if this is a local session and we are trying to create
         // an ephemeral node, in which case we upgrade the session
+        // 升级后的请求对象
         Request upgradeRequest = null;
         try {
+            // 验证session确认是否需要升级，如果需要则进行升级操作
             upgradeRequest = lzks.checkUpgradeSession(request);
         } catch (KeeperException ke) {
             if (request.getHdr() != null) {
@@ -65,6 +73,7 @@ public class LeaderRequestProcessor implements RequestProcessor {
         } catch (IOException ie) {
             LOG.error("Unexpected error in upgrade", ie);
         }
+        // 如果升级后的请求对象不为空
         if (upgradeRequest != null) {
             nextProcessor.processRequest(upgradeRequest);
         }

@@ -32,15 +32,23 @@ public class SendAckRequestProcessor implements RequestProcessor, Flushable {
 
     Learner learner;
 
+    /**
+     * ack 发送处理器
+     * @param peer
+     */
     SendAckRequestProcessor(Learner peer) {
         this.learner = peer;
     }
 
     public void processRequest(Request si) {
+
+
         if (si.type != OpCode.sync) {
+            // 创建数据包
             QuorumPacket qp = new QuorumPacket(Leader.ACK, si.getHdr().getZxid(), null,
                     null);
             try {
+                // 写出数据包
                 learner.writePacket(qp, false);
             } catch (IOException e) {
                 LOG.warn("Closing connection to leader, exception during packet send", e);
@@ -58,6 +66,7 @@ public class SendAckRequestProcessor implements RequestProcessor, Flushable {
 
     public void flush() throws IOException {
         try {
+            // 退出一个空的数据包
             learner.writePacket(null, true);
         } catch (IOException e) {
             LOG.warn("Closing connection to leader, exception during packet send", e);

@@ -307,7 +307,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
 
     /**
      * Rollback pending changes records from a failed multi-op.
-     *
+     * <p>
      * If a multi-op fails, we can't leave any invalid change records we created
      * around. We also need to restore their prior value (if any) if their prior
      * value is still valid.
@@ -316,28 +316,35 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
      * @param pendingChangeRecords
      */
     void rollbackPendingChanges(long zxid, Map<String, ChangeRecord> pendingChangeRecords) {
+        // 锁
         synchronized (zks.outstandingChanges) {
             // Grab a list iterator starting at the END of the list so we can iterate in reverse
+            // 遍历outstandingChanges变量
             Iterator<ChangeRecord> iter = zks.outstandingChanges.descendingIterator();
             while (iter.hasNext()) {
                 ChangeRecord c = iter.next();
+                // 如果操作的档案和当前档案相同
                 if (c.zxid == zxid) {
                     iter.remove();
                     // Remove all outstanding changes for paths of this multi.
                     // Previous records will be added back later.
                     zks.outstandingChangesForPath.remove(c.path);
-                } else {
+                }
+                else {
                     break;
                 }
             }
 
             // we don't need to roll back any records because there is nothing left.
+            // outstandingChanges变量为空
             if (zks.outstandingChanges.isEmpty()) {
                 return;
             }
 
+            // 获取第一个zxid
             long firstZxid = zks.outstandingChanges.peek().zxid;
 
+            // 小于第一个zxid的都跳过处理，大于等于的将其加入到outstandingChangesForPath变量中
             for (ChangeRecord c : pendingChangeRecords.values()) {
                 // Don't apply any prior change records less than firstZxid.
                 // Note that previous outstanding requests might have been removed
@@ -667,18 +674,30 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
                 break;
             // 设置权限操作
             case OpCode.setACL:
+                // 通过sessionTracker验证session
                 zks.sessionTracker.checkSession(request.sessionId, request.getOwner());
+                // 类型转换
                 SetACLRequest setAclRequest = (SetACLRequest) record;
-                if (deserialize)
+                // 反序列化
+                if (deserialize) {
                     ByteBufferInputStream.byteBuffer2Record(request.request, setAclRequest);
+                }
+                // 获取操作路径
                 path = setAclRequest.getPath();
+                // 验证路径
                 validatePath(path, request.sessionId);
+                // 计算ACL
                 List<ACL> listACL = fixupACL(path, request.authInfo, setAclRequest.getAcl());
+                // 获取当前路径对应的档案
                 nodeRecord = getRecordForPath(path);
+                // 校验ACL
                 checkACL(zks, nodeRecord.acl, ZooDefs.Perms.ADMIN, request.authInfo);
+                // 计算新版本号
                 newVersion = checkAndIncVersion(nodeRecord.stat.getAversion(),
                         setAclRequest.getVersion(), path);
+                // 设置txn
                 request.setTxn(new SetACLTxn(path, listACL, newVersion));
+                // 拷贝当前路径对应的档案
                 nodeRecord = nodeRecord.duplicate(request.getHdr().getZxid());
                 nodeRecord.stat.setAversion(newVersion);
                 addChangeRecord(nodeRecord);
@@ -704,36 +723,55 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
                 // queues up this operation without being the session owner.
                 // this request is the last of the session so it should be ok
                 //zks.sessionTracker.checkSession(request.sessionId, request.getOwner());
+
+                // 根据sessionId获取对应的临时路径
                 Set<String> es = zks.getZKDatabase()
                         .getEphemerals(request.sessionId);
+                // 锁
                 synchronized (zks.outstandingChanges) {
+                    // 循环outstandingChanges对象
                     for (ChangeRecord c : zks.outstandingChanges) {
+                        // 如果状态为空则
                         if (c.stat == null) {
                             // Doing a delete
+                            // 在临时路径集合中删除
                             es.remove(c.path);
-                        } else if (c.stat.getEphemeralOwner() == request.sessionId) {
+                        }
+                        // 如果状态的临时拥有者和当前sessionId相同则将其加入到临时路径集合中
+                        else if (c.stat.getEphemeralOwner() == request.sessionId) {
                             es.add(c.path);
                         }
                     }
+                    // 循环进行删除标记
                     for (String path2Delete : es) {
                         addChangeRecord(
                                 new ChangeRecord(request.getHdr().getZxid(), path2Delete, null, 0,
                                         null));
                     }
 
+                    // 关闭sessionId
                     zks.sessionTracker.setSessionClosing(request.sessionId);
                 }
                 break;
             // 检查
             case OpCode.check:
+                // 通过sessionTracker验证session
                 zks.sessionTracker.checkSession(request.sessionId, request.getOwner());
+                // 类型转换
                 CheckVersionRequest checkVersionRequest = (CheckVersionRequest) record;
-                if (deserialize)
+                // 反序列化
+                if (deserialize) {
                     ByteBufferInputStream.byteBuffer2Record(request.request, checkVersionRequest);
+                }
+                // 提取需要操作路径
                 path = checkVersionRequest.getPath();
+                // 验证路径
                 validatePath(path, request.sessionId);
+                // 获取操作路径对应的档案
                 nodeRecord = getRecordForPath(path);
+                // 验证acl
                 checkACL(zks, nodeRecord.acl, ZooDefs.Perms.READ, request.authInfo);
+                // 设置txn
                 request.setTxn(
                         new CheckVersionTxn(path, checkAndIncVersion(nodeRecord.stat.getVersion(),
                                 checkVersionRequest.getVersion(), path)));
@@ -753,7 +791,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
 
         // 标记，该标记表示了创建类型
         int flags;
-        // 节点地址
+        // 节点路径
         String path;
         // 权限信息
         List<ACL> acl;
@@ -782,7 +820,7 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
         CreateMode createMode = CreateMode.fromFlag(flags);
         // 验证创建请求是否合法
         validateCreateRequest(path, createMode, request, ttl);
-        // 验证创建地址
+        // 验证创建路径
         String parentPath = validatePathForCreate(path, request.sessionId);
 
         // 处理ACL
@@ -1066,7 +1104,9 @@ public class PrepRequestProcessor extends ZooKeeperCriticalThread implements
                 request.setTxn(new ErrorTxn(Code.MARSHALLINGERROR.intValue()));
             }
         }
+        // 设置zxid
         request.zxid = zks.getZxid();
+        // 交给下一个请求处理器进行处理
         nextProcessor.processRequest(request);
     }
 

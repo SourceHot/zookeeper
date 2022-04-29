@@ -1297,6 +1297,8 @@ public class Leader {
          * FinalRequestProcessor.processRequest MUST process the request
          * synchronously!
          *
+         *
+         * 待应用处理器
          * @param next
          *                a reference to the FinalRequestProcessor
          */
