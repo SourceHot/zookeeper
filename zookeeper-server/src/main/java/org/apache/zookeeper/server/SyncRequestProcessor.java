@@ -51,6 +51,7 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements
     private static final Logger LOG = LoggerFactory.getLogger(SyncRequestProcessor.class);
     /**
      * The number of log entries to log before starting a snapshot
+     * 快照数量
      */
     private static int snapCount = ZooKeeperServer.getSnapCount();
     private final ZooKeeperServer zks;
@@ -61,11 +62,17 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements
      * Transactions that have been written and are waiting to be flushed to
      * disk. Basically this is the list of SyncItems whose callbacks will be
      * invoked after flush returns successfully.
+     *
+     * 等待写入的请求
      */
     private final LinkedList<Request> toFlush = new LinkedList<Request>();
     private final Random r = new Random();
     private final Request requestOfDeath = Request.requestOfDeath;
+
     private Thread snapInProcess = null;
+    /**
+     * 是否运行中
+     */
     volatile private boolean running;
 
     /**
@@ -102,13 +109,19 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements
     @Override
     public void run() {
         try {
+            // 日志计数器
             int logCount = 0;
 
             // we do this in an attempt to ensure that not all of the servers
             // in the ensemble take a snapshot at the same time
+
+            // 随机的意义是避免集群服务中同一时刻进行快照操作
+
+            // 随机快照数量，避免全量快照日志
             int randRoll = r.nextInt(snapCount / 2);
             while (true) {
                 Request si = null;
+                // 从queuedRequests集合中取出请求对象
                 if (toFlush.isEmpty()) {
                     si = queuedRequests.take();
                 } else {
@@ -118,35 +131,48 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements
                         continue;
                     }
                 }
+                // 如果请求对象和死亡请求对象相同则跳出死循环
                 if (si == requestOfDeath) {
                     break;
                 }
+                //
                 if (si != null) {
                     // track the number of records written to the log
+                    // 向zk数据库追加当前请求
                     if (zks.getZKDatabase().append(si)) {
+                        // 日志计数器累加一
                         logCount++;
+                        // 日志计数器
                         if (logCount > (snapCount / 2 + randRoll)) {
                             randRoll = r.nextInt(snapCount / 2);
                             // roll the log
+                            // 滚动日志
                             zks.getZKDatabase().rollLog();
                             // take a snapshot
+                            // 确认是否需要生成快照
                             if (snapInProcess != null && snapInProcess.isAlive()) {
                                 LOG.warn("Too busy to snap, skipping");
-                            } else {
+                            }
+                            else {
                                 snapInProcess = new ZooKeeperThread("Snapshot Thread") {
                                     public void run() {
                                         try {
+                                            // 生成快照
                                             zks.takeSnapshot();
                                         } catch (Exception e) {
                                             LOG.warn("Unexpected exception", e);
                                         }
                                     }
                                 };
+                                // 启动
                                 snapInProcess.start();
                             }
+                            // 计数器归零
                             logCount = 0;
                         }
-                    } else if (toFlush.isEmpty()) {
+                    }
+                    // 等待写入的请求为空
+                    else if (toFlush.isEmpty()) {
                         // optimization for read heavy workloads
                         // iff this is a read, and there are no pending
                         // flushes (writes), then just pass this to the next
@@ -159,7 +185,9 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements
                         }
                         continue;
                     }
+                    // 等待写入的请求
                     toFlush.add(si);
+                    // 超过1000个进行写入操作
                     if (toFlush.size() > 1000) {
                         flush(toFlush);
                     }
@@ -175,8 +203,9 @@ public class SyncRequestProcessor extends ZooKeeperCriticalThread implements
 
     private void flush(LinkedList<Request> toFlush)
             throws IOException, RequestProcessorException {
-        if (toFlush.isEmpty())
+        if (toFlush.isEmpty()) {
             return;
+        }
 
         zks.getZKDatabase().commit();
         while (!toFlush.isEmpty()) {

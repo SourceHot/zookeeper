@@ -1327,11 +1327,17 @@ public class Leader {
             // requests, for which we will have a hdr. We can't simply use
             // request.zxid here because that is set on read requests to equal
             // the zxid of the last write op.
+
+            // 如果请求中的hdr(事务头)属性不为空
             if (request.getHdr() != null) {
+                // 从头信息中获取zxid
                 long zxid = request.getHdr().getZxid();
+                // 从leader中获取提案集合
                 Iterator<Proposal> iter = leader.toBeApplied.iterator();
+                // 遍历提案集合
                 if (iter.hasNext()) {
                     Proposal p = iter.next();
+                    // 提案中的请求对象不为空，zxid和当前zxid相同则将当前提案移除并结束处理
                     if (p.request != null && p.request.zxid == zxid) {
                         iter.remove();
                         return;
