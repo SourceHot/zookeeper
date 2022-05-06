@@ -34,11 +34,29 @@ public class ServerStats {
     private static final Logger LOG = LoggerFactory.getLogger(ServerStats.class);
     private final BufferStats clientResponseStats = new BufferStats();
     private final Provider provider;
+    /**
+     * 服务端向客户端发送的响应包次数
+     */
     private long packetsSent;
+    /**
+     * 服务端接收到的来自客户端的请求包次数
+     */
     private long packetsReceived;
+    /**
+     * 最大请求延迟
+     */
     private long maxLatency;
+    /**
+     * 最小请求延迟
+     */
     private long minLatency = Long.MAX_VALUE;
+    /**
+     * 累计所有请求的延迟时间
+     */
     private long totalLatency = 0;
+    /**
+     * 累计总共请求次数
+     */
     private long count = 0;
     private AtomicLong fsyncThresholdExceedCount = new AtomicLong(0);
 

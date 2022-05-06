@@ -57,12 +57,33 @@ public abstract class ServerCnxn implements Stats, Watcher {
     protected ZooKeeperSaslServer zooKeeperSaslServer = null;
     protected long minLatency;
     protected long maxLatency;
+    /**
+     * 最后的操作类型
+     */
     protected String lastOp;
+    /**
+     * 最后的cxid (客户端操作序号)
+     */
     protected long lastCxid;
+    /**
+     * 最后的zxid
+     */
     protected long lastZxid;
+    /**
+     * 最后响应时间
+     */
     protected long lastResponseTime;
+    /**
+     * 最后延迟时间
+     */
     protected long lastLatency;
+    /**
+     * 请求处理次数
+     */
     protected long count;
+    /**
+     * 总计延迟时间
+     */
     protected long totalLatency;
     /**
      * If the client is of old version, we don't send r-o mode info to it.

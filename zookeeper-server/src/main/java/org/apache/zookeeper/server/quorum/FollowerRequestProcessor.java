@@ -64,17 +64,20 @@ public class FollowerRequestProcessor extends ZooKeeperCriticalThread implements
     public void run() {
         try {
             while (!finished) {
+                // 从queuedRequests中获取一个请求
                 Request request = queuedRequests.take();
                 if (LOG.isTraceEnabled()) {
                     ZooTrace.logRequest(LOG, ZooTrace.CLIENT_REQUEST_TRACE_MASK,
                             'F', request, "");
                 }
+                // 请求和死亡请求相同
                 if (request == Request.requestOfDeath) {
                     break;
                 }
                 // We want to queue the request to be processed before we submit
                 // the request to the leader so that we are ready to receive
                 // the response
+                // 下一个请求处理器执行
                 nextProcessor.processRequest(request);
 
                 // We now ship the request to the leader. As with all

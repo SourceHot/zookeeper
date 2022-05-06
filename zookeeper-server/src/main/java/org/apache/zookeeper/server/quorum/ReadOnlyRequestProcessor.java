@@ -43,6 +43,9 @@ public class ReadOnlyRequestProcessor extends ZooKeeperCriticalThread implements
     private final LinkedBlockingQueue<Request> queuedRequests = new LinkedBlockingQueue<Request>();
     private final RequestProcessor nextProcessor;
     private final ZooKeeperServer zks;
+    /**
+     * 是否已经处理完成
+     */
     private boolean finished = false;
 
     public ReadOnlyRequestProcessor(ZooKeeperServer zks,
@@ -56,8 +59,10 @@ public class ReadOnlyRequestProcessor extends ZooKeeperCriticalThread implements
     public void run() {
         try {
             while (!finished) {
+                // 从请求列表中获取一个请求
                 Request request = queuedRequests.take();
 
+                // 日志记录
                 // log request
                 long traceMask = ZooTrace.CLIENT_REQUEST_TRACE_MASK;
                 if (request.type == OpCode.ping) {
@@ -66,11 +71,14 @@ public class ReadOnlyRequestProcessor extends ZooKeeperCriticalThread implements
                 if (LOG.isTraceEnabled()) {
                     ZooTrace.logRequest(LOG, traceMask, 'R', request, "");
                 }
+
+                // 如果请求和死亡请求相同则结束处理
                 if (Request.requestOfDeath == request) {
                     break;
                 }
 
                 // filter read requests
+                // 过滤请求
                 switch (request.type) {
                     case OpCode.sync:
                     case OpCode.create:
@@ -84,17 +92,21 @@ public class ReadOnlyRequestProcessor extends ZooKeeperCriticalThread implements
                     case OpCode.setACL:
                     case OpCode.multi:
                     case OpCode.check:
+                        // 构造新的头对象
                         ReplyHeader hdr = new ReplyHeader(request.cxid, zks.getZKDatabase()
                                 .getDataTreeLastProcessedZxid(), Code.NOTREADONLY.intValue());
                         try {
+                            // 发送响应
                             request.cnxn.sendResponse(hdr, null, null);
                         } catch (IOException e) {
                             LOG.error("IO exception while sending response", e);
                         }
+                        // 进行下一个处理
                         continue;
                 }
 
                 // proceed to the next processor
+                // 下一个请求处理器处理器
                 if (nextProcessor != null) {
                     nextProcessor.processRequest(request);
                 }

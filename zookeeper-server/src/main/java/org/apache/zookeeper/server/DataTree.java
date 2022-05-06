@@ -1408,6 +1408,8 @@ public class DataTree {
 
     /**
      * 事务处理结果存储对象
+     *
+     * 事务处理结果
      */
     static public class ProcessTxnResult {
         public long clientId;

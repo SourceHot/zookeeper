@@ -66,18 +66,23 @@ public class ObserverRequestProcessor extends ZooKeeperCriticalThread implements
     @Override
     public void run() {
         try {
+            // 是否已处理
             while (!finished) {
+                // 从需要处理的请求中获取一个请求
                 Request request = queuedRequests.take();
+                // 日志
                 if (LOG.isTraceEnabled()) {
                     ZooTrace.logRequest(LOG, ZooTrace.CLIENT_REQUEST_TRACE_MASK,
                             'F', request, "");
                 }
+                // 当前处理请求等于死亡请求结束处理
                 if (request == Request.requestOfDeath) {
                     break;
                 }
                 // We want to queue the request to be processed before we submit
                 // the request to the leader so that we are ready to receive
                 // the response
+                // 交给下一个请求处理器处理
                 nextProcessor.processRequest(request);
 
                 // We now ship the request to the leader. As with all
@@ -87,7 +92,9 @@ public class ObserverRequestProcessor extends ZooKeeperCriticalThread implements
                 // add it to pendingSyncs.
                 switch (request.type) {
                     case OpCode.sync:
+                        // 等待同步请求中加入当前请求
                         zks.pendingSyncs.add(request);
+                        // 发送数据包
                         zks.getObserver().request(request);
                         break;
                     case OpCode.create:
@@ -122,9 +129,12 @@ public class ObserverRequestProcessor extends ZooKeeperCriticalThread implements
      * Simply queue the request, which will be processed in FIFO order.
      */
     public void processRequest(Request request) {
+        // 是否已经完成处理
         if (!finished) {
+            // 创建升级请求后的请求对象
             Request upgradeRequest = null;
             try {
+                // 通过 ObserverZooKeeperServer 进行请求升级操作
                 upgradeRequest = zks.checkUpgradeSession(request);
             } catch (KeeperException ke) {
                 if (request.getHdr() != null) {
@@ -136,6 +146,7 @@ public class ObserverRequestProcessor extends ZooKeeperCriticalThread implements
             } catch (IOException ie) {
                 LOG.error("Unexpected error in upgrade", ie);
             }
+            // 升级后的请求对象不为空
             if (upgradeRequest != null) {
                 queuedRequests.add(upgradeRequest);
             }

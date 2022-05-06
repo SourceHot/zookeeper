@@ -43,6 +43,7 @@ public class SendAckRequestProcessor implements RequestProcessor, Flushable {
     public void processRequest(Request si) {
 
 
+        // 请求类型不是同步的
         if (si.type != OpCode.sync) {
             // 创建数据包
             QuorumPacket qp = new QuorumPacket(Leader.ACK, si.getHdr().getZxid(), null,
