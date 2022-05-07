@@ -46,14 +46,32 @@ public class SessionTrackerImpl extends ZooKeeperCriticalThread implements
         SessionTracker {
     private static final Logger LOG = LoggerFactory.getLogger(SessionTrackerImpl.class);
 
+    /**
+     * session id 和 SessionImpl的映射关系
+     */
     protected final ConcurrentHashMap<Long, SessionImpl> sessionsById =
             new ConcurrentHashMap<Long, SessionImpl>();
 
+    /**
+     * 过期队列
+     */
     private final ExpiryQueue<SessionImpl> sessionExpiryQueue;
 
+    /**
+     * session id 和 session 过期时间映射关系
+     */
     private final ConcurrentMap<Long, Integer> sessionsWithTimeout;
+    /**
+     * 下一个session id
+     */
     private final AtomicLong nextSessionId = new AtomicLong();
+    /**
+     * session 过期接口
+     */
     private final SessionExpirer expirer;
+    /**
+     * 是否处于运行状态
+     */
     volatile boolean running = true;
 
     public SessionTrackerImpl(SessionExpirer expirer,
@@ -63,22 +81,31 @@ public class SessionTrackerImpl extends ZooKeeperCriticalThread implements
         this.expirer = expirer;
         this.sessionExpiryQueue = new ExpiryQueue<SessionImpl>(tickTime);
         this.sessionsWithTimeout = sessionsWithTimeout;
+        // 计算session id
         this.nextSessionId.set(initializeNextSession(serverId));
+        // 添加session
         for (Entry<Long, Integer> e : sessionsWithTimeout.entrySet()) {
             addSession(e.getKey(), e.getValue());
         }
 
+        // 验证服务id有效性
         EphemeralType.validateServerId(serverId);
     }
 
     /**
      * Generates an initial sessionId. High order byte is serverId, next 5
      * 5 bytes are from timestamp, and low order 2 bytes are 0s.
+     *
+     * id 数据从Zookeeper配置中的myId属性来
      */
     public static long initializeNextSession(long id) {
+
         long nextSid;
+        // 当前时间(毫秒)左移24位，无符号右移8位
         nextSid = (Time.currentElapsedTime() << 24) >>> 8;
+        // sid 与id左移56位后或运算
         nextSid = nextSid | (id << 56);
+        // 判断计算的sid是否和最小long值相同，如果相同则进行加一操作
         if (nextSid == EphemeralType.CONTAINER_EPHEMERAL_OWNER) {
             ++nextSid;  // this is an unlikely edge case, but check it just in case
         }
@@ -121,14 +148,18 @@ public class SessionTrackerImpl extends ZooKeeperCriticalThread implements
     public void run() {
         try {
             while (running) {
+                // 获取等待时间
                 long waitTime = sessionExpiryQueue.getWaitTime();
                 if (waitTime > 0) {
                     Thread.sleep(waitTime);
                     continue;
                 }
 
+                // 从session过期队列中获取session
                 for (SessionImpl s : sessionExpiryQueue.poll()) {
+                    // 设置关闭状态
                     setSessionClosing(s.sessionId);
+                    // 进行过期接口操作
                     expirer.expire(s);
                 }
             }
@@ -139,18 +170,22 @@ public class SessionTrackerImpl extends ZooKeeperCriticalThread implements
     }
 
     synchronized public boolean touchSession(long sessionId, int timeout) {
+        // 根据session id 获取session
         SessionImpl s = sessionsById.get(sessionId);
 
+        // session 为空返回false
         if (s == null) {
             logTraceTouchInvalidSession(sessionId, timeout);
             return false;
         }
 
+        // session 处于关闭状态 返回false
         if (s.isClosing()) {
             logTraceTouchClosingSession(sessionId, timeout);
             return false;
         }
 
+        // 更新过期时间
         updateSessionExpiry(s, timeout);
         return true;
     }
@@ -229,22 +264,27 @@ public class SessionTrackerImpl extends ZooKeeperCriticalThread implements
     }
 
     public synchronized boolean addSession(long id, int sessionTimeout) {
+        // 向sessionsWithTimeout容器中加入数据
         sessionsWithTimeout.put(id, sessionTimeout);
 
         boolean added = false;
 
+        // 从sessionsById容器中根据session id 获取session
         SessionImpl session = sessionsById.get(id);
+        // 不存在创建
         if (session == null) {
             session = new SessionImpl(id, sessionTimeout);
         }
 
         // findbugs2.0.3 complains about get after put.
         // long term strategy would be use computeIfAbsent after JDK 1.8
+        // 向sessionsById容器中加入session
         SessionImpl existedSession = sessionsById.putIfAbsent(id, session);
 
         if (existedSession != null) {
             session = existedSession;
-        } else {
+        }
+        else {
             added = true;
             LOG.debug("Adding session 0x" + Long.toHexString(id));
         }
@@ -256,6 +296,7 @@ public class SessionTrackerImpl extends ZooKeeperCriticalThread implements
                             + Long.toHexString(id) + " " + sessionTimeout);
         }
 
+        // 更新session过期信息
         updateSessionExpiry(session, sessionTimeout);
         return added;
     }
@@ -269,19 +310,25 @@ public class SessionTrackerImpl extends ZooKeeperCriticalThread implements
             KeeperException.SessionMovedException,
             KeeperException.UnknownSessionException {
         LOG.debug("Checking session 0x" + Long.toHexString(sessionId));
+        // 获取 session
         SessionImpl session = sessionsById.get(sessionId);
 
+        // session 为空抛出异常
         if (session == null) {
             throw new KeeperException.UnknownSessionException();
         }
 
+        // session 已关闭抛出异常
         if (session.isClosing()) {
             throw new KeeperException.SessionExpiredException();
         }
 
+        // 所有者为空赋值所有者
         if (session.owner == null) {
             session.owner = owner;
-        } else if (session.owner != owner) {
+        }
+        // session 所有者和参数所有者不匹配抛出异常
+        else if (session.owner != owner) {
             throw new KeeperException.SessionMovedException();
         }
     }

@@ -145,6 +145,9 @@ public abstract class ServerCnxn implements Stats, Watcher {
 
     abstract void sendBuffer(ByteBuffer closeConn);
 
+    /**
+     * 恢复数据接收
+     */
     abstract void enableRecv();
 
     /**
