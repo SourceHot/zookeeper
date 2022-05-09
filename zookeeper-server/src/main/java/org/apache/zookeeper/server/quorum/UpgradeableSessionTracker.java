@@ -31,7 +31,13 @@ import java.util.concurrent.ConcurrentMap;
  */
 public abstract class UpgradeableSessionTracker implements SessionTracker {
     private static final Logger LOG = LoggerFactory.getLogger(UpgradeableSessionTracker.class);
+    /**
+     * 本地会话跟踪器
+     */
     protected LocalSessionTracker localSessionTracker;
+    /**
+     * 本地session过期映射表
+     */
     private ConcurrentMap<Long, Integer> localSessionsWithTimeouts;
 
     public void start() {
@@ -66,17 +72,23 @@ public abstract class UpgradeableSessionTracker implements SessionTracker {
      * @return session timeout (-1 if not a local session)
      */
     public int upgradeSession(long sessionId) {
+        // 容器localSessionsWithTimeouts为空返回-1
         if (localSessionsWithTimeouts == null) {
             return -1;
         }
         // We won't race another upgrade attempt because only one thread
         // will get the timeout from the map
+        // 从localSessionsWithTimeouts容器中根据session id移除数据，暂存超时时间
         Integer timeout = localSessionsWithTimeouts.remove(sessionId);
+        // 超时时间不为空
         if (timeout != null) {
             LOG.info("Upgrading session 0x" + Long.toHexString(sessionId));
             // Add as global before removing as local
+            // 将session 放入到全局容器中
             addGlobalSession(sessionId, timeout);
+            // 移除本地session
             localSessionTracker.removeSession(sessionId);
+            // 返回超时时间
             return timeout;
         }
         return -1;

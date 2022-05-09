@@ -37,7 +37,13 @@ import java.util.concurrent.ConcurrentMap;
 public class LeaderSessionTracker extends UpgradeableSessionTracker {
     private static final Logger LOG = LoggerFactory.getLogger(LeaderSessionTracker.class);
 
+    /**
+     * 是否启用本地会话
+     */
     private final boolean localSessionsEnabled;
+    /**
+     * 全局session跟踪器
+     */
     private final SessionTrackerImpl globalSessionTracker;
 
     /**

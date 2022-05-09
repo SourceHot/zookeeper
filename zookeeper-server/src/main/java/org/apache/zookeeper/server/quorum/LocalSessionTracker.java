@@ -32,6 +32,9 @@ public class LocalSessionTracker extends SessionTrackerImpl {
         super(expirer, sessionsWithTimeouts, tickTime, id, listener);
     }
 
+    /**
+     * 检查session id 是否位于sessionsById容器中
+     */
     public boolean isLocalSession(long sessionId) {
         return isTrackingSession(sessionId);
     }
@@ -40,6 +43,9 @@ public class LocalSessionTracker extends SessionTrackerImpl {
         return false;
     }
 
+    /**
+     * 恒定抛出异常
+     */
     public boolean addGlobalSession(long sessionId, int sessionTimeout) {
         throw new UnsupportedOperationException();
     }

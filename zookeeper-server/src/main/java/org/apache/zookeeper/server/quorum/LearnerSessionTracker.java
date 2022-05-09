@@ -47,14 +47,36 @@ import java.util.concurrent.atomic.AtomicReference;
 public class LearnerSessionTracker extends UpgradeableSessionTracker {
     private static final Logger LOG = LoggerFactory.getLogger(LearnerSessionTracker.class);
 
+    /**
+     * session 过期接口
+     */
     private final SessionExpirer expirer;
     // Touch table for the global sessions
+    /**
+     * 过期容器
+     * key: session id
+     * value: 过期时间
+     */
     private final AtomicReference<Map<Long, Integer>> touchTable =
             new AtomicReference<Map<Long, Integer>>();
+    /**
+     * 服务id
+     */
     private final long serverId;
+    /**
+     * 下一个session id
+     */
     private final AtomicLong nextSessionId = new AtomicLong();
 
+    /**
+     * 是否启用本地会话
+     */
     private final boolean localSessionsEnabled;
+    /**
+     * 全局session id和过期时间映射
+     * key: session id
+     * value: 过期时间
+     */
     private final ConcurrentMap<Long, Integer> globalSessionsWithTimeouts;
 
     public LearnerSessionTracker(SessionExpirer expirer,
