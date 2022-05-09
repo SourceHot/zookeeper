@@ -109,12 +109,16 @@ public class DigestAuthenticationProvider implements AuthenticationProvider {
 
     public KeeperException.Code
     handleAuthentication(ServerCnxn cnxn, byte[] authData) {
+        // 将认证信息转换为字符串
         String id = new String(authData);
         try {
+            // 生成摘要
             String digest = generateDigest(id);
+            // 摘要和超级管理员摘要对比，如果相同创建id对象加入到连接对象中
             if (digest.equals(superDigest)) {
                 cnxn.addAuthInfo(new Id("super", ""));
             }
+            // 创建id对象加入到连接对象中
             cnxn.addAuthInfo(new Id(getScheme(), digest));
             return KeeperException.Code.OK;
         } catch (NoSuchAlgorithmException e) {

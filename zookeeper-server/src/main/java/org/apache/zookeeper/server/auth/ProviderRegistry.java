@@ -34,37 +34,49 @@ public class ProviderRegistry {
     private static boolean initialized = false;
 
     public static void initialize() {
+
         synchronized (ProviderRegistry.class) {
-            if (initialized)
+            // 如果已经实例化则跳过
+            if (initialized) {
                 return;
+            }
+            // 创建 ip 和 digest 的认证模式加入到容器中
             IPAuthenticationProvider ipp = new IPAuthenticationProvider();
             DigestAuthenticationProvider digp = new DigestAuthenticationProvider();
             authenticationProviders.put(ipp.getScheme(), ipp);
             authenticationProviders.put(digp.getScheme(), digp);
+            // 获取系统变量
             Enumeration<Object> en = System.getProperties().keys();
             while (en.hasMoreElements()) {
+
                 String k = (String) en.nextElement();
+                // 如果系统变量是以zookeeper.authProvider.开头
                 if (k.startsWith(AUTHPROVIDER_PROPERTY_PREFIX)) {
+                    // 获取属性值
                     String className = System.getProperty(k);
                     try {
+                        // 反射创建类对象
                         Class<?> c = ZooKeeperServer.class.getClassLoader()
                                 .loadClass(className);
                         AuthenticationProvider ap =
                                 (AuthenticationProvider) c.getDeclaredConstructor()
                                         .newInstance();
+                        // 加入到容器
                         authenticationProviders.put(ap.getScheme(), ap);
                     } catch (Exception e) {
                         LOG.warn("Problems loading " + className, e);
                     }
                 }
             }
+            // 序列化完毕
             initialized = true;
         }
     }
 
     public static AuthenticationProvider getProvider(String scheme) {
-        if (!initialized)
+        if (!initialized) {
             initialize();
+        }
         return authenticationProviders.get(scheme);
     }
 

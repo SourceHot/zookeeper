@@ -67,6 +67,7 @@ public class IPAuthenticationProvider implements AuthenticationProvider {
     private void mask(byte b[], int bits) {
         int start = bits / 8;
         int startMask = (1 << (8 - (bits % 8))) - 1;
+        // 进行非运算
         startMask = ~startMask;
         while (start < b.length) {
             b[start] &= startMask;
@@ -92,12 +93,16 @@ public class IPAuthenticationProvider implements AuthenticationProvider {
                 return false;
             }
         }
+        // 对字节数组进行加工
         mask(aclAddr, bits);
+        // 将id转换为字节数组
         byte remoteAddr[] = addr2Bytes(id);
         if (remoteAddr == null) {
             return false;
         }
+        // 对字节数组进行加工
         mask(remoteAddr, bits);
+        // 遍历字节判断是否和acl中的数据相同，如果不相同则返回false
         for (int i = 0; i < remoteAddr.length; i++) {
             if (remoteAddr[i] != aclAddr[i]) {
                 return false;
@@ -111,14 +116,20 @@ public class IPAuthenticationProvider implements AuthenticationProvider {
     }
 
     public boolean isValid(String id) {
+        // 按照斜杠拆分
         String parts[] = id.split("/", 2);
+        // 将拆分结果的第一个元素转换为字节，第一个元素是ip
         byte aclAddr[] = addr2Bytes(parts[0]);
+        // ip字节为空返回false
         if (aclAddr == null) {
             return false;
         }
+        // 拆分结果长度为2
         if (parts.length == 2) {
             try {
+                // 将第二个元素转换为int，第二个元素是bits
                 int bits = Integer.parseInt(parts[1]);
+                // port小于0或者 aclAddr.length * 8值
                 if (bits < 0 || bits > aclAddr.length * 8) {
                     return false;
                 }

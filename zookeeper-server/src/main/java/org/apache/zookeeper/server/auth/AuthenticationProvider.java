@@ -31,6 +31,7 @@ public interface AuthenticationProvider {
     /**
      * The String used to represent this provider. This will correspond to the
      * scheme field of an Id.
+     * 获取验证方案
      *
      * @return the scheme of this provider.
      */
@@ -42,6 +43,7 @@ public interface AuthenticationProvider {
      * implementor may attach new ids to the authInfo field of cnxn or may use
      * cnxn to send packets back to the client.
      *
+     * 处理认证
      * @param cnxn
      *                the cnxn that received the authentication information.
      * @param authData
@@ -54,6 +56,7 @@ public interface AuthenticationProvider {
      * This method is called to see if the given id matches the given id
      * expression in the ACL. This allows schemes to use application specific
      * wild cards.
+     * 匹配id
      *
      * @param id
      *                the id to check.
@@ -77,6 +80,7 @@ public interface AuthenticationProvider {
     /**
      * Validates the syntax of an id.
      *
+     * 验证id
      * @param id
      *                the id to validate.
      * @return true if id is well formed.

@@ -140,21 +140,26 @@ public class X509AuthenticationProvider implements AuthenticationProvider {
     @Override
     public KeeperException.Code handleAuthentication(ServerCnxn cnxn,
                                                      byte[] authData) {
+        // 从连接对象中获取证书集合
         X509Certificate[] certChain
                 = (X509Certificate[]) cnxn.getClientCertificateChain();
 
+        // 证书集合为空或者证书集合长度为0返回认证失败状态码
         if (certChain == null || certChain.length == 0) {
             return KeeperException.Code.AUTHFAILED;
         }
 
+        // 信任管理器为空返回认证失败状态码
         if (trustManager == null) {
             LOG.error("No trust manager available to authenticate session 0x{}",
                     Long.toHexString(cnxn.getSessionId()));
             return KeeperException.Code.AUTHFAILED;
         }
 
+        // 取出证书集合中的第一个证书
         X509Certificate clientCert = certChain[0];
 
+        // 安全认证，认证中出现CertificateException异常返回认证失败状态码
         try {
             // Authenticate client certificate
             trustManager.checkClientTrusted(certChain,
@@ -165,19 +170,23 @@ public class X509AuthenticationProvider implements AuthenticationProvider {
             return KeeperException.Code.AUTHFAILED;
         }
 
+        // 根据客户端证书获取证书id
         String clientId = getClientId(clientCert);
 
+        // 判断证书id和zookeeper.X509AuthenticationProvider.superUser属性是否相同，相同则创建id对象加入到连接对象中
         if (clientId.equals(System.getProperty(
                 ZOOKEEPER_X509AUTHENTICATIONPROVIDER_SUPERUSER))) {
             cnxn.addAuthInfo(new Id("super", clientId));
             LOG.info("Authenticated Id '{}' as super user", clientId);
         }
 
+        // 创建id对象加入到连接对象中
         Id authInfo = new Id(getScheme(), clientId);
         cnxn.addAuthInfo(authInfo);
 
         LOG.info("Authenticated Id '{}' for Scheme '{}'",
                 authInfo.getId(), authInfo.getScheme());
+        // 返回认证通过
         return KeeperException.Code.OK;
     }
 
