@@ -28,6 +28,8 @@ import java.util.Set;
  * containsQuorum, which verifies if a HashSet of server 
  * identifiers constitutes a quorum.
  *
+ *
+ *仲裁验证器（投票验证器）
  */
 
 public interface QuorumVerifier {

@@ -70,23 +70,49 @@ public class ZKDatabase {
     /**
      * make sure on a clear you take care of
      * all these members.
+     *
+     * 数据树
      */
     protected DataTree dataTree;
+    /**
+     * session 过期映射表
+     * key: session id
+     * value: 过期时间
+     */
     protected ConcurrentHashMap<Long, Integer> sessionsWithTimeouts;
+    /**
+     * 快照日志
+     */
     protected FileTxnSnapLog snapLog;
     /**
      * 最小提交日志的zxid
      * 最大提交日志的zxid
      */
     protected long minCommittedLog, maxCommittedLog;
+    /**
+     * 提交日志，提案日志
+     */
     protected LinkedList<Proposal> committedLog = new LinkedList<Proposal>();
+    /**
+     * 读写锁
+     */
     protected ReentrantReadWriteLock logLock = new ReentrantReadWriteLock();
+
+    /**
+     * 提案提交事件
+     */
     private final PlayBackListener commitProposalPlaybackListener = new PlayBackListener() {
         public void onTxnLoaded(TxnHeader hdr, Record txn) {
             addCommittedProposal(hdr, txn);
         }
     };
+    /**
+     * 快照大小因子
+     */
     private double snapshotSizeFactor;
+    /**
+     * 是否实例化
+     */
     volatile private boolean initialized = false;
 
     /**
@@ -309,22 +335,29 @@ public class ZKDatabase {
         return enabled;
     }
 
+    /**
+     * 计算事务日志大小限制
+     */
     public long calculateTxnLogSizeLimit() {
         long snapSize = 0;
         try {
+            // 寻找最新的快照文件
             File snapFile = snapLog.findMostRecentSnapshot();
             if (snapFile != null) {
+                // 快照文件的大小
                 snapSize = snapFile.length();
             }
         } catch (IOException e) {
             LOG.error("Unable to get size of most recent snapshot");
         }
+        // 快照文件大小乘快照大小因子
         return (long) (snapSize * snapshotSizeFactor);
     }
 
     /**
      * Get proposals from txnlog. Only packet part of proposal is populated.
      *
+     * 获取提案
      * @param startZxid the starting zxid of the proposal
      * @param sizeLimit maximum on-disk size of txnlog to fetch
      *                  0 is unlimited, negative value means disable.
@@ -332,18 +365,22 @@ public class ZKDatabase {
      */
     public Iterator<Proposal> getProposalsFromTxnLog(long startZxid,
                                                      long sizeLimit) {
+        // 如果sizeLimit值为负数则返回空迭代器
         if (sizeLimit < 0) {
             LOG.debug("Negative size limit - retrieving proposal via txnlog is disabled");
             return TxnLogProposalIterator.EMPTY_ITERATOR;
         }
 
+        // 创建事务迭代器
         TxnIterator itr = null;
         try {
 
+            // 通过snapLog读取startZxid开始的事务迭代器
             itr = snapLog.readTxnLog(startZxid, false);
 
             // If we cannot guarantee that this is strictly the starting txn
             // after a given zxid, we should fail.
+            // 头信息不为空并且头信息中的zxid大于参数startZxid，关闭迭代器，返回空迭代器
             if ((itr.getHeader() != null)
                     && (itr.getHeader().getZxid() > startZxid)) {
                 LOG.warn("Unable to find proposals from txnlog for zxid: "
@@ -352,8 +389,11 @@ public class ZKDatabase {
                 return TxnLogProposalIterator.EMPTY_ITERATOR;
             }
 
+            // 参数sizeLimit大于0
             if (sizeLimit > 0) {
+                // 获取快照文件大小
                 long txnSize = itr.getStorageSize();
+                // 文件大小大于限制大小，关闭迭代器，返回空迭代器
                 if (txnSize > sizeLimit) {
                     LOG.info("Txnlog size: " + txnSize + " exceeds sizeLimit: "
                             + sizeLimit);
@@ -372,6 +412,7 @@ public class ZKDatabase {
             }
             return TxnLogProposalIterator.EMPTY_ITERATOR;
         }
+        // 将事务迭代器分装到TxnLogProposalIterator类中返回
         return new TxnLogProposalIterator(itr);
     }
 
@@ -534,6 +575,7 @@ public class ZKDatabase {
 
     /**
      * Truncate the ZKDatabase to the specified zxid
+     * 截断日志
      * @param zxid the zxid to truncate zk database to
      * @return true if the truncate is successful and false if not
      * @throws IOException
@@ -554,6 +596,8 @@ public class ZKDatabase {
 
     /**
      * deserialize a snapshot from an input archive
+     *
+     * 反序列化快照
      * @param ia the input archive you want to deserialize from
      * @throws IOException
      */
@@ -565,6 +609,7 @@ public class ZKDatabase {
 
     /**
      * serialize the snapshot
+     * 序列化到快照文件
      * @param oa the output archive to which the snapshot needs to be serialized
      * @throws IOException
      * @throws InterruptedException
@@ -606,16 +651,25 @@ public class ZKDatabase {
         this.snapLog.close();
     }
 
+    /**
+     * 初始化配置节点数据
+     *
+     * @param qv
+     */
     public synchronized void initConfigInZKDatabase(QuorumVerifier qv) {
+        //
         if (qv == null)
             return; // only happens during tests
         try {
+            // 如果数据树中 /zookeeper/config 节点不存在
             if (this.dataTree.getNode(ZooDefs.CONFIG_NODE) == null) {
                 // should only happen during upgrade
                 LOG.warn(
                         "configuration znode missing (should only happen during upgrade), creating the node");
+                // 执行 /zookeeper/config 节点添加操作
                 this.dataTree.addConfigNode();
             }
+            // 设置 /zookeeper/config 节点数据
             this.dataTree.setData(ZooDefs.CONFIG_NODE, qv.toString().getBytes(), -1,
                     qv.getVersion(), Time.currentWallTime());
         } catch (NoNodeException e) {

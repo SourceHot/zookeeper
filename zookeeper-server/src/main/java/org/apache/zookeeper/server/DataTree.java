@@ -58,15 +58,26 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class DataTree {
     private static final Logger LOG = LoggerFactory.getLogger(DataTree.class);
-    /** the root of zookeeper tree */
+    /**
+     *  the root of zookeeper tree
+     * 根节点路径
+     * */
     private static final String rootZookeeper = "/";
-    /** the zookeeper nodes that acts as the management and status node **/
+    /**
+     *  the zookeeper nodes that acts as the management and status node
+     * /zookeeper 节点路径
+     * **/
     private static final String procZookeeper = Quotas.procZookeeper;
-    /** this will be the string thats stored as a child of root */
+    /**
+     *  this will be the string thats stored as a child of root
+     * 根节点字符串
+     * */
     private static final String procChildZookeeper = procZookeeper.substring(1);
     /**
      * the zookeeper quota node that acts as the quota management node for
      * zookeeper
+     *
+     * /zookeeper/quota 节点字符串
      */
     private static final String quotaZookeeper = Quotas.quotaZookeeper;
     /** this will be the string thats stored as a child of /zookeeper */
@@ -83,18 +94,32 @@ public class DataTree {
     /**
      * This hashtable provides a fast lookup to the datanodes. The tree is the
      * source of truth and is where all the locking occurs
+     *
+     * 节点容器
      */
     private final ConcurrentHashMap<String, DataNode> nodes =
             new ConcurrentHashMap<String, DataNode>();
+    /**
+     * 数据监控管理器（观察管理器）
+     */
     private final WatchManager dataWatches = new WatchManager();
+    /**
+     * 子节点监控管理器（观察管理器）
+     */
     private final WatchManager childWatches = new WatchManager();
     /**
      * the path trie that keeps track fo the quota nodes in this datatree
+     *
+     * 前缀匹配树
      */
     private final PathTrie pTrie = new PathTrie();
 
     /**
      * This hashtable lists the paths of the ephemeral nodes of a session.
+     *
+     * 会话中临时节点集合
+     * key: session id
+     * value: 临时节点集合
      */
     private final Map<Long, HashSet<String>> ephemerals =
             new ConcurrentHashMap<Long, HashSet<String>>();
@@ -109,18 +134,26 @@ public class DataTree {
 
     /**
      * This set contains the paths of all ttl nodes
+     * 具备过期时间的节点集合
      */
     private final Set<String> ttls =
             Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
 
+    /**
+     * acl 缓存
+     */
     private final ReferenceCountedACLCache aclCache = new ReferenceCountedACLCache();
     /**
      * create a /zookeeper filesystem that is the proc filesystem of zookeeper
+     *
+     * /zookeeper 节点
      */
     private final DataNode procDataNode = new DataNode(new byte[0], -1L, new StatPersisted());
     /**
      * create a /zookeeper/quota node for maintaining quota properties for
      * zookeeper
+     *
+     * /zookeeper/quota 节点
      */
     private final DataNode quotaDataNode = new DataNode(new byte[0], -1L, new StatPersisted());
     /**
@@ -130,21 +163,30 @@ public class DataTree {
     /**
      * This is a pointer to the root of the DataTree. It is the source of truth,
      * but we usually use the nodes hashmap to find nodes in the tree.
+     *
+     * 根节点
      */
     private DataNode root = new DataNode(new byte[0], -1L, new StatPersisted());
 
     public DataTree() {
         /* Rather than fight it, let root have an alias */
+
+        // 设置空字符串对应root节点
         nodes.put("", root);
+        // 设置/对应root节点
         nodes.put(rootZookeeper, root);
 
         /** add the proc node and quota node */
+        // 向root节点添加zookeeper子节点字符串
         root.addChild(procChildZookeeper);
+        // 设置/zookeeper对应procDataNode节点
         nodes.put(procZookeeper, procDataNode);
 
+        // 向procDataNode节点添加quota子节点字符串
         procDataNode.addChild(quotaChildZookeeper);
+        // 设置/zookeeper/quota对应的quotaDataNode节点
         nodes.put(quotaZookeeper, quotaDataNode);
-
+        // 添加配置节点
         addConfigNode();
     }
 
@@ -241,16 +283,20 @@ public class DataTree {
      * zookeeper
      */
     public void addConfigNode() {
+        // 获取/zookeeper节点
         DataNode zookeeperZnode = nodes.get(procZookeeper);
+        // 如果/zookeeper节点不为空则向其添加config子节点字符串
         if (zookeeperZnode != null) { // should always be the case
             zookeeperZnode.addChild(configChildZookeeper);
         } else {
             assert false : "There's no /zookeeper znode - this should never happen.";
         }
 
+        // 向nodes容器添加/zookeeper/config路径对应的节点数据
         nodes.put(configZookeeper, new DataNode(new byte[0], -1L, new StatPersisted()));
         try {
             // Reconfig node is access controlled by default (ZOOKEEPER-2014).
+            // 设置acl
             setACL(configZookeeper, ZooDefs.Ids.READ_ACL_UNSAFE, -1);
         } catch (KeeperException.NoNodeException e) {
             assert false : "There's no " + configZookeeper +
@@ -679,15 +725,22 @@ public class DataTree {
 
     public Stat setACL(String path, List<ACL> acl, int version)
             throws KeeperException.NoNodeException {
+        // 创建统计对象
         Stat stat = new Stat();
+        // 从nodes容器中根据路径获取节点数据
         DataNode n = nodes.get(path);
+        // 如果节点数据为空抛出异常
         if (n == null) {
             throw new KeeperException.NoNodeException();
         }
         synchronized (n) {
+            // 从acl缓存中移除部分数据
             aclCache.removeUsage(n.acl);
+            // 向操作节点设置acl版本号
             n.stat.setAversion(version);
+            // 通过acl缓存转换acl对象将其设置到数据节点的acl变量中
             n.acl = aclCache.convertAcls(acl);
+            // 将数据节点中的统计信息拷贝到新建的统计对象中然后返回
             n.copyStat(stat);
             return stat;
         }

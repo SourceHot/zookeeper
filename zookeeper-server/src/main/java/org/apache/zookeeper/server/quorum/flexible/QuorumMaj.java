@@ -34,10 +34,24 @@ import java.util.Set;
  *
  */
 public class QuorumMaj implements QuorumVerifier {
+
+    /**
+     * 所有成员
+     */
     private Map<Long, QuorumServer> allMembers = new HashMap<Long, QuorumServer>();
+
+    /**
+     * 参与选举的成员
+     */
     private HashMap<Long, QuorumServer> votingMembers = new HashMap<Long, QuorumServer>();
+    /**
+     * 观察者成员
+     */
     private HashMap<Long, QuorumServer> observingMembers = new HashMap<Long, QuorumServer>();
     private long version = 0;
+    /**
+     * 参与选举成员数量的一半
+     */
     private int half;
 
     /**
