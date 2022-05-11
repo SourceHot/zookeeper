@@ -73,6 +73,8 @@ public enum EphemeralType {
     NORMAL,
     /**
      * Container node
+     *
+     * 容器
      */
     CONTAINER,
     /**
