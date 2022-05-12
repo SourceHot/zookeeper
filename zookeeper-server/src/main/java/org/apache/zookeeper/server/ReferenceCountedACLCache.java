@@ -33,10 +33,19 @@ import java.util.concurrent.atomic.AtomicLong;
 public class ReferenceCountedACLCache {
     private static final Logger LOG = LoggerFactory.getLogger(ReferenceCountedACLCache.class);
     private static final long OPEN_UNSAFE_ACL_ID = -1L;
+    /**
+     * long 值和 ACL集合的映射
+     */
     final Map<Long, List<ACL>> longKeyMap =
             new HashMap<Long, List<ACL>>();
+    /**
+     * ACL集合与long值的映射
+     */
     final Map<List<ACL>, Long> aclKeyMap =
             new HashMap<List<ACL>, Long>();
+    /**
+     * 计数器
+     */
     final Map<Long, AtomicLongWithEquals> referenceCounter =
             new HashMap<Long, AtomicLongWithEquals>();
     /**
@@ -51,8 +60,9 @@ public class ReferenceCountedACLCache {
      * @return a long that map to the acls
      */
     public synchronized Long convertAcls(List<ACL> acls) {
-        if (acls == null)
+        if (acls == null) {
             return OPEN_UNSAFE_ACL_ID;
+        }
 
         // get the value from the map
         Long ret = aclKeyMap.get(acls);
@@ -74,10 +84,12 @@ public class ReferenceCountedACLCache {
      * @return a list of ACLs that map to the long
      */
     public synchronized List<ACL> convertLong(Long longVal) {
-        if (longVal == null)
+        if (longVal == null) {
             return null;
-        if (longVal == OPEN_UNSAFE_ACL_ID)
+        }
+        if (longVal == OPEN_UNSAFE_ACL_ID) {
             return ZooDefs.Ids.OPEN_ACL_UNSAFE;
+        }
         List<ACL> acls = longKeyMap.get(longVal);
         if (acls == null) {
             LOG.error("ERROR: ACL not available for long " + longVal);

@@ -692,26 +692,36 @@ public class DataTree {
 
     public Stat setData(String path, byte data[], int version, long zxid,
                         long time) throws KeeperException.NoNodeException {
+        // 创建统计对象
         Stat s = new Stat();
+        // 获取数据节点
         DataNode n = nodes.get(path);
+        // 数据节点为空
         if (n == null) {
             throw new KeeperException.NoNodeException();
         }
         byte lastdata[] = null;
         synchronized (n) {
+            // 从数据节点中获取历史数据
             lastdata = n.data;
+            // 赋值新数据
             n.data = data;
             n.stat.setMtime(time);
             n.stat.setMzxid(zxid);
             n.stat.setVersion(version);
+            // 拷贝统计对象
             n.copyStat(s);
         }
         // now update if the path is in a quota subtree.
+        // 最大配额匹配路径
         String lastPrefix = getMaxPrefixWithQuota(path);
+        // 最大配额匹配路径不为空
         if (lastPrefix != null) {
+            // 更新bytes
             this.updateBytes(lastPrefix, (data == null ? 0 : data.length)
                     - (lastdata == null ? 0 : lastdata.length));
         }
+        // 触发观察者
         dataWatches.triggerWatch(path, EventType.NodeDataChanged);
         return s;
     }
@@ -738,6 +748,14 @@ public class DataTree {
         }
     }
 
+    /**
+     * 获取数据
+     * @param path
+     * @param stat
+     * @param watcher
+     * @return
+     * @throws KeeperException.NoNodeException
+     */
     public byte[] getData(String path, Stat stat, Watcher watcher)
             throws KeeperException.NoNodeException {
         DataNode n = nodes.get(path);
@@ -753,6 +771,13 @@ public class DataTree {
         }
     }
 
+    /**
+     * 统计节点
+     * @param path
+     * @param watcher
+     * @return
+     * @throws KeeperException.NoNodeException
+     */
     public Stat statNode(String path, Watcher watcher)
             throws KeeperException.NoNodeException {
         Stat stat = new Stat();
@@ -769,6 +794,14 @@ public class DataTree {
         }
     }
 
+    /**
+     * 获取子节点
+     * @param path
+     * @param stat
+     * @param watcher
+     * @return
+     * @throws KeeperException.NoNodeException
+     */
     public List<String> getChildren(String path, Stat stat, Watcher watcher)
             throws KeeperException.NoNodeException {
         DataNode n = nodes.get(path);
@@ -837,6 +870,13 @@ public class DataTree {
         return this.processTxn(header, txn, false);
     }
 
+    /**
+     * 处理事务：
+     * @param header
+     * @param txn
+     * @param isSubTxn
+     * @return
+     */
     public ProcessTxnResult processTxn(TxnHeader header, Record txn, boolean isSubTxn) {
         ProcessTxnResult rc = new ProcessTxnResult();
 
@@ -1089,8 +1129,11 @@ public class DataTree {
         // so there is no need for synchronization. The list is not
         // changed here. Only create and delete change the list which
         // are again called from FinalRequestProcessor in sequence.
+        // 从ephemerals容器中获取对应的临时节点路径
         HashSet<String> list = ephemerals.remove(session);
+        // 如果临时节点路径不为空
         if (list != null) {
+            // 循环删除节点
             for (String path : list) {
                 try {
                     deleteNode(path, zxid);
@@ -1177,32 +1220,43 @@ public class DataTree {
 
     /**
      * this method traverses the quota path and update the path trie and sets
+     * <p>
+     * 该方法遍历配额路径并更新路径trie和集合
      *
      * @param path
      */
     private void traverseNode(String path) {
+        // 获取数据节点
         DataNode node = getNode(path);
+        // 获取子节点路径集合
         String children[] = null;
         synchronized (node) {
             Set<String> childs = node.getChildren();
             children = childs.toArray(new String[childs.size()]);
         }
+        // 子节点路径集合长度为0的情况下
         if (children.length == 0) {
             // this node does not have a child
             // is the leaf node
             // check if its the leaf node
+            // 组合结尾路径 /zookeeper_limits
             String endString = "/" + Quotas.limitNode;
+            // 判断路径是否是/zookeeper_limits结尾
             if (path.endsWith(endString)) {
                 // ok this is the limit node
                 // get the real node and update
                 // the count and the bytes
+                // 得到 /zookeeper/quota/和/zookeeper_limits之间的路径
                 String realPath = path.substring(Quotas.quotaZookeeper
                         .length(), path.indexOf(endString));
+                // 更新配额数据
                 updateQuotaForPath(realPath);
+                // 添加路径
                 this.pTrie.addPath(realPath);
             }
             return;
         }
+        // 循环子路径处理
         for (String child : children) {
             traverseNode(path + "/" + child);
         }
@@ -1210,8 +1264,11 @@ public class DataTree {
 
     /**
      * this method sets up the path trie and sets up stats for quota nodes
+     * <p>
+     * 此方法设置路径特里树并设置配额节点的统计信息
      */
     private void setupQuota() {
+        // /zookeeper/quota
         String quotaPath = Quotas.quotaZookeeper;
         DataNode node = getNode(quotaPath);
         if (node == null) {
@@ -1223,34 +1280,45 @@ public class DataTree {
     /**
      * this method uses a stringbuilder to create a new path for children. This
      * is faster than string appends ( str1 + str2).
+     * <p>
+     * 序列化节点
      *
-     * @param oa
-     *            OutputArchive to write to.
-     * @param path
-     *            a string builder.
+     * @param oa   OutputArchive to write to.
+     * @param path a string builder.
      * @throws IOException
      * @throws InterruptedException
      */
     void serializeNode(OutputArchive oa, StringBuilder path) throws IOException {
+        // 获取路径字符串表示
         String pathString = path.toString();
+        // 获取数据节点
         DataNode node = getNode(pathString);
+        // 数据节点为空
         if (node == null) {
             return;
         }
         String children[] = null;
         DataNode nodeCopy;
         synchronized (node) {
+            // 创建统计对象
             StatPersisted statCopy = new StatPersisted();
+            // 将数据节点中的统计信息拷贝到统计对象中
             copyStatPersisted(node.stat, statCopy);
             //we do not need to make a copy of node.data because the contents
             //are never changed
+            // 根据原有数据节点创建一个拷贝的数据节点
             nodeCopy = new DataNode(node.data, node.acl, statCopy);
+            // 获取数据节点的子节点集合
             Set<String> childs = node.getChildren();
             children = childs.toArray(new String[childs.size()]);
         }
+        // 序列化数据 path 和 node
         serializeNodeData(oa, pathString, nodeCopy);
+        // 路径地址后加上斜杠
         path.append('/');
+        // 地址长度
         int off = path.length();
+        // 循环子节点集合序列化子节点数据
         for (String child : children) {
             // since this is single buffer being resused
             // we need
@@ -1277,53 +1345,89 @@ public class DataTree {
         }
     }
 
+    /**
+     * 反序列化节点
+     *
+     * @param ia
+     * @param tag
+     * @throws IOException
+     */
     public void deserialize(InputArchive ia, String tag) throws IOException {
+        // 将ia中的数据反序列化到acl缓存中
         aclCache.deserialize(ia);
+        // 将nodes和pTrie清空
         nodes.clear();
         pTrie.clear();
+        // 从ia中获取path数据
         String path = ia.readString("path");
+        // 循环处理节点，当节点为/时结束处理
         while (!"/".equals(path)) {
+            // 创建数据节点对象
             DataNode node = new DataNode();
+            // 从ia容器中获取node数据
             ia.readRecord(node, "node");
+            // 向nodes容器添加数据
             nodes.put(path, node);
+            // 处理acl缓存
             synchronized (node) {
                 aclCache.addUsage(node.acl);
             }
+            // 获取最后一个斜杠的索引
             int lastSlash = path.lastIndexOf('/');
+            // 如果不存在则将当前节点设置为root节点
             if (lastSlash == -1) {
                 root = node;
-            } else {
+            }
+            else {
+                // 提取父节点路径
                 String parentPath = path.substring(0, lastSlash);
+                // 从nodes容器中获取父节点
                 DataNode parent = nodes.get(parentPath);
+                // 父节点为空
                 if (parent == null) {
                     throw new IOException("Invalid Datatree, unable to find " +
                             "parent " + parentPath + " of path " + path);
                 }
+                // 添加子节点路径
                 parent.addChild(path.substring(lastSlash + 1));
+                // 获取拥有者标识
                 long eowner = node.stat.getEphemeralOwner();
+                // 拥有者类型
                 EphemeralType ephemeralType = EphemeralType.get(eowner);
+                // CONTAINER类型
                 if (ephemeralType == EphemeralType.CONTAINER) {
                     containers.add(path);
-                } else if (ephemeralType == EphemeralType.TTL) {
+                }
+                // TTL类型
+                else if (ephemeralType == EphemeralType.TTL) {
                     ttls.add(path);
-                } else if (eowner != 0) {
+                }
+                // 拥有者非0
+                else if (eowner != 0) {
+                    // 获取ephemerals容器中对应的路径集合
                     HashSet<String> list = ephemerals.get(eowner);
+                    // 路径集合为空创建新的路径容器加入到ephemerals容器中
                     if (list == null) {
                         list = new HashSet<String>();
                         ephemerals.put(eowner, list);
                     }
+                    // 向路径集合中放入到路径中
                     list.add(path);
                 }
             }
+            // 覆盖path
             path = ia.readString("path");
         }
+        // 向nodes容器添加根数据
         nodes.put("/", root);
         // we are done with deserializing the
         // the datatree
         // update the quotas - create path trie
         // and also update the stat nodes
+        // 设置配额节点
         setupQuota();
 
+        // 清除acl中的未使用数据
         aclCache.purgeUnused();
     }
 
@@ -1415,40 +1519,56 @@ public class DataTree {
         childWatches.removeWatcher(watcher);
     }
 
+    /**
+     *
+     * @param relativeZxid 客户端可见的zxid
+     * @param dataWatches 数据观察节点路径集合
+     * @param existWatches 存在观察节点路径集合
+     * @param childWatches 子节点观察集合
+     * @param watcher
+     */
     public void setWatches(long relativeZxid, List<String> dataWatches,
                            List<String> existWatches, List<String> childWatches,
                            Watcher watcher) {
+        // 循环数据观察路径
         for (String path : dataWatches) {
             DataNode node = getNode(path);
             WatchedEvent e = null;
             if (node == null) {
                 watcher.process(new WatchedEvent(EventType.NodeDeleted,
                         KeeperState.SyncConnected, path));
-            } else if (node.stat.getMzxid() > relativeZxid) {
+            }
+            else if (node.stat.getMzxid() > relativeZxid) {
                 watcher.process(new WatchedEvent(EventType.NodeDataChanged,
                         KeeperState.SyncConnected, path));
-            } else {
+            }
+            else {
                 this.dataWatches.addWatch(path, watcher);
             }
         }
+        // 循环观察节点是否存在路径
         for (String path : existWatches) {
             DataNode node = getNode(path);
             if (node != null) {
                 watcher.process(new WatchedEvent(EventType.NodeCreated,
                         KeeperState.SyncConnected, path));
-            } else {
+            }
+            else {
                 this.dataWatches.addWatch(path, watcher);
             }
         }
+        // 循环观察子节点路径
         for (String path : childWatches) {
             DataNode node = getNode(path);
             if (node == null) {
                 watcher.process(new WatchedEvent(EventType.NodeDeleted,
                         KeeperState.SyncConnected, path));
-            } else if (node.stat.getPzxid() > relativeZxid) {
+            }
+            else if (node.stat.getPzxid() > relativeZxid) {
                 watcher.process(new WatchedEvent(EventType.NodeChildrenChanged,
                         KeeperState.SyncConnected, path));
-            } else {
+            }
+            else {
                 this.childWatches.addWatch(path, watcher);
             }
         }
