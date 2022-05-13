@@ -22,6 +22,8 @@ import java.util.*;
 /**
  * A watch report, essentially a mapping of path to session IDs of sessions that
  * have set a watch on that path. This class is immutable.
+ *
+ * 观察者路径报告
  */
 public class WatchesPathReport {
 

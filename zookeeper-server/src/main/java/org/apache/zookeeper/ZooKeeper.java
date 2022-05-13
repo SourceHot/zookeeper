@@ -2637,6 +2637,9 @@ public class ZooKeeper implements AutoCloseable {
      * 观察者管理器
      */
     static class ZKWatchManager implements ClientWatchManager {
+        /**
+         * 数据从 org.apache.zookeeper.ZooKeeper.WatchRegistration#register(int) 方法中来
+         */
         private final Map<String, Set<Watcher>> dataWatches =
                 new HashMap<String, Set<Watcher>>();
         private final Map<String, Set<Watcher>> existWatches =
@@ -2646,7 +2649,7 @@ public class ZooKeeper implements AutoCloseable {
 
         protected volatile Watcher defaultWatcher;
         /**
-         *
+         * 环境变量zookeeper.disableAutoWatchReset
          */
         private final boolean disableAutoWatchReset;
 
@@ -2668,14 +2671,22 @@ public class ZooKeeper implements AutoCloseable {
                 throws KeeperException {
             // Validate the provided znode path contains the given watcher of
             // watcherType
+
+            // 判断操作路径是否存在指定的watcher
             containsWatcher(clientPath, watcher, watcherType);
 
+            // 移除结果
             Map<EventType, Set<Watcher>> removedWatchers = new HashMap<EventType, Set<Watcher>>();
+            // 子节点观察者
             HashSet<Watcher> childWatchersToRem = new HashSet<Watcher>();
+            // 向移除结果中添加子节点观察者
             removedWatchers
                     .put(EventType.ChildWatchRemoved, childWatchersToRem);
+            // 数据观察者
             HashSet<Watcher> dataWatchersToRem = new HashSet<Watcher>();
+            // 向移除结果中添加数据观察者
             removedWatchers.put(EventType.DataWatchRemoved, dataWatchersToRem);
+            // 是否移除成功标记
             boolean removedWatcher = false;
             switch (watcherType) {
                 case Children: {
@@ -2717,6 +2728,7 @@ public class ZooKeeper implements AutoCloseable {
                 }
             }
             // Watcher function doesn't exists for the specified params
+            // 移除标记为假抛出异常
             if (!removedWatcher) {
                 throw new KeeperException.NoWatcherException(clientPath);
             }
@@ -2746,13 +2758,18 @@ public class ZooKeeper implements AutoCloseable {
          * watcherType
          *
          * @param path        - client path
+         *                    搜索的节点路径
          * @param watcher     - watcher object reference
+         *                    watcher
          * @param watcherType - type of the watcher
+         *                    waatcher 类型
          * @throws NoWatcherException
          */
         void containsWatcher(String path, Watcher watcher,
                              WatcherType watcherType) throws NoWatcherException {
+            // 是否存在标识
             boolean containsWatcher = false;
+            // 根据不同类型进行不同判断逻辑
             switch (watcherType) {
                 case Children: {
                     synchronized (childWatches) {
@@ -2797,33 +2814,49 @@ public class ZooKeeper implements AutoCloseable {
         protected boolean removeWatches(Map<String, Set<Watcher>> pathVsWatcher,
                                         Watcher watcher, String path, boolean local, int rc,
                                         Set<Watcher> removedWatchers) throws KeeperException {
+            // 非本地，rc码非OK抛出异常
             if (!local && rc != Code.OK.intValue()) {
                 throw KeeperException
                         .create(KeeperException.Code.get(rc), path);
             }
+            // 是否移除成功标记
             boolean success = false;
             // When local flag is true, remove watchers for the given path
             // irrespective of rc. Otherwise shouldn't remove watchers locally
             // when sees failure from server.
+            // 1. rc码为OK
+            // 2。 是本地的并且rc码非OK
             if (rc == Code.OK.intValue() || (local && rc != Code.OK.intValue())) {
                 // Remove all the watchers for the given path
+                // 观察者为空
                 if (watcher == null) {
+                    // 删除路径对应的观察者集合
                     Set<Watcher> pathWatchers = pathVsWatcher.remove(path);
+                    // 观察者集合不为空
                     if (pathWatchers != null) {
                         // found path watchers
+                        // 移除容器中添加移除数据
                         removedWatchers.addAll(pathWatchers);
+                        // 移除成功标记设置为true
                         success = true;
                     }
-                } else {
+                }
+                else {
+                    // 获取删除路径对应的观察者集合
                     Set<Watcher> watchers = pathVsWatcher.get(path);
+                    // 观察者集合不为空
                     if (watchers != null) {
+                        // 如果在观察集合中移除指定的观察者成功
                         if (watchers.remove(watcher)) {
                             // found path watcher
+                            // 移除容器中添加移除数据
                             removedWatchers.add(watcher);
                             // cleanup <path vs watchlist>
+                            // 如果观察者容器小于等于0则需要在参数pathVsWatcher中移除
                             if (watchers.size() <= 0) {
                                 pathVsWatcher.remove(path);
                             }
+                            // 移除成功标记设置为true
                             success = true;
                         }
                     }
@@ -2840,61 +2873,82 @@ public class ZooKeeper implements AutoCloseable {
         public Set<Watcher> materialize(Watcher.Event.KeeperState state,
                                         Watcher.Event.EventType type,
                                         String clientPath) {
+            // 观察者结果容器
             Set<Watcher> result = new HashSet<Watcher>();
 
+            // 不同事件处理
             switch (type) {
                 case None:
+                    // 添加默认观察者
                     result.add(defaultWatcher);
+                    // 是否需要清理
                     boolean clear = disableAutoWatchReset
                             && state != Watcher.Event.KeeperState.SyncConnected;
                     synchronized (dataWatches) {
+                        // 将dataWatches中的观察者放入到结果集合中
                         for (Set<Watcher> ws : dataWatches.values()) {
                             result.addAll(ws);
                         }
+                        // 如果需要清理则将dataWatches数据清理
                         if (clear) {
                             dataWatches.clear();
                         }
                     }
 
                     synchronized (existWatches) {
+                        // 将existWatches中的观察者放入到结果集合中
                         for (Set<Watcher> ws : existWatches.values()) {
                             result.addAll(ws);
                         }
+                        // 如果需要清理则将existWatches数据清理
                         if (clear) {
                             existWatches.clear();
                         }
                     }
 
                     synchronized (childWatches) {
+                        // 将childWatches中的观察者放入到结果集合中
                         for (Set<Watcher> ws : childWatches.values()) {
                             result.addAll(ws);
                         }
+                        // 如果需要清理则将childWatches数据清理
                         if (clear) {
                             childWatches.clear();
                         }
                     }
 
                     return result;
+                // 数据变化
                 case NodeDataChanged:
+                    // 节点创建
                 case NodeCreated:
+
                     synchronized (dataWatches) {
+                        // 在dataWatches中移除操作路径对应的观察者并将其加入到结果集合中
                         addTo(dataWatches.remove(clientPath), result);
                     }
                     synchronized (existWatches) {
+                        // 在existWatches中移除操作路径对应的观察者并将其加入到结果集合中
                         addTo(existWatches.remove(clientPath), result);
                     }
                     break;
+                // 子节点变化
                 case NodeChildrenChanged:
                     synchronized (childWatches) {
+                        // 在childWatches中移除操作路径对应的观察者并将其加入到结果集合中
                         addTo(childWatches.remove(clientPath), result);
                     }
                     break;
+                    // 节点删除
                 case NodeDeleted:
+
                     synchronized (dataWatches) {
+                        // 在dataWatches中移除操作路径对应的观察者并将其加入到结果集合中
                         addTo(dataWatches.remove(clientPath), result);
                     }
                     // XXX This shouldn't be needed, but just in case
                     synchronized (existWatches) {
+                        // 在existWatches中移除操作路径对应的观察者并将其加入到结果集合中
                         Set<Watcher> list = existWatches.remove(clientPath);
                         if (list != null) {
                             addTo(list, result);
@@ -2903,9 +2957,11 @@ public class ZooKeeper implements AutoCloseable {
                         }
                     }
                     synchronized (childWatches) {
+                        // 在childWatches中移除操作路径对应的观察者并将其加入到结果集合中
                         addTo(childWatches.remove(clientPath), result);
                     }
                     break;
+                    // 其他操作抛出异常
                 default:
                     String msg = "Unhandled watch event type " + type
                             + " with state " + state + " on path " + clientPath;
@@ -2940,14 +2996,19 @@ public class ZooKeeper implements AutoCloseable {
          *           add the watch on the path.
          */
         public void register(int rc) {
+            // 如果rc为0则进行操作
             if (shouldAddWatch(rc)) {
+                // 根据rc获取观察者容器
                 Map<String, Set<Watcher>> watches = getWatches(rc);
                 synchronized (watches) {
+                    // 从观察者容器列表中根据操作路径获取观察者集合
                     Set<Watcher> watchers = watches.get(clientPath);
+                    // 如果观察者集合为空
                     if (watchers == null) {
                         watchers = new HashSet<Watcher>();
                         watches.put(clientPath, watchers);
                     }
+                    // 添加观察者集合
                     watchers.add(watcher);
                 }
             }

@@ -270,16 +270,22 @@ public class ClientCnxn {
     // @VisibleForTesting
     protected void finishPacket(Packet p) {
 
+        // 获取err码
         int err = p.replyHeader.getErr();
+        // 确认watcher注册参数是否存在
         if (p.watchRegistration != null) {
+            // 注册watcher
             p.watchRegistration.register(err);
         }
         // Add all the removed watch events to the event queue, so that the
         // clients will be notified with 'Data/Child WatchRemoved' event type.
+        // 确认watcher取消注册参数是否存在
         if (p.watchDeregistration != null) {
             Map<EventType, Set<Watcher>> materializedWatchers = null;
             try {
+                // 取消注册
                 materializedWatchers = p.watchDeregistration.unregister(err);
+                // 循环取消注册的对应数据
                 for (Entry<EventType, Set<Watcher>> entry : materializedWatchers
                         .entrySet()) {
                     Set<Watcher> watchers = entry.getValue();
@@ -298,13 +304,18 @@ public class ClientCnxn {
             }
         }
 
+        // 回调为空
         if (p.cb == null) {
             synchronized (p) {
+                // 处理完成标记设置
                 p.finished = true;
+                // 通知
                 p.notifyAll();
             }
         } else {
+            // 处理完成标记设置
             p.finished = true;
+            // 发送数据包
             eventThread.queuePacket(p);
         }
     }
@@ -428,7 +439,7 @@ public class ClientCnxn {
             // 请求超时时间大于0
             if (requestTimeout > 0) {
                 // Wait for request completion with timeout
-                // 发起请求并且等requestTimeout时间
+                // 等requestTimeout时间
                 waitForPacketFinish(r, packet);
             } else {
                 // Wait for request completion infinitely
