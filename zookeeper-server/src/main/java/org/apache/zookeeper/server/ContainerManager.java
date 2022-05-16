@@ -109,23 +109,30 @@ public class ContainerManager {
      */
     public void checkContainers()
             throws InterruptedException {
+        // 间隔时间
         long minIntervalMs = getMinIntervalMs();
+        // 循环容器路径
         for (String containerPath : getCandidates()) {
+            // 获取当前时间
             long startMs = Time.currentElapsedTime();
 
+            // 将容器路径字符串转换为请求
             ByteBuffer path = ByteBuffer.wrap(containerPath.getBytes());
             Request request = new Request(null, 0, 0,
                     ZooDefs.OpCode.deleteContainer, path, null);
             try {
                 LOG.info("Attempting to delete candidate container: {}",
                         containerPath);
+                // 处理请求
                 requestProcessor.processRequest(request);
             } catch (Exception e) {
                 LOG.error("Could not delete container: {}",
                         containerPath, e);
             }
 
+            // 计算时间差，当前时间-开始时间
             long elapsedMs = Time.currentElapsedTime() - startMs;
+            // 间隔时间-时间差，如果还有剩余需要进行线程等待
             long waitMs = minIntervalMs - elapsedMs;
             if (waitMs > 0) {
                 Thread.sleep(waitMs);
@@ -141,7 +148,9 @@ public class ContainerManager {
     // VisibleForTesting
     protected Collection<String> getCandidates() {
         Set<String> candidates = new HashSet<String>();
+        // 从zk数据库中获取容器路径集合
         for (String containerPath : zkDb.getDataTree().getContainers()) {
+            // 获取容器路径对应的数据节点
             DataNode node = zkDb.getDataTree().getNode(containerPath);
             /*
                 cversion > 0: keep newly created containers from being deleted
@@ -149,19 +158,32 @@ public class ContainerManager {
                 container just before a container cleaning period the container
                 would be immediately be deleted.
              */
+            // 数据节点不为空
+            // 数据节点中的 cversion 大于0
+            // 子节点数量为0
             if ((node != null) && (node.stat.getCversion() > 0) &&
                     (node.getChildren().size() == 0)) {
                 candidates.add(containerPath);
             }
         }
+
+        // 从zk数据库中获取过期路径集合
         for (String ttlPath : zkDb.getDataTree().getTtls()) {
+            // 获取过期路径对应的数据节点
             DataNode node = zkDb.getDataTree().getNode(ttlPath);
+            // 数据节点不为空
             if (node != null) {
+                // 获取子节点路径集合
                 Set<String> children = node.getChildren();
+                // 子节点路径集合为空
+                // 子节点路径数量为0
                 if ((children == null) || (children.size() == 0)) {
+                    // EphemeralType类型是TTL
                     if (EphemeralType.get(node.stat.getEphemeralOwner()) == EphemeralType.TTL) {
-                        long elapsed = getElapsed(node);
+                        // 获取过期时间
                         long ttl = EphemeralType.TTL.getValue(node.stat.getEphemeralOwner());
+                        // 过期时间不为0
+                        // 节点过期时间大于ttl时间
                         if ((ttl != 0) && (getElapsed(node) > ttl)) {
                             candidates.add(ttlPath);
                         }
