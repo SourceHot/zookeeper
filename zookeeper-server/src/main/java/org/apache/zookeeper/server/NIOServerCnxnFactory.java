@@ -668,14 +668,22 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
          * @return whether was able to accept a connection or not
          */
         private boolean doAccept() {
+            // 是否处理
             boolean accepted = false;
+            // socket通道
             SocketChannel sc = null;
             try {
+                // 开启一个socket通道
                 sc = acceptSocket.accept();
+                // 是否处理标记已处理
                 accepted = true;
+                // 获取网络地址
                 InetAddress ia = sc.socket().getInetAddress();
+                // 获取客户端连接数量
                 int cnxncount = getClientCnxnCount(ia);
 
+                // 客户端最大连接数大于0
+                // 客户端连接数量大于客户端最大连接数
                 if (maxClientCnxns > 0 && cnxncount >= maxClientCnxns) {
                     throw new IOException("Too many connections from " + ia
                             + " - max is " + maxClientCnxns);
@@ -686,10 +694,12 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
                 sc.configureBlocking(false);
 
                 // Round-robin assign this connection to a selector thread
+                // 获取一个选择器线程进行处理
                 if (!selectorIterator.hasNext()) {
                     selectorIterator = selectorThreads.iterator();
                 }
                 SelectorThread selectorThread = selectorIterator.next();
+                // 处理socket通道，如果处理失败抛出异常
                 if (!selectorThread.addAcceptedConnection(sc)) {
                     throw new IOException(
                             "Unable to add connection to selector queue"
@@ -778,7 +788,9 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
                 while (!stopped) {
                     try {
                         select();
+                        // 处理 acceptedQueue
                         processAcceptedConnections();
+                        // 处理 updateQueue
                         processInterestOpsUpdateRequests();
                     } catch (RuntimeException e) {
                         LOG.warn("Ignoring unexpected runtime exception", e);

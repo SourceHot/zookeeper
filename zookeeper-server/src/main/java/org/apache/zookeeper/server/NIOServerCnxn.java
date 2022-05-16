@@ -355,6 +355,7 @@ public class NIOServerCnxn extends ServerCnxn {
 
                 return;
             }
+            // 可读
             if (k.isReadable()) {
                 int rc = sock.read(incomingBuffer);
                 if (rc < 0) {
@@ -382,6 +383,7 @@ public class NIOServerCnxn extends ServerCnxn {
                     }
                 }
             }
+            // 可写
             if (k.isWritable()) {
                 handleWrite(k);
 

@@ -164,18 +164,28 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
 
     private synchronized void initSSL(ChannelPipeline p, boolean supportPlaintext)
             throws X509Exception, KeyManagementException, NoSuchAlgorithmException {
+        // 获取 zookeeper.ssl.authProvider 属性
         String authProviderProp = System.getProperty(x509Util.getSslAuthProviderProperty());
+        // SSL上下文
         SslContext nettySslContext;
+        // zookeeper.ssl.authProvider属性为空
         if (authProviderProp == null) {
+            // 获取默认的SSL上下文以及操作项
             SSLContextAndOptions sslContextAndOptions = x509Util.getDefaultSSLContextAndOptions();
+            // 创建SSL上下文
             nettySslContext = sslContextAndOptions.createNettyJdkSslContext(
                     sslContextAndOptions.getSSLContext(), false);
-        } else {
+        }
+        // zookeeper.ssl.authProvider属性不为空
+        else {
+            // 获取TLSv1.2对应的SSL上下文
             SSLContext sslContext = SSLContext.getInstance(ClientX509Util.DEFAULT_PROTOCOL);
+            // 获取身份认证器
             X509AuthenticationProvider authProvider =
                     (X509AuthenticationProvider) ProviderRegistry.getProvider(
                             System.getProperty(x509Util.getSslAuthProviderProperty(), "x509"));
 
+            // 身份认证器为空抛出异常
             if (authProvider == null) {
                 LOG.error("Auth provider not found: {}", authProviderProp);
                 throw new SSLContextException(
@@ -183,17 +193,21 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
                                 authProviderProp);
             }
 
-            sslContext.init(new X509KeyManager[] {authProvider.getKeyManager()},
-                    new X509TrustManager[] {authProvider.getTrustManager()},
+            // SSL上下文初始化
+            sslContext.init(new X509KeyManager[]{authProvider.getKeyManager()},
+                    new X509TrustManager[]{authProvider.getTrustManager()},
                     null);
+            // 赋值SSL上下文
             nettySslContext = x509Util.getDefaultSSLContextAndOptions()
                     .createNettyJdkSslContext(sslContext, false);
         }
 
+        // 支持明文
         if (supportPlaintext) {
             p.addLast("ssl", new DualModeSslHandler(nettySslContext));
             LOG.debug("dual mode SSL handler added for channel: {}", p.channel());
-        } else {
+        }
+        else {
             p.addLast("ssl", nettySslContext.newHandler(p.channel().alloc()));
             LOG.debug("SSL handler added for channel: {}", p.channel());
         }

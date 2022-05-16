@@ -59,11 +59,20 @@ public class Login {
     // thread will not sleep between refresh attempts any less than 1 minute (60*1000 milliseconds = 1 minute).
     // Change the '1' to e.g. 5, to change this to 5 minutes.
     private static final long MIN_TIME_BEFORE_RELOGIN = 1 * 60 * 1000L;
-    /** Random number generator */
+    /**
+     * Random number generator
+     */
     private static Random rng = new Random();
+    /**
+     * zk 配置
+     */
     private final ZKConfig zkConfig;
+    /**
+     * 安全回调接口
+     */
     public CallbackHandler callbackHandler;
     private Subject subject = null;
+
     private Thread t = null;
     private boolean isKrbTicket = false;
     private boolean isUsingTicketCache = false;
@@ -127,19 +136,29 @@ public class Login {
         t = new Thread(new Runnable() {
             public void run() {
                 LOG.info("TGT refresh thread started.");
-                while (true) {  // renewal thread's main loop. if it exits from here, thread will exit.
+                while (true) {
+                    // renewal thread's main loop. if it exits from here, thread will exit.
+                    // 获取 KerberosTicket
                     KerberosTicket tgt = getTGT();
+                    // 获取当前时间
                     long now = Time.currentWallTime();
+                    // 下次刷新时间
                     long nextRefresh;
                     Date nextRefreshDate;
+                    // 如果变量tgt为空，重新计算时间
                     if (tgt == null) {
                         nextRefresh = now + MIN_TIME_BEFORE_RELOGIN;
                         nextRefreshDate = new Date(nextRefresh);
                         LOG.warn("No TGT found: will try again at {}", nextRefreshDate);
-                    } else {
+                    }
+                    else {
+                        // 根据tgt计算下一次刷新时间
                         nextRefresh = getRefreshTime(tgt);
+                        // 结算过期时间
                         long expiry = tgt.getEndTime().getTime();
                         Date expiryDate = new Date(expiry);
+                        // 使用Ticket缓存，
+                        // tgt中的endTime和renewTill相同
                         if ((isUsingTicketCache) && (tgt.getEndTime().equals(tgt.getRenewTill()))) {
                             Object[] logPayload = {expiryDate, principal, principal};
                             LOG.error("The TGT cannot be renewed beyond the next expiry date: {}." +
@@ -161,11 +180,16 @@ public class Login {
                         // We should not allow the ticket to expire, but we should take into consideration
                         // MIN_TIME_BEFORE_RELOGIN. Will not sleep less than MIN_TIME_BEFORE_RELOGIN, unless doing so
                         // would cause ticket expiration.
+
+                        // 下一次刷新时间大于过期时间
+                        // 当前时间+最小重新登陆时间大于过期时间
                         if ((nextRefresh > expiry) ||
                                 ((now + MIN_TIME_BEFORE_RELOGIN) > expiry)) {
                             // expiry is before next scheduled refresh).
                             nextRefresh = now;
-                        } else {
+                        }
+                        else {
+                            // 下一次刷新时间小于当前时间+最小重新登陆时间
                             if (nextRefresh < (now + MIN_TIME_BEFORE_RELOGIN)) {
                                 // next scheduled refresh is sooner than (now + MIN_TIME_BEFORE_LOGIN).
                                 Date until = new Date(nextRefresh);
@@ -176,9 +200,12 @@ public class Login {
                                         + "the former is sooner than the minimum refresh interval ("
                                         + "{} seconds) from now.", logPayload);
                             }
+                            // 计算下一次刷新时间
                             nextRefresh = Math.max(nextRefresh, now + MIN_TIME_BEFORE_RELOGIN);
                         }
+                        // 创建下一次刷新时间（数据类型是Date）
                         nextRefreshDate = new Date(nextRefresh);
+                        // 如果下一次刷新时间大于过期时间
                         if (nextRefresh > expiry) {
                             Object[] logPayload = {nextRefreshDate, expiryDate};
                             LOG.error("next refresh: {} is later than expiry {}."
@@ -188,30 +215,39 @@ public class Login {
                             return;
                         }
                     }
+                    // 当前时间等于下一次刷新时间
                     if (now == nextRefresh) {
                         LOG.info(
                                 "refreshing now because expiry is before next scheduled refresh time.");
-                    } else if (now < nextRefresh) {
+                    }
+                    // 当前时间小于下一次刷新时间
+                    else if (now < nextRefresh) {
                         Date until = new Date(nextRefresh);
                         LOG.info("TGT refresh sleeping until: {}", until.toString());
                         try {
+                            // 等待一定时间
                             Thread.sleep(nextRefresh - now);
                         } catch (InterruptedException ie) {
                             LOG.warn("TGT renewal thread has been interrupted and will exit.");
                             break;
                         }
-                    } else {
+                    }
+                    // 大于跳过
+                    else {
                         LOG.error("nextRefresh:{} is in the past: exiting refresh thread. Check"
                                 + " clock sync between this host and KDC - (KDC's clock is likely ahead of this host)."
                                 + " Manual intervention will be required for this client to successfully authenticate."
                                 + " Exiting refresh thread.", nextRefreshDate);
                         break;
                     }
+                    // 使用Ticket缓存
                     if (isUsingTicketCache) {
+                        // 获取 zookeeper.kinit 属性，默认值：/usr/bin/kinit
                         String cmd =
                                 zkConfig.getProperty(ZKConfig.KINIT_COMMAND, KINIT_COMMAND_DEFAULT);
                         String kinitArgs = "-R";
                         int retry = 1;
+                        // 在重试范围内进行shell命令执行
                         while (retry >= 0) {
                             try {
                                 LOG.debug("running ticket cache refresh command: {} {}", cmd,
@@ -242,6 +278,7 @@ public class Login {
                     }
                     try {
                         int retry = 1;
+                        // 在重试次数范围内进行重新登陆操作
                         while (retry >= 0) {
                             try {
                                 reLogin();

@@ -32,6 +32,8 @@ import java.util.Arrays;
 
 /**
  * Implementation of connection MBean interface.
+ *
+ * 客户端连接
  */
 public class ConnectionBean implements ConnectionMXBean, ZKMBeanInfo {
     private static final Logger LOG = LoggerFactory.getLogger(ConnectionBean.class);

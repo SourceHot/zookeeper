@@ -39,30 +39,41 @@ public class SaslServerCallbackHandler implements CallbackHandler {
     private static final String SYSPROP_REMOVE_HOST = "zookeeper.kerberos.removeHostFromPrincipal";
     private static final String SYSPROP_REMOVE_REALM =
             "zookeeper.kerberos.removeRealmFromPrincipal";
+    /**
+     * 证书容器
+     * key:用户名
+     * value:证书
+     */
     private final Map<String, String> credentials = new HashMap<String, String>();
     private String userName;
 
     public SaslServerCallbackHandler(Configuration configuration)
             throws IOException {
+        // 读取系统变量zookeeper.sasl.serverconfig，默认值Server
         String serverSection = System.getProperty(
                 ZooKeeperSaslServer.LOGIN_CONTEXT_NAME_KEY,
                 ZooKeeperSaslServer.DEFAULT_LOGIN_CONTEXT_NAME);
-        AppConfigurationEntry configurationEntries[] =
+        // 获取serverSection对应的AppConfigurationEntry集合
+        AppConfigurationEntry[] configurationEntries =
                 configuration.getAppConfigurationEntry(serverSection);
 
+        // 如果AppConfigurationEntry集合为空抛出异常
         if (configurationEntries == null) {
             String errorMessage = "Could not find a '" + serverSection
                     + "' entry in this configuration: Server cannot start.";
             LOG.error(errorMessage);
             throw new IOException(errorMessage);
         }
+        // 证书容器进行清理操作
         credentials.clear();
+        // 循环AppConfigurationEntry集合
         for (AppConfigurationEntry entry : configurationEntries) {
             Map<String, ?> options = entry.getOptions();
             // Populate DIGEST-MD5 user -> password map with JAAS configuration entries from the "Server" section.
             // Usernames are distinguished from other options by prefixing the username with a "user_" prefix.
             for (Map.Entry<String, ?> pair : options.entrySet()) {
                 String key = pair.getKey();
+                // 数据信息是以user_开头将信息放入到证书容器中
                 if (key.startsWith(USER_PREFIX)) {
                     String userName = key.substring(USER_PREFIX.length());
                     credentials.put(userName, (String) pair.getValue());
@@ -113,36 +124,46 @@ public class SaslServerCallbackHandler implements CallbackHandler {
     }
 
     private void handleAuthorizeCallback(AuthorizeCallback ac) {
+        // 获取身份验证id
         String authenticationID = ac.getAuthenticationID();
+        // 获取授权id
         String authorizationID = ac.getAuthorizationID();
 
         LOG.info("Successfully authenticated client: authenticationID=" + authenticationID
                 + ";  authorizationID=" + authorizationID + ".");
+        // 是否允许授权，设置为允许
         ac.setAuthorized(true);
 
         // canonicalize authorization id according to system properties:
         // zookeeper.kerberos.removeRealmFromPrincipal(={true,false})
         // zookeeper.kerberos.removeHostFromPrincipal(={true,false})
+        // 创建KerberosName对象
         KerberosName kerberosName = new KerberosName(authenticationID);
         try {
+            // 用户名构造，初始化值：短名字
             StringBuilder userNameBuilder = new StringBuilder(kerberosName.getShortName());
+            // 是否需要追加host，如果需要则追加
             if (shouldAppendHost(kerberosName)) {
                 userNameBuilder.append("/").append(kerberosName.getHostName());
             }
+            // 是否需要追加域（realm）
             if (shouldAppendRealm(kerberosName)) {
                 userNameBuilder.append("@").append(kerberosName.getRealm());
             }
             LOG.info("Setting authorizedID: " + userNameBuilder);
+            // 设置授权id
             ac.setAuthorizedID(userNameBuilder.toString());
         } catch (IOException e) {
             LOG.error("Failed to set name based on Kerberos authentication rules.", e);
         }
     }
 
+    // 是否需要追加域
     private boolean shouldAppendRealm(KerberosName kerberosName) {
         return !isSystemPropertyTrue(SYSPROP_REMOVE_REALM) && kerberosName.getRealm() != null;
     }
 
+    // 是否需要追加host
     private boolean shouldAppendHost(KerberosName kerberosName) {
         return !isSystemPropertyTrue(SYSPROP_REMOVE_HOST) && kerberosName.getHostName() != null;
     }

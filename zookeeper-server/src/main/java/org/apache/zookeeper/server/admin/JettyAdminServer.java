@@ -183,7 +183,9 @@ public class JettyAdminServer implements AdminServer {
         protected void doGet(HttpServletRequest request, HttpServletResponse response)
                 throws ServletException, IOException {
             // Capture the command name from the URL
+            // 获取命令
             String cmd = request.getPathInfo();
+            // 命令为空或者命令是/
             if (cmd == null || cmd.equals("/")) {
                 // No command specified, print links to all commands instead
                 for (String link : commandLinks()) {
@@ -193,9 +195,11 @@ public class JettyAdminServer implements AdminServer {
                 return;
             }
             // Strip leading "/"
+            // 将命令中的第一个符号斜杠去掉，保留真实的命令
             cmd = cmd.substring(1);
 
             // Extract keyword arguments to command from request parameters
+            // 从请求中获取参数
             @SuppressWarnings("unchecked")
             Map<String, String[]> parameterMap = request.getParameterMap();
             Map<String, String> kwargs = new HashMap<String, String>();
@@ -204,9 +208,11 @@ public class JettyAdminServer implements AdminServer {
             }
 
             // Run the command
+            // 执行命令得到命令执行结果
             CommandResponse cmdResponse = Commands.runCommand(cmd, zkServer, kwargs);
 
             // Format and print the output of the command
+            // 写出命令执行结果
             CommandOutputter outputter = new JsonOutputter();
             response.setStatus(HttpServletResponse.SC_OK);
             response.setContentType(outputter.getContentType());
