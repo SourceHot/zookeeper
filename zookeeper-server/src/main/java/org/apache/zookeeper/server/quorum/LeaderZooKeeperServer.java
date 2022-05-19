@@ -27,15 +27,23 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 /**
- *
  * Just like the standard ZooKeeperServer. We just replace the request
  * processors: PrepRequestProcessor -> ProposalRequestProcessor ->
  * CommitProcessor -> Leader.ToBeAppliedRequestProcessor ->
  * FinalRequestProcessor
  */
 public class LeaderZooKeeperServer extends QuorumZooKeeperServer {
+    /**
+     * 提交请求处理器
+     */
     CommitProcessor commitProcessor;
+    /**
+     * 前置处理器
+     */
     PrepRequestProcessor prepRequestProcessor;
+    /**
+     * 容器管理器
+     */
     private ContainerManager containerManager;  // guarded by sync
 
     /**

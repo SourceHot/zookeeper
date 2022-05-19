@@ -116,6 +116,8 @@ public class NIOServerCnxn extends ServerCnxn {
 
     /**
      * Close resources associated with a sock.
+     *
+     * 关闭SocketChannel对象
      */
     public static void closeSock(SocketChannel sock) {
         if (sock.isOpen() == false) {
@@ -250,6 +252,7 @@ public class NIOServerCnxn extends ServerCnxn {
     }
 
     void handleWrite(SelectionKey k) throws IOException, CloseRequestException {
+        // 如果写出队列为空不做操作
         if (outgoingBuffers.isEmpty()) {
             return;
         }
@@ -279,7 +282,8 @@ public class NIOServerCnxn extends ServerCnxn {
                 packetSent();
                 outgoingBuffers.remove();
             }
-        } else {
+        }
+        else {
             directBuffer.clear();
 
             for (ByteBuffer b : outgoingBuffers) {

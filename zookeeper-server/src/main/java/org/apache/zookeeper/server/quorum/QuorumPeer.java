@@ -79,6 +79,8 @@ import static org.apache.zookeeper.common.NetUtils.formatInetAddr;
  * </pre>
  *
  * The request for the current leader will consist solely of an xid: int xid;
+ *
+ * 选举线程
  */
 public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider {
     public static final String FLE_TIME_UNIT = "MS";

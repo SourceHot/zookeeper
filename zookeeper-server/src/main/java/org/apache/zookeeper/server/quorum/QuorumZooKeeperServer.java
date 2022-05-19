@@ -39,7 +39,13 @@ import java.nio.ByteBuffer;
  */
 public abstract class QuorumZooKeeperServer extends ZooKeeperServer {
 
+    /**
+     * 选举线程
+     */
     public final QuorumPeer self;
+    /**
+     * 更新session工具
+     */
     protected UpgradeableSessionTracker upgradeableSessionTracker;
 
     protected QuorumZooKeeperServer(FileTxnSnapLog logFactory, int tickTime,
@@ -56,6 +62,9 @@ public abstract class QuorumZooKeeperServer extends ZooKeeperServer {
         upgradeableSessionTracker.start();
     }
 
+    /**
+     * 检查是否需要升级session
+     */
     public Request checkUpgradeSession(Request request)
             throws IOException, KeeperException {
         // If this is a request for a local session and it is to
@@ -129,6 +138,11 @@ public abstract class QuorumZooKeeperServer extends ZooKeeperServer {
         return makeUpgradeRequest(request.sessionId);
     }
 
+    /**
+     * 升级session
+     * @param sessionId
+     * @return
+     */
     private Request makeUpgradeRequest(long sessionId) {
         // Make sure to atomically check local session status, upgrade
         // session, and make the session creation request.  This is to
@@ -155,6 +169,7 @@ public abstract class QuorumZooKeeperServer extends ZooKeeperServer {
         if (request != null) {
             LOG.info("Upgrading session 0x" + Long.toHexString(sessionId));
             // This must be a global request
+            // 提交请求
             submitRequest(request);
         }
     }

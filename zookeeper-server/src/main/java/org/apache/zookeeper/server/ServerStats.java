@@ -159,10 +159,16 @@ public class ServerStats {
         maxLatency = getMinLatency();
     }
 
+    /**
+     * 数据包接收数量加1
+     */
     synchronized public void incrementPacketsReceived() {
         packetsReceived++;
     }
 
+    /**
+     * 发送数据包数量加1
+     */
     synchronized public void incrementPacketsSent() {
         packetsSent++;
     }
@@ -199,6 +205,7 @@ public class ServerStats {
     }
 
     public interface Provider {
+
         public long getOutstandingRequests();
 
         public long getLastProcessedZxid();
