@@ -47,7 +47,10 @@ import java.util.concurrent.atomic.AtomicLong;
 public class AuthFastLeaderElection implements Election {
     private static final Logger LOG = LoggerFactory.getLogger(AuthFastLeaderElection.class);
 
-    /* Sequence numbers for messages */
+    /*
+     Sequence numbers for messages
+    * 消息序号
+    *  */
     static int sequencer = 0;
     static int maxTag = 0;
 
@@ -70,6 +73,9 @@ public class AuthFastLeaderElection implements Election {
     LinkedBlockingQueue<Notification> recvqueue;
     QuorumPeer self;
     int port;
+    /**
+     * 任选周期
+     */
     AtomicLong logicalclock = new AtomicLong(); /* Election instance */
     DatagramSocket mySocket;
     long proposedLeader;

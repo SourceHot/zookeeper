@@ -253,7 +253,13 @@ public class QuorumPeer extends ZooKeeperThread implements QuorumStats.Provider 
     private boolean reconfigFlag = false; // indicates that a reconfig just committed
     private int electionType;
     private FileTxnSnapLog logFactory = null;
+    /**
+     * 接受的人选周期
+     */
     private long acceptedEpoch = -1;
+    /**
+     * 当前周期
+     */
     private long currentEpoch = -1;
 
     public QuorumPeer() throws SaslException {

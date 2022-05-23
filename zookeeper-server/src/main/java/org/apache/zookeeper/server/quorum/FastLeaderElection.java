@@ -75,12 +75,27 @@ public class FastLeaderElection implements Election {
      */
 
     QuorumCnxManager manager;
+    /**
+     * 发送队列
+     */
     LinkedBlockingQueue<ToSend> sendqueue;
+    /**
+     * 待处理队列
+     */
     LinkedBlockingQueue<Notification> recvqueue;
     QuorumPeer self;
     Messenger messenger;
+    /**
+     * 任选周期
+     */
     AtomicLong logicalclock = new AtomicLong(); /* Election instance */
+    /**
+     * 提案发起人
+     */
     long proposedLeader;
+    /**
+     * 提案zxid
+     */
     long proposedZxid;
     long proposedEpoch;
     volatile boolean stop;
@@ -209,6 +224,7 @@ public class FastLeaderElection implements Election {
      * Send notifications to all peers upon a change in our vote
      */
     private void sendNotifications() {
+        // 将选票信息放入sendqueue，WorkerSender会从中读取数据发送
         for (long sid : self.getCurrentAndNextConfigVoters()) {
             QuorumVerifier qv = self.getQuorumVerifier();
             ToSend notmsg = new ToSend(ToSend.mType.notification,
@@ -442,7 +458,9 @@ public class FastLeaderElection implements Election {
             int notTimeout = finalizeWait;
 
             synchronized (this) {
+                // 任选周期+1
                 logicalclock.incrementAndGet();
+                // 更新提案信息
                 updateProposal(getInitId(), getInitLastLoggedZxid(), getPeerEpoch());
             }
 
@@ -650,6 +668,8 @@ public class FastLeaderElection implements Election {
      * a given peer has changed its vote, either because it has
      * joined leader election or because it learned of another
      * peer with higher zxid or same zxid and higher server id
+     *
+     * 投票信息
      */
 
     static public class Notification {
@@ -662,6 +682,7 @@ public class FastLeaderElection implements Election {
 
         /*
          * Proposed leader
+         * 提案发起者
          */
         long leader;
 
@@ -672,11 +693,14 @@ public class FastLeaderElection implements Election {
 
         /*
          * Epoch
+         * 选举周期,执行一次选举就+1
          */
         long electionEpoch;
 
         /*
          * current state of sender
+         *
+         * 服务状态
          */
         QuorumPeer.ServerState state;
 
@@ -803,8 +827,8 @@ public class FastLeaderElection implements Election {
         /**
          * Receives messages from instance of QuorumCnxManager on
          * method run(), and processes such messages.
+         * 提案接收器
          */
-
         class WorkerReceiver extends ZooKeeperThread {
             volatile boolean stop;
             QuorumCnxManager manager;

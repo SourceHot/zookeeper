@@ -19,6 +19,9 @@
 package org.apache.zookeeper.server.quorum;
 
 
+/**
+ * 选举接口
+ */
 public interface Election {
     public Vote lookForLeader() throws InterruptedException;
 

@@ -23,7 +23,13 @@ package org.apache.zookeeper.server.quorum;
  * how two different states are compared.
  */
 public class StateSummary {
+    /**
+     * 任选周期
+     */
     private long currentEpoch;
+    /**
+     * 最后操作的zxid
+     */
     private long lastZxid;
 
     public StateSummary(long currentEpoch, long lastZxid) {
