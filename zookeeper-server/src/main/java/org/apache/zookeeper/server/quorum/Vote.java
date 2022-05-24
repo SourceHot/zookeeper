@@ -21,13 +21,25 @@ package org.apache.zookeeper.server.quorum;
 import org.apache.zookeeper.server.quorum.QuorumPeer.ServerState;
 
 
+/**
+ * 选票
+ */
 public class Vote {
 
     final private int version;
     final private long id;
     final private long zxid;
+    /**
+     * 逻辑时钟
+     */
     final private long electionEpoch;
+    /**
+     * 选举周期
+     */
     final private long peerEpoch;
+    /**
+     * 服务状态
+     */
     final private ServerState state;
 
     public Vote(long id,

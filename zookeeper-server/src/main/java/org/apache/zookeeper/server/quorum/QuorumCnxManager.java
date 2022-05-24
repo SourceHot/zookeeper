@@ -61,8 +61,9 @@ import static org.apache.zookeeper.common.NetUtils.formatInetAddr;
  * Although this is not a problem for the leader election, it could be a problem
  * when consolidating peer communication. This is to be verified, though.
  *
+ *
+ * 领导者选举通讯管理器
  */
-
 public class QuorumCnxManager {
     /*
      * Protocol identifier used among peers
@@ -96,6 +97,7 @@ public class QuorumCnxManager {
     private static Supplier<Socket> SOCKET_FACTORY = DEFAULT_SOCKET_FACTORY;
     /*
      * Reception queue
+     * 接收到的消息
      */
     public final ArrayBlockingQueue<Message> recvQueue;
     /*
@@ -112,9 +114,21 @@ public class QuorumCnxManager {
     final boolean listenOnAllIPs;
     /*
      * Mapping from Peer to Thread number
+     * key:服务id
+     * value:发送线程
      */
     final ConcurrentHashMap<Long, SendWorker> senderWorkerMap;
+    /**
+     * 需要发送的消息
+     * key:服务id
+     * value:发送队列
+     */
     final ConcurrentHashMap<Long, ArrayBlockingQueue<ByteBuffer>> queueSendMap;
+    /**
+     * 最后处理的消息
+     * key:服务id
+     * value:消息
+     */
     final ConcurrentHashMap<Long, ByteBuffer> lastMessageSent;
     private final Set<Long> inprogressConnections = Collections.synchronizedSet(new HashSet<>());
     /*
@@ -578,7 +592,6 @@ public class QuorumCnxManager {
      * Try to establish a connection with each server if one
      * doesn't exist.
      */
-
     public void connectAll() {
         long sid;
         for (Enumeration<Long> en = queueSendMap.keys();
@@ -590,6 +603,7 @@ public class QuorumCnxManager {
 
     /**
      * Check if all queues are empty, indicating that all messages have been delivered.
+     * 检查是否还有未发送的消息
      */
     boolean haveDelivered() {
         for (ArrayBlockingQueue<ByteBuffer> queue : queueSendMap.values()) {

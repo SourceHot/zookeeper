@@ -41,8 +41,16 @@ public interface QuorumVerifier {
 
     void setVersion(long ver);
 
+    /**
+     * 获取参与选举的所有成员
+     * @return
+     */
     Map<Long, QuorumServer> getAllMembers();
 
+    /**
+     * 获取投票成员
+     * @return
+     */
     Map<Long, QuorumServer> getVotingMembers();
 
     Map<Long, QuorumServer> getObservingMembers();
