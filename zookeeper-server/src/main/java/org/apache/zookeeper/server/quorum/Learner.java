@@ -296,6 +296,8 @@ public class Learner {
     /**
      * Once connected to the leader, perform the handshake protocol to
      * establish a following / observing connection.
+     *
+     * 将自己注册到领导者上
      * @param pktType
      * @return the zxid the Leader sends for synchronization purposes.
      * @throws IOException
@@ -322,6 +324,7 @@ public class Learner {
         writePacket(qp, true);
         readPacket(qp);
         final long newEpoch = ZxidUtils.getEpochFromZxid(qp.getZxid());
+        //
         if (qp.getType() == Leader.LEADERINFO) {
             // we are connected to a 1.0 server so accept the new epoch and read the next packet
             leaderProtocolVersion = ByteBuffer.wrap(qp.getData()).getInt();
@@ -341,6 +344,7 @@ public class Learner {
                         "Leaders epoch, " + newEpoch + " is less than accepted epoch, "
                                 + self.getAcceptedEpoch());
             }
+            // 发送ACKEPOCH数据包
             QuorumPacket ackNewEpoch =
                     new QuorumPacket(Leader.ACKEPOCH, lastLoggedZxid, epochBytes, null);
             writePacket(ackNewEpoch, true);
@@ -359,6 +363,8 @@ public class Learner {
 
     /**
      * Finally, synchronize our history with the Leader.
+     *
+     * 从leader同步数据
      * @param newLeaderZxid
      * @throws IOException
      * @throws InterruptedException
@@ -377,10 +383,13 @@ public class Learner {
         LinkedList<Long> packetsCommitted = new LinkedList<Long>();
         LinkedList<PacketInFlight> packetsNotCommitted = new LinkedList<PacketInFlight>();
         synchronized (zk) {
+            // 差异化同步
             if (qp.getType() == Leader.DIFF) {
                 LOG.info("Getting a diff from the leader 0x{}", Long.toHexString(qp.getZxid()));
                 snapshotNeeded = false;
-            } else if (qp.getType() == Leader.SNAP) {
+            }
+            // 全量同步
+            else if (qp.getType() == Leader.SNAP) {
                 LOG.info("Getting a snapshot from leader 0x" + Long.toHexString(qp.getZxid()));
                 // The leader is going to dump the database
                 // db is clear as part of deserializeSnapshot()
@@ -399,7 +408,9 @@ public class Learner {
                     throw new IOException("Missing signature");
                 }
                 zk.getZKDatabase().setlastProcessedZxid(qp.getZxid());
-            } else if (qp.getType() == Leader.TRUNC) {
+            }
+            // 回滚同步
+            else if (qp.getType() == Leader.TRUNC) {
                 //we need to truncate the log to the lastzxid of the leader
                 LOG.warn("Truncating log to get in sync with the leader 0x"
                         + Long.toHexString(qp.getZxid()));
@@ -435,6 +446,7 @@ public class Learner {
             while (self.isRunning()) {
                 readPacket(qp);
                 switch (qp.getType()) {
+
                     case Leader.PROPOSAL:
                         PacketInFlight pif = new PacketInFlight();
                         pif.hdr = new TxnHeader();
@@ -474,11 +486,13 @@ public class Learner {
                             if (pif.hdr.getZxid() != qp.getZxid()) {
                                 LOG.warn("Committing " + qp.getZxid() + ", but next proposal is "
                                         + pif.hdr.getZxid());
-                            } else {
+                            }
+                            else {
                                 zk.processTxn(pif.hdr, pif.rec);
                                 packetsNotCommitted.remove();
                             }
-                        } else {
+                        }
+                        else {
                             packetsCommitted.add(qp.getZxid());
                         }
                         break;
@@ -500,7 +514,8 @@ public class Learner {
                             if (majorChange) {
                                 throw new Exception("changes proposed in reconfig");
                             }
-                        } else {
+                        }
+                        else {
                             packet.rec = SerializeUtils.deserializeTxn(qp.getData(), packet.hdr);
                             // Log warning message if txn comes out-of-order
                             if (packet.hdr.getZxid() != lastQueued + 1) {
@@ -514,7 +529,8 @@ public class Learner {
                         if (!writeToTxnLog) {
                             // Apply to db directly if we haven't taken the snapshot
                             zk.processTxn(packet.hdr, packet.rec);
-                        } else {
+                        }
+                        else {
                             packetsNotCommitted.add(packet);
                             packetsCommitted.add(qp.getZxid());
                         }

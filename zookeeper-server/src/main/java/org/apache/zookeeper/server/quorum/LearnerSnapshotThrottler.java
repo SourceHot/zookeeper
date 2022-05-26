@@ -28,6 +28,9 @@ import org.slf4j.LoggerFactory;
  * {@link #beginSnapshot(boolean)} before sending a snapshot and
  * {@link #endSnapshot()} after finishing, successfully or not.
  *
+ *
+ * 用于限制从领导者到观察者和追随者的并发快照数量的实用程序类。 LearnerHandler对象应该在发送快照之前调
+ *
  */
 public class LearnerSnapshotThrottler {
     private static final Logger LOG =

@@ -922,17 +922,23 @@ public class FastLeaderElection implements Election {
 
             public void run() {
 
+                // 响应
                 Message response;
                 while (!stop) {
                     // Sleeps on receive
                     try {
+                        // 通过manager获取一个需要处理的消息
                         response = manager.pollRecvQueue(3000, TimeUnit.MILLISECONDS);
-                        if (response == null)
+                        // 待处理的消息为空进入下一个循环
+                        if (response == null) {
                             continue;
+                        }
 
+                        // 获取消息字节长度
                         final int capacity = response.buffer.capacity();
 
                         // The current protocol and two previous generations all send at least 28 bytes
+                        // 消息字节长度小于28进入下一个循环
                         if (capacity < 28) {
                             LOG.error("Got a short response from server {}: {}", response.sid,
                                     capacity);
@@ -942,29 +948,42 @@ public class FastLeaderElection implements Election {
                         // this is the backwardCompatibility mode in place before ZK-107
                         // It is for a version of the protocol in which we didn't send peer epoch
                         // With peer epoch and version the message became 40 bytes
+                        // 消息字节长度是否是28
                         boolean backCompatibility28 = (capacity == 28);
 
                         // this is the backwardCompatibility mode for no version information
+                        // 消息字节长度是否是40
                         boolean backCompatibility40 = (capacity == 40);
 
+                        // 将响应中的字节清空
                         response.buffer.clear();
 
                         // Instantiate Notification and set its attributes
+                        // 创建通知对象
                         Notification n = new Notification();
 
+                        // 读取state
                         int rstate = response.buffer.getInt();
+                        // 读取leader
                         long rleader = response.buffer.getLong();
+                        // 读取zxid
                         long rzxid = response.buffer.getLong();
+                        // 读取electionEpoch
                         long relectionEpoch = response.buffer.getLong();
+                        //
                         long rpeerepoch;
 
+                        // 版本号
                         int version = 0x0;
                         QuorumVerifier rqv = null;
 
                         try {
 
+                            // 如果消息字节长度不是28
                             if (!backCompatibility28) {
+                                // 读取peerEpoch
                                 rpeerepoch = response.buffer.getLong();
+                                // 如果消息长度不是40
                                 if (!backCompatibility40) {
                                     /*
                                      * Version added in 3.4.6
@@ -978,40 +997,53 @@ public class FastLeaderElection implements Election {
                             } else {
                                 LOG.info("Backward compatibility mode (28 bits), server id: {}",
                                         response.sid);
+                                // 从zxid转换为peerEpoch
                                 rpeerepoch = ZxidUtils.getEpochFromZxid(rzxid);
                             }
 
 
                             // check if we have a version that includes config. If so extract config info from message.
+                            // 如果版本大于0x1
                             if (version > 0x1) {
+                                // 读取配置长度
                                 int configLength = response.buffer.getInt();
 
                                 // we want to avoid errors caused by the allocation of a byte array with negative length
                                 // (causing NegativeArraySizeException) or huge length (causing e.g. OutOfMemoryError)
+                                // 配置长度小于0
+                                // 配置长度大于消息字节长度
                                 if (configLength < 0 || configLength > capacity) {
+                                    // 抛出异常
                                     throw new IOException(String.format(
                                             "Invalid configLength in notification message! sid=%d, capacity=%d, version=%d, configLength=%d",
                                             response.sid, capacity, version, configLength));
                                 }
 
+                                // 将配置读取
                                 byte b[] = new byte[configLength];
 
                                 response.buffer.get(b);
 
                                 synchronized (self) {
                                     try {
+                                        // 将配置转换为QuorumVerifier类
                                         rqv = self.configFromString(new String(b));
+                                        // 获取当前节点的QuorumVerifier对象
                                         QuorumVerifier curQV = self.getQuorumVerifier();
+                                        // 新建的QuorumVerifier版本号大于当前所持有的QuorumVerifier的版本号
                                         if (rqv.getVersion() > curQV.getVersion()) {
                                             LOG.info("{} Received version: {} my version: {}",
                                                     self.getId(),
                                                     Long.toHexString(rqv.getVersion()),
                                                     Long.toHexString(
                                                             self.getQuorumVerifier().getVersion()));
+                                            // 如果当前节点服务状态是LOOKING
                                             if (self.getPeerState() == ServerState.LOOKING) {
                                                 LOG.debug("Invoking processReconfig(), state: {}",
                                                         self.getServerState());
+                                                // 重新处理配置
                                                 self.processReconfig(rqv, null, null, false);
+                                                // 如果新建的QuorumVerifier对象和当前持有的QuorumVerifier类不相同需要关闭选举接口
                                                 if (!rqv.equals(curQV)) {
                                                     LOG.info("restarting leader election");
                                                     self.shuttingDownLE = true;
@@ -1047,10 +1079,14 @@ public class FastLeaderElection implements Election {
                         /*
                          * If it is from a non-voting server (such as an observer or
                          * a non-voting follower), respond right away.
+                         * 确认sid是否在参选服务器中
                          */
                         if (!validVoter(response.sid)) {
+                            // 获取选票
                             Vote current = self.getCurrentVote();
+                            // 获取QuorumVerifier
                             QuorumVerifier qv = self.getQuorumVerifier();
+                            // 创建发送对象
                             ToSend notmsg = new ToSend(ToSend.mType.notification,
                                     current.getId(),
                                     current.getZxid(),
@@ -1059,7 +1095,7 @@ public class FastLeaderElection implements Election {
                                     response.sid,
                                     current.getPeerEpoch(),
                                     qv.toString().getBytes());
-
+                            // 加入到待发送消息集合
                             sendqueue.offer(notmsg);
                         } else {
                             // Receive new message
@@ -1069,6 +1105,7 @@ public class FastLeaderElection implements Election {
                             }
 
                             // State of peer that sent this message
+                            // 将待处理消息中的服务状态从数字转换为枚举
                             QuorumPeer.ServerState ackstate = QuorumPeer.ServerState.LOOKING;
                             switch (rstate) {
                                 case 0:
@@ -1087,6 +1124,7 @@ public class FastLeaderElection implements Election {
                                     continue;
                             }
 
+                            // 通知对象数据填写
                             n.leader = rleader;
                             n.zxid = rzxid;
                             n.electionEpoch = relectionEpoch;
@@ -1098,6 +1136,7 @@ public class FastLeaderElection implements Election {
                             /*
                              * Print notification info
                              */
+                            // 输出通知
                             if (LOG.isInfoEnabled()) {
                                 printNotification(n);
                             }
@@ -1106,7 +1145,9 @@ public class FastLeaderElection implements Election {
                              * If this server is looking, then send proposed leader
                              */
 
+                            // 如果当前节点服务状态是LOOKING
                             if (self.getPeerState() == QuorumPeer.ServerState.LOOKING) {
+                                // 通知放入到recvqueue集合
                                 recvqueue.offer(n);
 
                                 /*
@@ -1114,9 +1155,12 @@ public class FastLeaderElection implements Election {
                                  * message is also looking and its logical clock is
                                  * lagging behind.
                                  */
+                                // 如果待处理消息中的服务状态是LOOKING，并且通知中的选举周期小于本地选举周期
                                 if ((ackstate == QuorumPeer.ServerState.LOOKING)
                                         && (n.electionEpoch < logicalclock.get())) {
+                                    // 将成员变量proposedLeader、proposedZxid和proposedEpoch构造为选票
                                     Vote v = getVote();
+                                    // 选票转换为ToSend对象加入到sendqueue集合
                                     QuorumVerifier qv = self.getQuorumVerifier();
                                     ToSend notmsg = new ToSend(ToSend.mType.notification,
                                             v.getId(),
@@ -1128,12 +1172,15 @@ public class FastLeaderElection implements Election {
                                             qv.toString().getBytes());
                                     sendqueue.offer(notmsg);
                                 }
-                            } else {
+                            }
+                            else {
                                 /*
                                  * If this server is not looking, but the one that sent the ack
                                  * is looking, then send back what it believes to be the leader.
                                  */
+                                // 获取选票
                                 Vote current = self.getCurrentVote();
+                                // 如果待处理消息中的服务状态是LOOKING
                                 if (ackstate == QuorumPeer.ServerState.LOOKING) {
                                     if (LOG.isDebugEnabled()) {
                                         LOG.debug(
@@ -1146,6 +1193,7 @@ public class FastLeaderElection implements Election {
                                                         self.getQuorumVerifier().getVersion()));
                                     }
 
+                                    // 选票转换为ToSend对象加入到sendqueue集合
                                     QuorumVerifier qv = self.getQuorumVerifier();
                                     ToSend notmsg = new ToSend(
                                             ToSend.mType.notification,
@@ -1189,9 +1237,9 @@ public class FastLeaderElection implements Election {
                 while (!stop) {
                     try {
                         ToSend m = sendqueue.poll(3000, TimeUnit.MILLISECONDS);
-                        if (m == null)
+                        if (m == null) {
                             continue;
-
+                        }
                         process(m);
                     } catch (InterruptedException e) {
                         break;

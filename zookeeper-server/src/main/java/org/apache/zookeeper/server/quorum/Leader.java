@@ -158,6 +158,9 @@ public class Leader {
     // VisibleForTesting
     protected final Set<Long> connectingFollowers = new HashSet<Long>();
     // VisibleForTesting
+    /**
+     * Follower集合
+     */
     protected final Set<Long> electingFollowers = new HashSet<Long>();
     final LeaderZooKeeperServer zk;
     final QuorumPeer self;
@@ -399,36 +402,47 @@ public class Leader {
      * @throws InterruptedException
      */
     void lead() throws IOException, InterruptedException {
+        // 获取当前时间
         self.end_fle = Time.currentElapsedTime();
+        // 计算选举消耗的时间：当前时间-选举开始时间
         long electionTimeTaken = self.end_fle - self.start_fle;
+        // 设置选举消耗的时间
         self.setElectionTimeTaken(electionTimeTaken);
         LOG.info("LEADING - LEADER ELECTION TOOK - {} {}", electionTimeTaken,
                 QuorumPeer.FLE_TIME_UNIT);
+        // 时间计数器归零
         self.start_fle = 0;
         self.end_fle = 0;
 
+        // 注册JMX
         zk.registerJMX(new LeaderBean(this, zk), self.jmxLocalPeerBean);
 
         try {
             self.tick.set(0);
+            // 执行数据加载操作
             zk.loadData();
 
+            // 创建状态信息，主要存储参选周期和最后处理的zxid
             leaderStateSummary =
                     new StateSummary(self.getCurrentEpoch(), zk.getLastProcessedZxid());
 
             // Start thread that waits for connection requests from
             // new followers.
+            // 创建LearnerCnxAcceptor类用于等待Follower发送同步请求
             cnxAcceptor = new LearnerCnxAcceptor();
             cnxAcceptor.start();
 
+            // 计算最新选举周期
             long epoch = getEpochToPropose(self.getId(), self.getAcceptedEpoch());
 
+            // 将任选周期转换为zxid并将其设置到zk中
             zk.setZxid(ZxidUtils.makeZxid(epoch, 0));
 
             synchronized (this) {
                 lastProposed = zk.getZxid();
             }
 
+            // 创建NEWLEADER数据包
             newLeaderProposal.packet = new QuorumPacket(NEWLEADER, zk.getZxid(),
                     null, null);
 
@@ -482,15 +496,19 @@ public class Leader {
             // us. We do this by waiting for the NEWLEADER packet to get
             // acknowledged
 
+            // 等待 epoch 的ACK数据包
             waitForEpochAck(self.getId(), leaderStateSummary);
+            // 设置当前选举周期
             self.setCurrentEpoch(epoch);
 
             try {
+                // 等待NEWLEADER的ACK数据包
                 waitForNewLeaderAck(self.getId(), zk.getZxid());
             } catch (InterruptedException e) {
                 shutdown("Waiting for a quorum of followers, only synced with sids: [ "
                         + newLeaderProposal.ackSetsToString() + " ]");
                 HashSet<Long> followerSet = new HashSet<Long>();
+
 
                 for (LearnerHandler f : getLearners()) {
                     if (self.getQuorumVerifier().getVotingMembers().containsKey(f.getSid())) {
@@ -511,6 +529,7 @@ public class Leader {
                 return;
             }
 
+            // 启动zk服务
             startZkServer();
 
             /**
@@ -567,6 +586,7 @@ public class Leader {
                     // We use an instance of SyncedLearnerTracker to
                     // track synced learners to make sure we still have a
                     // quorum of current (and potentially next pending) view.
+                    // 创建SyncedLearnerTracker对象，该对象用于确认是否有大多数同意
                     SyncedLearnerTracker syncedAckSet = new SyncedLearnerTracker();
                     syncedAckSet.addQuorumVerifier(self.getQuorumVerifier());
                     if (self.getLastSeenQuorumVerifier() != null
@@ -591,6 +611,7 @@ public class Leader {
                         break;
                     }
 
+                    // 没有大多数认可，结束处理
                     if (!tickSkip && !syncedAckSet.hasAllQuorums()) {
                         // Lost quorum of last committed and/or last proposed
                         // config, set shutdown flag
@@ -601,6 +622,7 @@ public class Leader {
                     }
                     tickSkip = !tickSkip;
                 }
+                // 获取LearnerHandler然后发送ping
                 for (LearnerHandler f : getLearners()) {
                     f.ping();
                 }
@@ -616,6 +638,7 @@ public class Leader {
 
     /**
      * Close down all the LearnerHandlers
+     * 关闭各类对象
      */
     void shutdown(String reason) {
         LOG.info("Shutting down");
@@ -660,6 +683,7 @@ public class Leader {
      *  Otherwise, choose one of the new voters that acked the reconfiguartion, such that it is as
      * up-to-date as possible, i.e., acked as many outstanding proposals as possible.
      *
+     * 确认leader
      * @param reconfigProposal
      * @param zxid of the reconfigProposal
      * @return server if of the designated leader
@@ -667,11 +691,15 @@ public class Leader {
 
     private long getDesignatedLeader(Proposal reconfigProposal, long zxid) {
         //new configuration
+        // 获取最后一个QuorumVerifierAcksetPair对象
+
         Proposal.QuorumVerifierAcksetPair newQVAcksetPair =
                 reconfigProposal.qvAcksetPairs.get(reconfigProposal.qvAcksetPairs.size() - 1);
 
         //check if I'm in the new configuration with the same quorum address -
         // if so, I'll remain the leader
+
+        // 判断自己是否在newQVAcksetPair中，如果在我自己就是leader
         if (newQVAcksetPair.getQuorumVerifier().getVotingMembers().containsKey(self.getId()) &&
                 newQVAcksetPair.getQuorumVerifier().getVotingMembers()
                         .get(self.getId()).addr.equals(self.getQuorumAddress())) {
@@ -680,27 +708,36 @@ public class Leader {
         // start with an initial set of candidates that are voters from new config that
         // acknowledged the reconfig op (there must be a quorum). Choose one of them as
         // current leader candidate
+        // 候选人集合
         HashSet<Long> candidates = new HashSet<Long>(newQVAcksetPair.getAckset());
+        // 从候选人集合中移除自己
         candidates.remove(self.getId()); // if we're here, I shouldn't be the leader
+        // 当前需要处理的候选人
         long curCandidate = candidates.iterator().next();
 
         //go over outstanding ops in order, and try to find a candidate that acked the most ops.
         //this way it will be the most up-to-date and we'll minimize the number of ops that get dropped
 
+
         long curZxid = zxid + 1;
         Proposal p = outstandingProposals.get(curZxid);
 
+        // 循环处理，处理目标是获取最多投票数量的候选人
         while (p != null && !candidates.isEmpty()) {
             for (Proposal.QuorumVerifierAcksetPair qvAckset : p.qvAcksetPairs) {
                 //reduce the set of candidates to those that acknowledged p
+                // 保留交集
                 candidates.retainAll(qvAckset.getAckset());
                 //no candidate acked p, return the best candidate found so far
-                if (candidates.isEmpty())
+                // 如果交集为空
+                if (candidates.isEmpty()) {
                     return curCandidate;
+                }
                 //update the current candidate, and if it is the only one remaining, return it
                 curCandidate = candidates.iterator().next();
-                if (candidates.size() == 1)
+                if (candidates.size() == 1) {
                     return curCandidate;
+                }
             }
             curZxid++;
             p = outstandingProposals.get(curZxid);
@@ -710,6 +747,7 @@ public class Leader {
     }
 
     /**
+     * 尝试提交
      * @return True if committed, otherwise false.
      **/
     synchronized public boolean tryToCommit(Proposal p, long zxid, SocketAddress followerAddr) {
@@ -720,8 +758,11 @@ public class Leader {
         // pending all wait for a quorum of old and new config, so it's not possible to get enough acks
         // for an operation without getting enough acks for preceding ops. But in the future if multiple
         // concurrent reconfigs are allowed, this can happen.
-        if (outstandingProposals.containsKey(zxid - 1))
+
+
+        if (outstandingProposals.containsKey(zxid - 1)) {
             return false;
+        }
 
         // in order to be committed, a proposal must be accepted by a quorum.
         //
@@ -741,6 +782,7 @@ public class Leader {
         outstandingProposals.remove(zxid);
 
         if (p.request != null) {
+            // 待处理提案
             toBeApplied.add(p);
         }
 
@@ -793,6 +835,7 @@ public class Leader {
      * Keep a count of acks that are received by the leader for a particular
      * proposal
      *
+     * 处理ACK
      * @param zxid, the zxid of the proposal sent out
      * @param sid, the id of the server that sent the ack
      * @param followerAddr
@@ -801,6 +844,7 @@ public class Leader {
         if (!allowedToCommit)
             return; // last op committed was a leader change - from now on
         // the new leader should commit
+        // 记录日志
         if (LOG.isTraceEnabled()) {
             LOG.trace("Ack zxid: 0x{}", Long.toHexString(zxid));
             for (Proposal p : outstandingProposals.values()) {
@@ -811,6 +855,7 @@ public class Leader {
             LOG.trace("outstanding proposals all");
         }
 
+        // 跳过处理
         if ((zxid & 0xffffffffL) == 0) {
             /*
              * We no longer process NEWLEADER ack with this method. However,
@@ -821,12 +866,14 @@ public class Leader {
         }
 
 
+        // 提案容器数量为0跳过处理
         if (outstandingProposals.size() == 0) {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("outstanding is 0");
             }
             return;
         }
+        // 如果最后提交的zxid大于等于参数zxid将跳过处理
         if (lastCommitted >= zxid) {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("proposal has already been committed, pzxid: 0x{} zxid: 0x{}",
@@ -835,19 +882,24 @@ public class Leader {
             // The proposal has already been committed
             return;
         }
+
+        // 获取提案
         Proposal p = outstandingProposals.get(zxid);
+        // 提案为空跳过处理
         if (p == null) {
             LOG.warn("Trying to commit future proposal: zxid 0x{} from {}",
                     Long.toHexString(zxid), followerAddr);
             return;
         }
 
+        // 向提案中添加已经ACK的服务id
         p.addAck(sid);
         /*if (LOG.isDebugEnabled()) {
             LOG.debug("Count for zxid: 0x{} is {}",
                     Long.toHexString(zxid), p.ackSet.size());
         }*/
 
+        // 尝试提交提案
         boolean hasCommitted = tryToCommit(p, zxid, followerAddr);
 
         // If p is a reconfiguration, multiple other operations may be ready to be committed,
@@ -859,13 +911,16 @@ public class Leader {
         // concurrent reconfigs are allowed, this can happen and then we need to check whether some pending
         // ops may already have enough acks and can be committed, which is what this code does.
 
+        // 1. 提案提交失败
+        // 2. 提案中的请求对象不为空并且类型为重载配置
         if (hasCommitted && p.request != null && p.request.getHdr().getType() == OpCode.reconfig) {
             long curZxid = zxid;
             while (allowedToCommit && hasCommitted && p != null) {
                 curZxid++;
                 p = outstandingProposals.get(curZxid);
-                if (p != null)
+                if (p != null) {
                     hasCommitted = tryToCommit(p, curZxid, null);
+                }
             }
         }
     }
@@ -956,6 +1011,8 @@ public class Leader {
     /**
      * create a proposal and send it out to all the members
      *
+     * 创建提案发送给其他服务
+     *
      * @param request
      * @return the proposal that is queued to send to all the members
      */
@@ -996,6 +1053,7 @@ public class Leader {
             }
 
             lastProposed = p.packet.getZxid();
+
             outstandingProposals.put(lastProposed, p);
             sendPacket(pp);
         }
@@ -1037,6 +1095,7 @@ public class Leader {
      * lets the leader know that a follower is capable of following and is done
      * syncing
      *
+     * 一般用于Follower节点来通知领导者同步完成
      * @param handler handler of the follower
      * @return last proposed zxid
      * @throws InterruptedException
@@ -1125,11 +1184,13 @@ public class Leader {
                             + leaderStateSummary.getLastZxid()
                             + " (last zxid)");
                 }
+                // 判断当前id是否在选举节点中
                 if (isParticipant(id)) {
                     electingFollowers.add(id);
                 }
             }
             QuorumVerifier verifier = self.getQuorumVerifier();
+            // 方法containsQuorum确认是否一半以上收到
             if (electingFollowers.contains(self.getId()) && verifier.containsQuorum(
                     electingFollowers)) {
                 electionFinished = true;
@@ -1139,6 +1200,7 @@ public class Leader {
                 long cur = start;
                 long end = start + self.getInitLimit() * self.getTickTime();
                 while (!electionFinished && cur < end) {
+                    // 等待一定时间
                     electingFollowers.wait(end - cur);
                     cur = Time.currentElapsedTime();
                 }
@@ -1177,6 +1239,7 @@ public class Leader {
                 newLeaderProposal.ackSetsToString(),
                 Long.toHexString(zk.getZxid()));
 
+        // 是否允许重载配置
         if (self.isReconfigEnabled()) {
             /*
              * ZOOKEEPER-1324. the leader sends the new config it must complete
@@ -1187,8 +1250,10 @@ public class Leader {
              */
             QuorumVerifier newQV = self.getLastSeenQuorumVerifier();
 
+            // 从newLeaderProposal中确认leader
             Long designatedLeader = getDesignatedLeader(newLeaderProposal, zk.getZxid());
 
+            // 重载配置
             self.processReconfig(newQV, designatedLeader, zk.getZxid(), true);
             if (designatedLeader != self.getId()) {
                 LOG.warn(
@@ -1200,6 +1265,7 @@ public class Leader {
                     "Dynamic reconfig feature is disabled, skip designatedLeader calculation and reconfig processing.");
         }
 
+        // zk服务类正式启动
         zk.startup();
         /*
          * Update the election vote here to ensure that all members of the
@@ -1208,8 +1274,10 @@ public class Leader {
          *
          * @see https://issues.apache.org/jira/browse/ZOOKEEPER-1732
          */
+        // 更新选票周期
         self.updateElectionVote(getEpoch());
 
+        //
         zk.getZKDatabase().setlastProcessedZxid(zk.getZxid());
     }
 
@@ -1383,6 +1451,7 @@ public class Leader {
                     Socket s = null;
                     boolean error = false;
                     try {
+                        // 接收socket连接
                         s = ss.accept();
 
                         // start with the initLimit, once the ack is processed
@@ -1392,6 +1461,7 @@ public class Leader {
 
                         BufferedInputStream is = new BufferedInputStream(
                                 s.getInputStream());
+                        // 创建LearnerHandler对象并启动
                         LearnerHandler fh = new LearnerHandler(s, is, Leader.this);
                         fh.start();
                     } catch (SocketException e) {
@@ -1404,7 +1474,8 @@ public class Leader {
                             // the call to accept throws an exception.
                             // We catch and set stop to true.
                             stop = true;
-                        } else {
+                        }
+                        else {
                             throw e;
                         }
                     } catch (SaslException e) {
