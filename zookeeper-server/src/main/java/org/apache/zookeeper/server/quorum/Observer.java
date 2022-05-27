@@ -63,18 +63,27 @@ public class Observer extends Learner {
         zk.registerJMX(new ObserverBean(this, zk), self.jmxLocalPeerBean);
 
         try {
+            // 寻找leader服务
             QuorumServer leaderServer = findLeader();
             LOG.info("Observing " + leaderServer.addr);
             try {
+                // 与leader服务建立连接
                 connectToLeader(leaderServer.addr, leaderServer.hostname);
+                // 将当前节点注册到leader，得到新选举周期对应的zxid
                 long newLeaderZxid = registerWithLeader(Leader.OBSERVERINFO);
-                if (self.isReconfigStateChange())
+                // 如果当前节点发生了状态改变抛出异常
+                if (self.isReconfigStateChange()) {
                     throw new Exception("learned about role change");
+                }
 
+                // 从leader同步
                 syncWithLeader(newLeaderZxid);
+                // 创建数据包
                 QuorumPacket qp = new QuorumPacket();
                 while (this.isRunning()) {
+                    // 读取数据包
                     readPacket(qp);
+                    // 处理数据包
                     processPacket(qp);
                 }
             } catch (Exception e) {
