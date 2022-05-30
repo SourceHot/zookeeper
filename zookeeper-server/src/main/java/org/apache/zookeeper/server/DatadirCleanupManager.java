@@ -32,15 +32,35 @@ import java.util.concurrent.TimeUnit;
  * 'autopurge.purgeInterval'. It keeps the most recent
  * 'autopurge.snapRetainCount' number of snapshots and corresponding transaction
  * logs.
+ *
+ * 数据目录清理管理器
  */
 public class DatadirCleanupManager {
 
     private static final Logger LOG = LoggerFactory.getLogger(DatadirCleanupManager.class);
+    /**
+     * 快照目录
+     */
     private final File snapDir;
+    /**
+     * 数据日志目录
+     */
     private final File dataLogDir;
+    /**
+     * 快照保留数量
+     */
     private final int snapRetainCount;
+    /**
+     * 清理间隔周期
+     */
     private final int purgeInterval;
+    /**
+     * 清理状态
+     */
     private PurgeTaskStatus purgeTaskStatus = PurgeTaskStatus.NOT_STARTED;
+    /**
+     * 定时器
+     */
     private Timer timer;
 
     /**
@@ -79,20 +99,26 @@ public class DatadirCleanupManager {
      * @see PurgeTxnLog#purge(File, File, int)
      */
     public void start() {
+        // 状态是以开始不做操作
         if (PurgeTaskStatus.STARTED == purgeTaskStatus) {
             LOG.warn("Purge task is already running.");
             return;
         }
         // Don't schedule the purge task with zero or negative purge interval.
+        // 清理间隔小于等于0不做操作
         if (purgeInterval <= 0) {
             LOG.info("Purge task is not scheduled.");
             return;
         }
 
+        // 创建定时器
         timer = new Timer("PurgeTask", true);
+        // 创建定时任务
         TimerTask task = new PurgeTask(dataLogDir, snapDir, snapRetainCount);
+        // 启动定时任务
         timer.scheduleAtFixedRate(task, 0, TimeUnit.HOURS.toMillis(purgeInterval));
 
+        // 状态设置为以开始
         purgeTaskStatus = PurgeTaskStatus.STARTED;
     }
 
@@ -158,7 +184,19 @@ public class DatadirCleanupManager {
      * Status of the dataDir purge task
      */
     public enum PurgeTaskStatus {
-        NOT_STARTED, STARTED, COMPLETED;
+
+        /**
+         * 未开始
+         */
+        NOT_STARTED,
+        /**
+         * 以开始
+         */
+        STARTED,
+        /**
+         * 处理完成
+         */
+        COMPLETED;
     }
 
 

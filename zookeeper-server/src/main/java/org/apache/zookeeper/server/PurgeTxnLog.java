@@ -62,26 +62,37 @@ public class PurgeTxnLog {
      * excluded from current purging cycle.
      *
      * @param dataDir the dir that has the logs
+     *                数据目录
      * @param snapDir the dir that has the snapshots
+     *                快照目录
      * @param num the number of snapshots to keep
+     *            需要保留的快照数量
+     *
      * @throws IOException
      */
     public static void purge(File dataDir, File snapDir, int num) throws IOException {
+        // 快照保留数量小于3抛出异常
         if (num < 3) {
             throw new IllegalArgumentException(COUNT_ERR_MSG);
         }
 
+        // 创建FileTxnSnapLog对象
         FileTxnSnapLog txnLog = new FileTxnSnapLog(dataDir, snapDir);
 
+        // 从FileTxnSnapLog对象中获取一定数量的文件
         List<File> snaps = txnLog.findNRecentSnapshots(num);
+        // 获取寻找的文件数量
         int numSnaps = snaps.size();
+        // 如果文件数量大于0
         if (numSnaps > 0) {
+            // 清理快照
             purgeOlderSnapshots(txnLog, snaps.get(numSnaps - 1));
         }
     }
 
     // VisibleForTesting
     static void purgeOlderSnapshots(FileTxnSnapLog txnLog, File snapShot) {
+        // 从快照文件的名字中提取zxid
         final long leastZxidToBeRetain = Util.getZxidFromName(
                 snapShot.getName(), PREFIX_SNAPSHOT);
 
@@ -104,6 +115,7 @@ public class PurgeTxnLog {
          * recoverability of all snapshots being retained.  We determine that log file here by
          * calling txnLog.getSnapshotLogs().
          */
+        // 在参数txnLog提取zxid在leastZxidToBeRetain之前的数据
         final Set<File> retainedTxnLogs = new HashSet<File>();
         retainedTxnLogs.addAll(Arrays.asList(txnLog.getSnapshotLogs(leastZxidToBeRetain)));
 
@@ -111,6 +123,7 @@ public class PurgeTxnLog {
          * Finds all candidates for deletion, which are files with a zxid in their name that is less
          * than leastZxidToBeRetain.  There's an exception to this rule, as noted above.
          */
+        // 文件过滤器
         class MyFileFilter implements FileFilter {
             private final String prefix;
 
@@ -119,12 +132,15 @@ public class PurgeTxnLog {
             }
 
             public boolean accept(File f) {
-                if (!f.getName().startsWith(prefix + "."))
+                if (!f.getName().startsWith(prefix + ".")) {
                     return false;
+                }
                 if (retainedTxnLogs.contains(f)) {
                     return false;
                 }
+                // 当前文件的zxid
                 long fZxid = Util.getZxidFromName(f.getName(), prefix);
+                // 文件的zxid大于等于最小值不需要删除
                 if (fZxid >= leastZxidToBeRetain) {
                     return false;
                 }
@@ -132,6 +148,7 @@ public class PurgeTxnLog {
             }
         }
         // add all non-excluded log files
+        // 过滤数据文件
         File[] logs = txnLog.getDataDir().listFiles(new MyFileFilter(PREFIX_LOG));
         List<File> files = new ArrayList<>();
         if (logs != null) {
@@ -139,12 +156,14 @@ public class PurgeTxnLog {
         }
 
         // add all non-excluded snapshot files to the deletion list
+        // 过滤快照文件
         File[] snapshots = txnLog.getSnapDir().listFiles(new MyFileFilter(PREFIX_SNAPSHOT));
         if (snapshots != null) {
             files.addAll(Arrays.asList(snapshots));
         }
 
         // remove the old files
+        // 删除历史文件
         for (File f : files) {
             final String msg = "Removing file: " +
                     DateFormat.getDateTimeInstance().format(f.lastModified()) +

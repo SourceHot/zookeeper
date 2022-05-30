@@ -206,8 +206,9 @@ public class FileSnap implements SnapShot {
         int count = 0;
         List<File> list = new ArrayList<File>();
         for (File f : files) {
-            if (count == n)
+            if (count == n) {
                 break;
+            }
             if (Util.getZxidFromName(f.getName(), SNAPSHOT_FILE_PREFIX) != -1) {
                 count++;
                 list.add(f);

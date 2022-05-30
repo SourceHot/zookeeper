@@ -112,14 +112,18 @@ public class QuorumPeerMain {
         }
 
         // Start and schedule the the purge task
+        // 数据目录清理器
         DatadirCleanupManager purgeMgr = new DatadirCleanupManager(config
                 .getDataDir(), config.getDataLogDir(), config
                 .getSnapRetainCount(), config.getPurgeInterval());
+        // 启动数据目录清理管理器
         purgeMgr.start();
 
         if (args.length == 1 && config.isDistributed()) {
+            // 从配置中启动
             runFromConfig(config);
-        } else {
+        }
+        else {
             LOG.warn("Either no config or no quorum defined in config, running "
                     + " in standalone mode");
             // there is only server in the quorum -- run as standalone
